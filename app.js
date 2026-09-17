@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '12';
+const APP_VERSION = '13';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -227,8 +227,13 @@ function table(cols, rows, rowFn, onClick, opts = {}) {
   let lastG = null;
   rows.forEach(r => {
     if (opts.groupKey) { const g = opts.groupKey(r); if (g !== lastG) { lastG = g; body.appendChild(el('tr', 'grp', `<td colspan="${cols.length}">${esc(g)}</td>`)); } }
-    const tr = el('tr', onClick ? 'clk' : ''); tr.innerHTML = rowFn(r).map(c => `<td>${c}</td>`).join('');
-    if (onClick) { tr.onclick = () => onClick(r); tr.tabIndex = 0; tr.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); onClick(r); } }; }
+    const tr = el('tr', onClick ? 'clk' : '');
+    // data-label — подпись колонки (карточный вид на телефоне); na — пустая ячейка, на телефоне скрыта;
+    // ctl — ячейка с элементом управления (галочка, статус, кнопка): на телефоне отдельной строкой
+    tr.innerHTML = rowFn(r).map((c, i) => { const v = c == null ? '' : String(c); const plain = v.replace(/<[^>]+>/g, '').trim(); const ctl = /<(input|select|button|textarea)/i.test(v);
+      return `<td data-label="${esc(cols[i] || '')}" class="${!ctl && (plain === '' || plain === '—' || plain === '0') ? 'na' : ''}${ctl ? ' ctl' : ''}">${v}</td>`; }).join('');
+    // клик по контролу внутри строки (галочка, статус, ссылка, кнопка) не должен открывать карточку строки
+    if (onClick) { tr.onclick = e => { if (e.target.closest('input,select,button,a,textarea,label,summary,details')) return; onClick(r); }; tr.tabIndex = 0; tr.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); onClick(r); } }; }
     body.appendChild(tr);
   });
   tb.appendChild(body); w.appendChild(tb); return w;
@@ -1003,6 +1008,8 @@ function tgSync() {
 }
 async function boot() {
   $$('.appver').forEach(e => { e.textContent = 'v' + APP_VERSION; });
+  const mq = matchMedia('(max-width:640px)'); const setPh = () => { $('#q').placeholder = mq.matches ? 'Поиск' : 'Поиск: ВП, стандарт, документ, термин…'; }; setPh(); mq.addEventListener('change', setPh);
+  $('#who').title = 'Выйти из портала на этом устройстве';
   tgInit();
   applyTheme(); applyLang(); initGate();
   $('#themeBtn').onclick = () => { LS.set(K.theme, document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); applyTheme(); };
@@ -1015,7 +1022,12 @@ async function boot() {
   let tm; $('#q').oninput = () => { clearTimeout(tm); tm = setTimeout(() => { const v = $('#q').value.trim(); if (v.length >= 2) go('find', {}, v); }, 300); };
   $('#q').onkeydown = e => { if (e.key === 'Enter') { const v = $('#q').value.trim(); if (v) go('find', {}, v); } };
   window.addEventListener('hashchange', route);
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    // новая версия SW активируется (skipWaiting+claim) — один раз перезагружаем страницу, чтобы не сидеть на старой оболочке (телефон/Telegram)
+    const hadController = !!navigator.serviceWorker.controller; let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+    navigator.serviceWorker.register('sw.js').then(r => { try { r.update(); } catch (e) {} }).catch(() => {});
+  }
   try { S.cfg = await (await fetch('data/config.json', { cache: 'no-cache' })).json(); }
   catch (e) { $('#main').innerHTML = '<div class="empty">Не найден data/config.json. Портал нужно открыть через http(s)-сервер (node tools/serve.mjs), а не как файл.</div>'; return; }
   if (S.cfg.plain) { await enter(); return; }
