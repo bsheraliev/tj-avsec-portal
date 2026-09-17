@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>AvSec Portal · АГА РТ</title>
+<meta name="theme-color" content="#123b5e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css?v=9">
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <button class="burger" id="burger" aria-label="Меню">☰</button>
+    <div class="brand">
+      <span class="mark">AS</span>
+      <span>
+        <b>AvSec Portal</b>
+        <small id="brandSub">авиационная безопасность · подготовка к USAP-CMA · АГА при ПРТ</small>
+      </span>
+    </div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Поиск: ВП, стандарт, документ, термин…" autocomplete="off">
+      <button id="qclear" title="Очистить">✕</button>
+    </div>
+    <div class="lang" id="lang"><button data-l="ru">RU</button><button data-l="en">EN</button></div>
+    <button class="topbtn" id="themeBtn" title="Тема">◐</button>
+    <button class="topbtn" id="who" hidden>Выйти</button>
+    <span class="appver topver" title="Версия портала"></span>
+  </header>
+
+  <div class="gate" id="gate" hidden>
+    <form class="gate-card" id="gateForm">
+      <span class="mark">AS</span>
+      <h2>AvSec Portal</h2>
+      <p class="dim" id="gateSub">Портал авиационной безопасности и подготовки к USAP-CMA. Вход по коду доступа — код выдаёт НКМК (National Continuous Monitoring Coordinator).</p>
+      <input id="gateCode" type="password" placeholder="Код доступа" autocomplete="current-password" spellcheck="false">
+      <p class="gate-err" id="gateErr" hidden></p>
+      <button class="btn" type="submit" id="gateBtn">Войти</button>
+      <small class="appver dim"></small>
+    </form>
+  </div>
+
+  <nav class="side" id="side"></nav>
+  <main id="main"><div class="loading">Загрузка…</div></main>
+  <nav class="bottombar" id="bottombar"></nav>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-bg" data-close></div>
+  <article class="sheet-card" role="dialog" aria-modal="true" tabindex="-1">
+    <button class="sheet-x" data-close aria-label="Закрыть">✕</button>
+    <div id="sheetBody"></div>
+  </article>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- Telegram Mini App: SDK нужен только при открытии из бота; вне Telegram window.Telegram.WebApp пустой -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="app.js?v=9"></script>
+</body>
+</html>

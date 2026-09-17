@@ -1,0 +1,27 @@
+{
+ "title": "AvSec Portal",
+ "org": "Агентство гражданской авиации при Правительстве Республики Таджикистан",
+ "requireLogin": true,
+ "plain": false,
+ "salt": "d637156037e03ca688805e619063f602",
+ "check": "5b4b179884beb03250640c50de18f3328f117fdd0453626aa981ad27fdab9c36",
+ "kdfIter": 250000,
+ "files": [
+  "cap2019.json",
+  "cc.json",
+  "drive.json",
+  "glossary.json",
+  "gm.json",
+  "icao.json",
+  "matrix.json",
+  "neighbours.json",
+  "pq.json",
+  "registry.json",
+  "sasaq.json",
+  "team.json",
+  "usap.json"
+ ],
+ "built": "2026-09-17",
+ "site": "https://bsheraliev.github.io/tj-avsec-portal/",
+ "tg": "https://t.me/TJ_AVSEC_bot"
+}
