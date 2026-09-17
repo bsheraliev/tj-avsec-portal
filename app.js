@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '13';
+const APP_VERSION = '14';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -218,6 +218,7 @@ function render() {
 function head(m, title, sub) { m.appendChild(el('h1', '', esc(t(title)))); if (sub) m.appendChild(el('p', 'sub', sub)); }
 
 /* ---------- общие виджеты ---------- */
+const TABLE_NA = new Set(['', '—', '-', '0', 'Н/П', 'н/п', 'Нет статуса', 'Не начато']);   // на телефоне такие ячейки в карточке скрыты (колонка на десктопе остаётся)
 function table(cols, rows, rowFn, onClick, opts = {}) {
   const w = el('div', 'tw');
   const tb = el('table');
@@ -231,7 +232,7 @@ function table(cols, rows, rowFn, onClick, opts = {}) {
     // data-label — подпись колонки (карточный вид на телефоне); na — пустая ячейка, на телефоне скрыта;
     // ctl — ячейка с элементом управления (галочка, статус, кнопка): на телефоне отдельной строкой
     tr.innerHTML = rowFn(r).map((c, i) => { const v = c == null ? '' : String(c); const plain = v.replace(/<[^>]+>/g, '').trim(); const ctl = /<(input|select|button|textarea)/i.test(v);
-      return `<td data-label="${esc(cols[i] || '')}" class="${!ctl && (plain === '' || plain === '—' || plain === '0') ? 'na' : ''}${ctl ? ' ctl' : ''}">${v}</td>`; }).join('');
+      return `<td data-label="${esc(cols[i] || '')}" class="${!ctl && TABLE_NA.has(plain) ? 'na' : ''}${ctl ? ' ctl' : ''}">${v}</td>`; }).join('');
     // клик по контролу внутри строки (галочка, статус, ссылка, кнопка) не должен открывать карточку строки
     if (onClick) { tr.onclick = e => { if (e.target.closest('input,select,button,a,textarea,label,summary,details')) return; onClick(r); }; tr.tabIndex = 0; tr.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); onClick(r); } }; }
     body.appendChild(tr);
@@ -684,7 +685,8 @@ function pAudit(m) {
     tc.appendChild(table(['Участник', 'Роль', 'Направлен', 'Паспорт / виза', 'Прибытие', 'Отъезд', 'Статус'], u.audit.team, x => [
       `<b>${esc(x.name)}</b>${x.email ? `<div class="small"><a href="mailto:${esc(x.email)}">${esc(x.email)}</a>${x.phone ? ' · ' + esc(x.phone) : ''}</div>` : ''}`,
       `<span class="small">${esc(x.role)}</span>`, `<span class="small">${esc(x.org)}</span>`, `<span class="small">${esc(x.passport)}</span>`,
-      `<span class="small mono">${esc(x.arrive)}</span>`, `<span class="small mono">${esc(x.depart)}</span>`, badge((TEAMST[x.status] || ['none', x.status])[0], (TEAMST[x.status] || ['none', x.status])[1])]));
+      `<span class="small mono">${esc(x.arrive)}</span>`, `<span class="small mono">${esc(x.depart)}</span>`, badge((TEAMST[x.status] || ['none', x.status])[0], (TEAMST[x.status] || ['none', x.status])[1])],
+      x => openSheet(`<h3>${esc(x.name)} ${badge((TEAMST[x.status] || ['none', x.status])[0], (TEAMST[x.status] || ['none', x.status])[1])}</h3>${kv([['Роль', esc(x.role)], ['Направлен', esc(x.org)], ['Паспорт / виза', esc(x.passport)], ['Прибытие', esc(x.arrive)], ['Отъезд', esc(x.depart)], ['E-mail', x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''], ['Телефон', esc(x.phone || '')]])}<p class="small dim">${esc(u.audit.teamNote || '')}</p><div class="row mt">${x.email ? `<a class="btn sm" href="mailto:${esc(x.email)}">Написать</a>` : ''}<button class="btn sm ghost" data-go="audit">К аудиту</button></div>`)));
     if (u.audit.teamNote) tc.appendChild(el('p', 'small dim', esc(u.audit.teamNote)));
     m.appendChild(tc);
   }
@@ -733,6 +735,19 @@ function capRef(id) {
   const hits = c.findings.flatMap(f => f.items.filter(i => i.pq === id).map(i => ({ f, i }))); if (!hits.length) return '';
   return `<div class="callout small"><b>Аудит 2019:</b> ${hits.map(({ f, i }) => `вывод № ${f.n} (${esc(CAPP[f.priority] || f.priority)}, SARP ${esc(i.sarp)}, КЭ-${esc(i.ce)}) — ${esc(i.rec)} ${i.status ? badge(CAPSB[capSt(i)], CAPST[capSt(i)]) : ''}`).join('<br>')} <a href="#cap?s=${encodeURIComponent(id)}">→ ПКД</a></div>`;
 }
+// карточка рекомендации ПКД: полный текст, статус EN, срок, переходы к ВП и к фильтрам
+function openCapItem(i, f) {
+  const pq = D('pq'); const cur = pq && pq.items.find(x => x.id === i.pq); const k = capSt(i); const st = i.status || {};
+  openSheet(`<h3>Вывод № ${f.n} <span class="badge b-area">${f.area}</span> ${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} · ВП <span class="code">${esc(i.pq)}</span> ${st.st ? badge(CAPSB[k], CAPST[k]) : ''}</h3>
+    <p><b>${esc(i.rec)}</b></p>
+    ${kv([['SARP', `<span class="mono">${esc(i.sarp)}</span> · КЭ-${esc(i.ce)} · приоритет: ${CAPP[i.prio] || esc(i.prio)}`], ['Замечания', esc(i.comment || '')], ['Корректирующее действие (ПКД 2020)', esc(i.action || '')], ['Организация', esc(i.org || '')],
+      ['Сроки (ПКД 2020)', `${esc(i.start || '')}${i.end ? ' – ' + esc(i.end) : ''}`], ['Completion date (EN v2)', esc(st.endEn || '')], ['Исполнитель (EN v2)', esc(st.orgEn || '')],
+      ['Срок (EN v2)', st.due ? `${daysTo(st.due) < 0 && k !== 'done' ? '<span class="warn">⚠ ' : '<span>'}${esc(fmtDate(st.due))}</span> <span class="dim small">предложение, подтвердить</span>` : '']])}
+    ${st.en ? `<h4>Статус (EN, редакция v2.1)</h4><p class="small">${esc(st.en)}</p>` : ''}
+    <div class="row mt">${cur ? `<button class="btn sm" data-go="pq?s=${encodeURIComponent(i.pq)}">К ВП ${esc(i.pq)}</button>` : `<span class="dim small">ВП ${esc(i.pq)} — номер прежней редакции протокола, в текущем перечне нет</span>`}
+      <button class="btn sm ghost" data-go="cap?area=${esc(f.area)}">Выводы области ${esc(f.area)}</button>
+      ${k !== 'done' && k !== 'na' ? '<button class="btn sm ghost" data-go="cap?st=open">Все незакрытые</button>' : ''}</div>`);
+}
 // срок незакрытой рекомендации (status.due из редакции EN v2): красным, если прошёл
 const capDue = i => { const d = i.status && i.status.due; if (!d) return ''; const late = daysTo(d) < 0 && capSt(i) !== 'done'; return `<div class="small ${late ? 'warn' : 'dim'}" title="Deadline в редакции EN v2 (предложение, подтвердить)">${late ? '⚠ ' : ''}срок ${esc(fmtDate(d))}</div>`; };
 function pCAP(m) {
@@ -766,7 +781,7 @@ function pCAP(m) {
       i => { const cur = pq && pq.items.find(x => x.id === i.pq); const k = capSt(i); return [badge(CAPB[i.prio], CAPP[i.prio] || i.prio), `<span class="mono">${esc(i.sarp)}</span>`, `<span class="badge b-ce">КЭ-${esc(i.ce)}</span>`,
         cur ? `<a href="#pq?s=${encodeURIComponent(i.pq)}" class="code">${esc(i.pq)}</a>` : `<span class="code dim" title="номер прежней редакции ВП">${esc(i.pq)}</span>`,
         `<div class="td-wrap small">${esc(i.rec)}</div>`, `<div class="td-wrap small">${esc(i.action)}${i.org ? `<div class="dim">${esc(i.org)}</div>` : ''}</div>`, `<span class="small">${esc(i.start)}${i.end ? ' – ' + esc(i.end) : ''}</span>${i.status && i.status.endEn ? `<div class="small dim" title="графа Completion date в редакции EN v2">EN v2: ${esc(i.status.endEn)}</div>` : ''}`,
-        `${i.status ? badge(CAPSB[k], CAPST[k]) : ''}${capDue(i)}${i.status && i.status.en ? `<details class="small"><summary class="dim">EN</summary><div class="td-wrap">${esc(i.status.en)}</div></details>` : ''}`]; }));
+        `${i.status ? badge(CAPSB[k], CAPST[k]) : ''}${capDue(i)}${i.status && i.status.en ? `<details class="small"><summary class="dim">EN</summary><div class="td-wrap">${esc(i.status.en)}</div></details>` : ''}`]; }, i => openCapItem(i, f)));
     m.appendChild(card);
   });
 }
@@ -869,7 +884,8 @@ function pGM(m) {
   const list = d.items.filter(i => has(S.f.s, i.code, i.title, i.ncasp, i.status));
   m.appendChild(el('div', 'card', `<div class="row">${d.meta.folders.map(l => `<a class="btn ghost sm" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join('')}</div>`));
   m.appendChild(table(['Код', 'Инструктивный материал', 'Раздел / § НПАБГА РТ', 'Статус', 'Папка'], list,
-    i => [`<span class="code">${esc(i.code)}</span>`, `<b>${esc(i.title)}</b>`, esc(i.ncasp), badge(i.bucket, i.status), `<a href="${esc(i.folder)}" target="_blank" rel="noopener">Drive ↗</a>`]));
+    i => [`<span class="code">${esc(i.code)}</span>`, `<b>${esc(i.title)}</b>`, esc(i.ncasp), badge(i.bucket, i.status), `<a href="${esc(i.folder)}" target="_blank" rel="noopener">Drive ↗</a>`],
+    i => openSheet(`<h3><span class="code">${esc(i.code)}</span> ${badge(i.bucket, i.status)}</h3><p><b>${esc(i.title)}</b></p>${kv([['Раздел / § НПАБГА РТ', esc(i.ncasp || '')], ['Статус', esc(i.status || '')]])}<div class="row mt"><button class="btn sm" data-open="${esc(i.folder)}">Папка Drive ↗</button><button class="btn sm ghost" data-go="matrix">Матрица ИКАО</button></div>`)));
   m.appendChild(el('div', 'card', `<h2>Примечания</h2><ul class="list">${d.meta.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>`));
 }
 
@@ -904,7 +920,8 @@ function pNB(m) {
   head(m, 'Соседние страны', `${esc(d.meta.title)} · ${fmtDate(d.meta.updated)} · <a href="${esc(d.meta.folder)}" target="_blank" rel="noopener">папка «Сравнение — соседние страны» ↗</a>`);
   d.countries.forEach(c => {
     m.appendChild(el('h2', 'mt', `${esc(c.name)} <span class="dim small">— ${esc(c.regulator)} · <a href="${esc(c.folder)}" target="_blank" rel="noopener">папка ↗</a></span>`));
-    m.appendChild(table(['Документ', 'Тема', 'Реквизиты', 'Файл / источник'], c.docs, x => [`<b>${esc(x.title)}</b>`, esc(x.topic), esc(x.ref), [x.local && `<a href="${esc(x.local)}" target="_blank" rel="noopener">в папке ↗</a>`, x.local2 && `<a href="${esc(x.local2)}" target="_blank" rel="noopener">PDF ↗</a>`, x.src && `<span class="small dim">${esc(x.src)}</span>`].filter(Boolean).join(' · ')]));
+    m.appendChild(table(['Документ', 'Тема', 'Реквизиты', 'Файл / источник'], c.docs, x => [`<b>${esc(x.title)}</b>`, esc(x.topic), esc(x.ref), [x.local && `<a href="${esc(x.local)}" target="_blank" rel="noopener">в папке ↗</a>`, x.local2 && `<a href="${esc(x.local2)}" target="_blank" rel="noopener">PDF ↗</a>`, x.src && `<span class="small dim">${esc(x.src)}</span>`].filter(Boolean).join(' · ')],
+      x => openSheet(`<h3>${esc(x.title)}</h3>${kv([['Страна / регулятор', `${esc(c.name)} — ${esc(c.regulator)}`], ['Тема', esc(x.topic || '')], ['Реквизиты', esc(x.ref || '')], ['Источник', esc(x.src || '')]])}<div class="row mt">${x.local ? `<button class="btn sm" data-open="${esc(x.local)}">В папке ↗</button>` : ''}${x.local2 ? `<button class="btn sm ghost" data-open="${esc(x.local2)}">PDF ↗</button>` : ''}<button class="btn sm ghost" data-open="${esc(c.folder)}">Папка страны ↗</button></div>`)));
   });
 }
 
@@ -945,6 +962,7 @@ function pData(m) {
 /* ---------- О портале ---------- */
 function pAbout(m) {
   head(m, 'О портале', 'AvSec Portal v' + APP_VERSION);
+  m.appendChild(el('p', 'small dim', 'Номер версии виден в шапке (на телефоне справа от поиска) и внизу меню. Если после обновления на телефоне или в Telegram номер другой — закройте и снова откройте мини-апп: при смене сборки портал перезагружается сам.'));
   if (S.cfg.site || S.cfg.tg) m.appendChild(el('div', 'card', `<h2>${esc(t('Где открыть'))}</h2>` + kv([
     ['Веб (GitHub Pages)', S.cfg.site ? `<a href="${esc(S.cfg.site)}" target="_blank" rel="noopener">${esc(S.cfg.site)}</a> — на телефоне «Добавить на экран „Домой“», работает офлайн` : ''],
     ['Telegram', S.cfg.tg ? `<a href="${esc(S.cfg.tg)}" target="_blank" rel="noopener">${esc(S.cfg.tg)}</a> — кнопка «Портал» внизу чата с ботом (Mini App)` : ''],
@@ -1007,15 +1025,16 @@ function tgSync() {
   try { const need = !$('#sheet').hidden || S.page !== 'dash'; need ? tg.BackButton.show() : tg.BackButton.hide(); } catch (e) {}
 }
 async function boot() {
-  $$('.appver').forEach(e => { e.textContent = 'v' + APP_VERSION; });
+  tgInit();   // Telegram Web держит мини-апп на заглушке, пока страница не скажет ready() — первым делом, до любых await
   const mq = matchMedia('(max-width:640px)'); const setPh = () => { $('#q').placeholder = mq.matches ? 'Поиск' : 'Поиск: ВП, стандарт, документ, термин…'; }; setPh(); mq.addEventListener('change', setPh);
   $('#who').title = 'Выйти из портала на этом устройстве';
-  tgInit();
   applyTheme(); applyLang(); initGate();
   $('#themeBtn').onclick = () => { LS.set(K.theme, document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); applyTheme(); };
-  $$('#lang button').forEach(b => b.onclick = () => { S.lang = b.dataset.l; LS.set(K.lang, S.lang); applyLang(); if (S.cfg) { buildNav(); render(); } });
+  $$('#lang button').forEach(b => b.onclick = () => { S.lang = (mq.matches && b.classList.contains('on')) ? (S.lang === 'ru' ? 'en' : 'ru') : b.dataset.l; LS.set(K.lang, S.lang); applyLang(); if (S.cfg) { buildNav(); render(); } });
   $('#burger').onclick = () => $('#side').classList.toggle('open');
-  document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(); if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
+  document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
+    const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
+    const opn = e.target.closest('[data-open]'); if (opn) { window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
   // Esc — закрыть шторку; «/» — курсор в поиск, если не печатаем в поле
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); if (e.key === '/' && !/^(input|textarea|select)$/i.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); $('#q').focus(); } });
   $('#qclear').onclick = () => { $('#q').value = ''; if (S.page === 'find') go('dash'); };
