@@ -1,6 +1,6 @@
 /* AvSec Portal — service worker. Оболочка кэшируется целиком: после первого входа портал
    открывается без сети. При правке ЛЮБОГО файла портала поднять V (и ?v= в index.html). */
-const V = 'avsec-portal-v9';
+const V = 'avsec-portal-v10';
 const N = V.replace(/\D/g, '');   // номер версии — тот же, что ?v= в index.html
 const SHELL = [
   './', './index.html', `./app.js?v=${N}`, `./styles.css?v=${N}`,

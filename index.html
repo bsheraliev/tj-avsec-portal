@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="styles.css?v=9">
+<link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
 <div id="app">
@@ -37,7 +37,7 @@
     <form class="gate-card" id="gateForm">
       <span class="mark">AS</span>
       <h2>AvSec Portal</h2>
-      <p class="dim" id="gateSub">Портал авиационной безопасности и подготовки к USAP-CMA. Вход по коду доступа — код выдаёт НКМК (National Continuous Monitoring Coordinator).</p>
+      <p class="dim" id="gateSub">Портал авиационной безопасности и подготовки к USAP-CMA. Вход по коду доступа — код выдаёт НКМК / NCMC (National Continuous Monitoring Coordinator, национальный координатор по непрерывному мониторингу). Один и тот же код для веба и Telegram.</p>
       <input id="gateCode" type="password" placeholder="Код доступа" autocomplete="current-password" spellcheck="false">
       <p class="gate-err" id="gateErr" hidden></p>
       <button class="btn" type="submit" id="gateBtn">Войти</button>
@@ -61,6 +61,6 @@
 
 <!-- Telegram Mini App: SDK нужен только при открытии из бота; вне Telegram window.Telegram.WebApp пустой -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
