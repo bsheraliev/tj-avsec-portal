@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '15';
+const APP_VERSION = '16';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -1026,6 +1026,7 @@ function tgSync() {
 }
 async function boot() {
   tgInit();   // Telegram Web держит мини-апп на заглушке, пока страница не скажет ready() — первым делом, до любых await
+  $$('.appver').forEach(e => { e.textContent = 'v' + APP_VERSION; });   // номер версии в шапке и в «О портале»
   const mq = matchMedia('(max-width:640px)'); const setPh = () => { $('#q').placeholder = mq.matches ? 'Поиск' : 'Поиск: ВП, стандарт, документ, термин…'; }; setPh(); mq.addEventListener('change', setPh);
   $('#who').title = 'Выйти из портала на этом устройстве';
   applyTheme(); applyLang(); initGate();

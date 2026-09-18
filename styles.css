@@ -244,12 +244,13 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
   /* шапка: марка и название лишние (они в заголовке Telegram/вкладки), поиск шире, версия видна, кнопки-иконки */
   .top{gap:8px;padding:0 10px}
   .brand{display:none}
-  .search{flex:1 1 auto;max-width:none;margin-left:0;min-width:0}
-  .search input{height:34px;font-size:14px}
-  .topver{display:inline;margin-left:auto;font-size:10.5px}
-  .lang{display:flex}.lang button{display:none;border-radius:7px!important;padding:5px 8px}.lang button.on{display:inline-block}   /* одна кнопка с текущим языком, клик переключает */
-  #themeBtn{padding:4px 8px}
-  #who{font-size:0;padding:4px 8px}#who::before{content:"⎋";font-size:16px;line-height:1}
+  .search{flex:1 1 auto;max-width:150px;margin-left:0;min-width:0}   /* уже, чтобы освободить место под версию */
+  .search input{height:31px;font-size:13px;padding:0 26px 0 10px}
+  .search #qclear{right:6px}
+  .topver{display:inline;margin-left:auto;font-size:10px;opacity:.85;white-space:nowrap}   /* номер версии виден в шапке */
+  .lang{display:flex;flex:0 0 auto}.lang button{display:none;border-radius:7px!important;padding:4px 6px;font-size:11px}.lang button.on{display:inline-block}   /* одна кнопка с текущим языком, клик переключает */
+  #themeBtn{padding:3px 7px;font-size:12px}
+  #who{font-size:0;padding:3px 7px}#who::before{content:"⎋";font-size:16px;line-height:1}
   main{padding:12px 10px 84px}
   h1{font-size:19px}
   .sub{font-size:12.5px}
