@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '21';
+const APP_VERSION = '22';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -12,8 +12,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
-const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit' };
-const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.audit];
+const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems' };
+const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.audit, K.capi];
 
 const S = { cfg: null, key: null, D: {}, page: 'dash', q: '', f: {}, lang: LS.get(K.lang, 'ru'), pqSel: new Set() };
 
@@ -804,6 +804,42 @@ const CAPST = { done: 'Выполнено', part: 'Частично', wip: 'В �
 const CAPSB = { done: 'ok', part: 'draft', wip: 'wip', ongoing: 'info', na: 'na', '': 'none' };
 const capSt = i => (i.status && i.status.st) || '';
 function capStats(c) { const s = { done: 0, part: 0, wip: 0, ongoing: 0, na: 0, open: 0, total: 0 }; c.findings.forEach(f => f.items.forEach(i => { const k = capSt(i); s.total++; if (s[k] !== undefined) s[k]++; if (k !== 'done' && k !== 'na') s.open++; })); return s; }
+
+/* Корректирующие действия в формате ИКАО OLF (таблица Corrective Action Items):
+   Step · Proposed Action · Action Office · Evidence Reference · Est./Rev. Imp. Date · Date of Completion · Progress Status.
+   Факты берём из ПКД 2020 / редакции EN v2.1, недостающие поля заполняет пользователь — хранятся на устройстве. */
+const CAPPR = { completed: 'Выполнено с доказательством', inprogress: 'В работе', notsub: 'Не представлено', na: 'Не применимо' };
+const CAPPRB = { completed: 'completed', inprogress: 'inprogress', notsub: 'notsub', na: 'na' };
+const CAPPREN = { completed: 'Completed with evidence as indicated by the State', inprogress: 'In-Progress', notsub: 'Not Submitted', na: 'Not applicable' };
+const capProgOf = i => ({ done: 'completed', part: 'inprogress', wip: 'inprogress', ongoing: 'inprogress', na: 'na' })[capSt(i)] || 'notsub';
+const capItemState = () => LS.get(K.capi, {});
+const capKey = (f, idx) => f.n + '-' + (idx + 1);
+function capItem(f, idx, i) {
+  const key = capKey(f, idx), o = capItemState()[key] || {}, st = i.status || {};
+  return { key, step: idx + 1, action: i.action || '', org: o.org != null ? o.org : (st.orgEn || i.org || ''), evref: o.evref || '',
+    est: o.est || st.due || '', rev: o.rev || '', done: o.done || '', progress: o.progress || capProgOf(i), at: o.at || '', saved: !!o.at };
+}
+// стек «CAP Status by Audit Area» — как на дашборде OLF
+function capByArea(c) {
+  const map = {};
+  c.findings.forEach(f => f.items.forEach((i, idx) => {
+    const a = f.area, p = capItem(f, idx, i).progress;
+    (map[a] = map[a] || { completed: 0, inprogress: 0, notsub: 0, na: 0, total: 0 });
+    map[a][p]++; map[a].total++;
+  }));
+  const box = el('div', 'card');
+  box.innerHTML = `<h2>${esc(t('Статус ПКД по областям аудита'))} <span class="dim small">${Object.entries(CAPPR).map(([k, v]) => `<span class="badge b-${CAPPRB[k] === 'completed' ? 'ok' : CAPPRB[k] === 'inprogress' ? 'wip' : CAPPRB[k] === 'na' ? 'na' : 'none'}">${esc(t(v))}</span>`).join(' ')}</span></h2>`
+    + Object.entries(map).sort((a, b) => b[1].total - a[1].total).map(([a, n]) => `<div class="cerow"><div class="celab"><b>${esc(a)}</b> <span class="dim small">${n.total} рек.</span></div>`
+      + `<div class="prog">${['completed', 'inprogress', 'notsub', 'na'].filter(k => n[k]).map(k => `<span class="p-${k}" style="width:${n[k] * 100 / n.total}%" title="${esc(t(CAPPR[k]))}: ${n[k]}"></span>`).join('')}</div>`
+      + `<div class="ceval"><b>${Math.round(n.completed * 100 / n.total)}%</b> <span class="dim small">${n.completed}/${n.total}</span></div></div>`).join('');
+  return box;
+}
+function exportCapOLF(c) {
+  const rows = [['Finding No.', 'Audit Area', 'PQ', 'SARP', 'Step', 'Proposed Action', 'Action Office', 'Evidence Reference', 'Est.Imp.Date', 'Rev. Imp. Date', 'Date of Completion', 'Progress Status']];
+  c.findings.forEach(f => f.items.forEach((i, idx) => { const x = capItem(f, idx, i);
+    rows.push([f.n, f.area, i.pq, i.sarp, x.step, x.action, x.org, x.evref, x.est, x.rev, x.done, CAPPREN[x.progress] || '']); }));
+  download(csv(rows), `AvSec_CAP_OLF_${today()}.csv`, 'text/csv;charset=utf-8');
+}
 const capHas = id => { const c = D('cap2019'); return !!c && c.findings.some(f => f.items.some(i => i.pq === id)); };
 function capRef(id) {
   const c = D('cap2019'); if (!c) return '';
@@ -811,17 +847,40 @@ function capRef(id) {
   return `<div class="callout small"><b>Аудит 2019:</b> ${hits.map(({ f, i }) => `вывод № ${f.n} (${esc(CAPP[f.priority] || f.priority)}, SARP ${esc(i.sarp)}, КЭ-${esc(i.ce)}) — ${esc(i.rec)} ${i.status ? badge(CAPSB[capSt(i)], CAPST[capSt(i)]) : ''}`).join('<br>')} <a href="#cap?s=${encodeURIComponent(id)}">→ ПКД</a></div>`;
 }
 // карточка рекомендации ПКД: полный текст, статус EN, срок, переходы к ВП и к фильтрам
-function openCapItem(i, f) {
-  const pq = D('pq'); const cur = pq && pq.items.find(x => x.id === i.pq); const k = capSt(i); const st = i.status || {};
-  openSheet(`<h3>Вывод № ${f.n} <span class="badge b-area">${f.area}</span> ${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} · ВП <span class="code">${esc(i.pq)}</span> ${st.st ? badge(CAPSB[k], CAPST[k]) : ''}</h3>
+function openCapItem(i, f, idx) {
+  if (idx == null) idx = f.items.indexOf(i);
+  const pq = D('pq'); const cur = pq && pq.items.find(x => x.id === i.pq); const k = capSt(i); const st = i.status || {}; const ci = capItem(f, idx, i);
+  openSheet(`<h3>Вывод № ${f.n} <span class="badge b-area">${f.area}</span> ${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} · ВП <span class="code">${esc(i.pq)}</span> ${st.st ? badge(CAPSB[k], CAPST[k]) : ''} ${badge(CAPPRB[ci.progress] === 'completed' ? 'ok' : CAPPRB[ci.progress] === 'inprogress' ? 'wip' : CAPPRB[ci.progress] === 'na' ? 'na' : 'none', CAPPR[ci.progress])}</h3>
     <p><b>${esc(i.rec)}</b></p>
     ${kv([['SARP', `<span class="mono">${esc(i.sarp)}</span> · КЭ-${esc(i.ce)} · приоритет: ${CAPP[i.prio] || esc(i.prio)}`], ['Замечания', esc(i.comment || '')], ['Корректирующее действие (ПКД 2020)', esc(i.action || '')], ['Организация', esc(i.org || '')],
       ['Сроки (ПКД 2020)', `${esc(i.start || '')}${i.end ? ' – ' + esc(i.end) : ''}`], ['Completion date (EN v2)', esc(st.endEn || '')], ['Исполнитель (EN v2)', esc(st.orgEn || '')],
       ['Срок (EN v2)', st.due ? `${daysTo(st.due) < 0 && k !== 'done' ? '<span class="warn">⚠ ' : '<span>'}${esc(fmtDate(st.due))}</span> <span class="dim small">предложение, подтвердить</span>` : '']])}
     ${st.en ? `<h4>Статус (EN, редакция v2.1)</h4><p class="small">${esc(st.en)}</p>` : ''}
+    <h4>Corrective Action Item (формат ИКАО OLF)</h4>
+    <p class="small dim">Колонки как в таблице Corrective Action Items в OLF. Значения по умолчанию взяты из ПКД и редакции EN v2.1; правки хранятся на этом устройстве и попадают в экспорт «ПКД в формате OLF».</p>
+    <form class="form" id="capForm">
+      ${kv([['Step', String(ci.step)], ['Proposed Action', esc(ci.action || '—')]])}
+      <label>Action Office<input class="inp" name="org" value="${esc(ci.org)}"></label>
+      <label>Evidence Reference <span class="dim small">документ, пункт, дата — чем закрывается</span><textarea name="evref">${esc(ci.evref)}</textarea></label>
+      <div class="two">
+        <label>Est. Imp. Date<input type="date" name="est" value="${esc(ci.est)}"></label>
+        <label>Rev. Imp. Date<input type="date" name="rev" value="${esc(ci.rev)}"></label>
+      </div>
+      <div class="two">
+        <label>Date of Completion<input type="date" name="done" value="${esc(ci.done)}"></label>
+        <label>Progress Status<select name="progress">${Object.entries(CAPPR).map(([kk, v]) => `<option value="${kk}"${ci.progress === kk ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select></label>
+      </div>
+      <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="capClear">Сбросить к данным ПКД</button><span class="dim small grow">${ci.saved ? 'изменено ' + esc(ci.at) : 'значения из ПКД'}</span></div>
+    </form>
     <div class="row mt">${cur ? `<button class="btn sm" data-go="pq?s=${encodeURIComponent(i.pq)}">К ВП ${esc(i.pq)}</button>` : `<span class="dim small">ВП ${esc(i.pq)} — номер прежней редакции протокола, в текущем перечне нет</span>`}
       <button class="btn sm ghost" data-go="cap?area=${esc(f.area)}">Выводы области ${esc(f.area)}</button>
       ${k !== 'done' && k !== 'na' ? '<button class="btn sm ghost" data-go="cap?st=open">Все незакрытые</button>' : ''}</div>`);
+  $('#capForm').onsubmit = e => {
+    e.preventDefault(); const fd = new FormData(e.target); const all = capItemState();
+    all[ci.key] = { org: (fd.get('org') || '').trim(), evref: (fd.get('evref') || '').trim(), est: fd.get('est') || '', rev: fd.get('rev') || '', done: fd.get('done') || '', progress: fd.get('progress'), at: today() };
+    LS.set(K.capi, all); toast('Сохранено: вывод ' + f.n + ', шаг ' + ci.step, 'ok'); closeSheet(); render();
+  };
+  $('#capClear').onclick = () => { const all = capItemState(); delete all[ci.key]; LS.set(K.capi, all); toast('Сброшено к данным ПКД'); closeSheet(); render(); };
 }
 // срок незакрытой рекомендации (status.due из редакции EN v2): красным, если прошёл
 const capDue = i => { const d = i.status && i.status.due; if (!d) return ''; const late = daysTo(d) < 0 && capSt(i) !== 'done'; return `<div class="small ${late ? 'warn' : 'dim'}" title="Deadline в редакции EN v2 (предложение, подтвердить)">${late ? '⚠ ' : ''}срок ${esc(fmtDate(d))}</div>`; };
@@ -837,6 +896,7 @@ function pCAP(m) {
   if (up) tb.appendChild(selector('Статус ПКД', 'st', ['open', 'done', 'part', 'wip', 'ongoing', 'na'], k => k === 'open' ? t('Незакрытые') : t(CAPST[k])));
   tb.appendChild(inputFilter('Поиск по SARP, ВП, тексту'));
   const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => download(csv([['Вывод', 'Приоритет вывода', 'Область', 'Приоритет', 'SARP', 'КЭ', 'ВП (2019)', 'Рекомендация ИКАО', 'Замечания', 'Корректирующее действие', 'Организация', 'Начало', 'Окончание', 'Окончание (EN v2)', 'Срок (EN v2)', 'Статус', 'Статус (EN, редакция v2 2026)']].concat(list.flatMap(f => f.items.filter(itOk).map(i => [f.n, CAPP[f.priority], f.area, CAPP[i.prio], i.sarp, i.ce, i.pq, i.rec, i.comment, i.action, i.org, i.start, i.end, i.status ? i.status.endEn || '' : '', i.status ? i.status.due || '' : '', CAPST[capSt(i)], i.status ? i.status.en : ''])))), `AvSec_CAP2019_${today()}.csv`, 'text/csv;charset=utf-8'); tb.appendChild(ex);
+  const exo = el('button', 'btn ghost sm', esc(t('ПКД в формате OLF'))); exo.onclick = () => exportCapOLF(c); tb.appendChild(exo);
   m.appendChild(tb);
   if (up) {
     const s = capStats(c); const tiles = el('div', 'tiles');
@@ -848,6 +908,7 @@ function pCAP(m) {
   }
   const list = c.findings.filter(f => (!S.f.area || f.area === S.f.area) && (!S.f.prio || f.priority === S.f.prio) && f.items.some(itOk));
   m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b><span class="dim">выводов из ${c.findings.length} · рекомендаций ${c.meta.items} · ${['critical', 'high', 'medium', 'low'].map(p => badge(CAPB[p], CAPP[p]) + ' ' + c.findings.filter(f => f.priority === p).length).join(' · ')}</span></div><p class="small dim">${esc(c.meta.note)}${up ? ' ' + esc(up.note) : ''}</p>${up && up.files ? links(up.files) : ''}`));
+  m.appendChild(capByArea(c));
   const pq = D('pq');
   list.forEach(f => {
     const card = el('div', 'card');
@@ -856,7 +917,7 @@ function pCAP(m) {
       i => { const cur = pq && pq.items.find(x => x.id === i.pq); const k = capSt(i); return [badge(CAPB[i.prio], CAPP[i.prio] || i.prio), `<span class="mono">${esc(i.sarp)}</span>`, `<span class="badge b-ce">КЭ-${esc(i.ce)}</span>`,
         cur ? `<a href="#pq?s=${encodeURIComponent(i.pq)}" class="code">${esc(i.pq)}</a>` : `<span class="code dim" title="номер прежней редакции ВП">${esc(i.pq)}</span>`,
         `<div class="td-wrap small">${esc(i.rec)}</div>`, `<div class="td-wrap small">${esc(i.action)}${i.org ? `<div class="dim">${esc(i.org)}</div>` : ''}</div>`, `<span class="small">${esc(i.start)}${i.end ? ' – ' + esc(i.end) : ''}</span>${i.status && i.status.endEn ? `<div class="small dim" title="графа Completion date в редакции EN v2">EN v2: ${esc(i.status.endEn)}</div>` : ''}`,
-        `${i.status ? badge(CAPSB[k], CAPST[k]) : ''}${capDue(i)}${i.status && i.status.en ? `<details class="small"><summary class="dim">EN</summary><div class="td-wrap">${esc(i.status.en)}</div></details>` : ''}`]; }, i => openCapItem(i, f)));
+        `${i.status ? badge(CAPSB[k], CAPST[k]) : ''}${(x => `<div class="small mt">${badge(CAPPRB[x.progress] === 'completed' ? 'ok' : CAPPRB[x.progress] === 'inprogress' ? 'wip' : CAPPRB[x.progress] === 'na' ? 'na' : 'none', CAPPR[x.progress])}${x.evref ? `<div class="dim" title="Evidence Reference">${esc(x.evref)}</div>` : ''}${x.done ? `<div class="dim">завершено ${esc(fmtDate(x.done))}</div>` : ''}</div>`)(capItem(f, f.items.indexOf(i), i))}${capDue(i)}${i.status && i.status.en ? `<details class="small"><summary class="dim">EN</summary><div class="td-wrap">${esc(i.status.en)}</div></details>` : ''}`]; }, i => openCapItem(i, f, f.items.indexOf(i))));
     m.appendChild(card);
   });
 }
@@ -1030,7 +1091,7 @@ function pData(m) {
   m.appendChild(b);
   $('#bkExp').onclick = () => { const out = { app: 'avsec-portal', version: APP_VERSION, at: new Date().toISOString() }; STATE_KEYS.forEach(k => { out[k] = LS.get(k, null); }); download(JSON.stringify(out, null, 1), `AvSec_backup_${today()}.json`, 'application/json'); };
   $('#bkImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const j = JSON.parse(await f.text()); if (j.app !== 'avsec-portal') throw new Error('Это не резервная копия AvSec Portal'); if (!confirm('Заменить самооценку на этом устройстве данными из файла?')) return; STATE_KEYS.forEach(k => { if (j[k]) LS.set(k, j[k]); }); toast('Копия загружена', 'ok'); render(); } catch (ex) { toast(ex.message, 'err'); } };
-  $('#bkClear').onclick = () => { if (confirm('Удалить всю самооценку на этом устройстве? Данные портала (ВП, CC, реестр) не пострадают.')) { [K.pq, K.cc, K.sasaq, K.plan, K.arearesp, K.audit].forEach(k => LS.del(k)); toast('Очищено'); render(); } };
+  $('#bkClear').onclick = () => { if (confirm('Удалить всю самооценку на этом устройстве? Данные портала (ВП, CC, реестр) не пострадают.')) { [K.pq, K.cc, K.sasaq, K.plan, K.arearesp, K.audit, K.capi].forEach(k => LS.del(k)); toast('Очищено'); render(); } };
   m.appendChild(el('div', 'card', `<h2>Источник данных</h2><div class="kv"><div>Сборка данных</div><div>${esc(S.cfg.built || '—')}</div><div>Файлы</div><div class="small">${(S.cfg.files || []).map(esc).join(', ')}</div><div>Режим</div><div>${S.cfg.plain ? 'открытые data/*.json (локальная разработка)' : 'шифрованные data-enc/*.enc, ключ из кода доступа'}</div></div>`));
 }
 
