@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '20';
+const APP_VERSION = '21';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -494,21 +494,66 @@ function pPQ(m) {
   let list = d.items.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star)
     && (!S.f.st || (S.f.st === 'none' ? !(st[i.id] || {}).st : (st[i.id] || {}).st === S.f.st))
     && (!S.f.resp || (S.f.resp === 'none' ? !respOfPQ(i) : (respOfPQ(i) || {}).id === S.f.resp))
-    && has(S.f.s, i.id, i.q, i.g.join(' '), i.doc, (respOfPQ(i) || {}).name, (st[i.id] || {}).ev));
+    && has(S.f.s, i.id, i.q, i.g.join(' '), i.doc, (respOfPQ(i) || {}).name, evText(st[i.id])));
   const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; list.forEach(i => { const s = (st[i.id] || {}).st; if (s) cnt[s]++; });
   const n = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
   m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${n} (${pct(n, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
+  m.appendChild(ceEI(d, list, st));
   m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], list,
     i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
       `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, pqBadge(o.st), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
     openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const s = d.meta.subs.find(x => x.code === i.sub); return s ? `${s.code} ${s.name}` : i.area; }) }));
 }
+// Справочные материалы к ВП — как вкладка «Reference & Guidance» в OLF: документы реестра, пункты матрицы, документы ИКАО.
+// Связь по пункту Приложения (i.doc), критическому элементу (i.ce) и области аудита (i.area) — точное совпадение важнее общего.
+function refsForPQ(i) {
+  const reg = D('registry'), mx = D('matrix'), ic = D('icao');
+  const docs = [];
+  if (reg) reg.docs.forEach(x => {
+    const ref = (x.icao || []).join(' ');
+    const rank = i.doc && ref.includes(i.doc) ? 3 : ref.includes(i.ce) ? 2 : (x.usap || []).includes(i.area) ? 1 : 0;
+    if (rank) docs.push({ x, rank });
+  });
+  docs.sort((a, b) => b.rank - a.rank || a.x.n - b.x.n);
+  const mrows = [];
+  if (mx) mx.sections.forEach(s => s.items.forEach(it => { const txt = String(it.icao || ''); if ((i.doc && txt.includes(i.doc)) || txt.includes(i.ce)) mrows.push({ s, it }); }));
+  const want = i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17';
+  const icaoDocs = ic ? ic.items.filter(x => x.code === want || x.code === 'Doc 8973') : [];
+  return { docs, mrows, icaoDocs };
+}
+function refsBlock(R) {
+  if (!R.docs.length && !R.mrows.length && !R.icaoDocs.length) return '';
+  const dl = a => (a || []).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join(' · ');
+  return `<details class="mt"><summary><b>${esc(t('Справочные материалы'))}</b> <span class="dim small">${R.docs.length} док. нормбазы · ${R.mrows.length} п. матрицы</span></summary>`
+    + (R.docs.length ? `<h4>${esc(t('Нормативная база'))}</h4><ul class="list">${R.docs.slice(0, 8).map(({ x }) => `<li>${badge(x.bucket)} <b>${esc(x.ru)}</b>${x.approved ? ` <span class="dim small">${esc(x.approved)}</span>` : ''}${(x.drive || []).length ? ` — ${dl(x.drive)}` : ''}</li>`).join('')}</ul>` : '')
+    + (R.mrows.length ? `<h4>${esc(t('Матрица ИКАО'))}</h4><ul class="list">${R.mrows.slice(0, 6).map(({ s, it }) => `<li><span class="dim small">${esc(s.code)}</span> ${esc(it.title)} <span class="dim small">— ${esc(it.icao)}</span></li>`).join('')}</ul>` : '')
+    + (R.icaoDocs.length ? `<h4>${esc(t('Документы ИКАО'))}</h4><ul class="list">${R.icaoDocs.map(x => `<li><b>${esc(x.code)}</b> — ${esc(x.title)}${x.restricted ? ' <span class="dim small">(ограниченный доступ)</span>' : ''}${(x.links || []).length ? ` — ${dl(x.links)}` : ''}</li>`).join('')}</ul>` : '')
+    + `</details>`;
+}
+// Доказательства одной строкой (для поиска и экспорта): структурированный список + старый свободный текст
+const evText = o => [...((o || {}).evl || []).map(e => [e.doc, e.ref, e.date].filter(Boolean).join(' · ')), (o || {}).ev || ''].filter(Boolean).join('\n');
+// EI по критическим элементам — главный график OLF: удовлетворительно ÷ применимые (не применимые исключаются)
+function ceEI(d, list, st) {
+  const c = el('div', 'card');
+  const rows = Object.keys(d.meta.ce).map(ce => {
+    const items = list.filter(i => i.ce === ce); if (!items.length) return null;
+    const n = { sat: 0, unsat: 0, wip: 0, na: 0, none: 0 };
+    items.forEach(i => { n[(st[i.id] || {}).st || 'none']++; });
+    const appl = items.length - n.na;
+    return { ce, n, appl, ei: appl ? Math.round(n.sat * 100 / appl) : null };
+  }).filter(Boolean);
+  c.innerHTML = `<h2>${esc(t('EI по критическим элементам'))} <span class="dim small">удовлетворительно ÷ применимые · ${S.f.star ? 'только ★' : 'все ВП'}${S.f.area ? ' · ' + esc(S.f.area) : ''}</span></h2>`
+    + rows.map(r => `<div class="cerow"><div class="celab"><b>${esc(r.ce)}</b> <span class="dim small">${esc(d.meta.ce[r.ce] || '')}</span></div><div class="cebar"><span style="width:${r.ei == null ? 0 : r.ei}%"></span></div><div class="ceval"><b>${r.ei == null ? '—' : r.ei + '%'}</b> <span class="dim small">${r.n.sat}/${r.appl}${r.n.na ? ' · н/п ' + r.n.na : ''}</span></div></div>`).join('')
+    + `<p class="small dim">Неоценённые ВП считаются неудовлетворительными — как в USAP до подтверждения доказательствами.</p>`;
+  return c;
+}
 function openPQ(i) {
-  const d = D('pq'); const o = pqOf(i.id);
+  const d = D('pq'); const o = pqOf(i.id); const R = refsForPQ(i); const evl = Array.isArray(o.evl) ? o.evl : [];
   openSheet(`<h3><span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''} <span class="badge b-area">${i.area}</span> <span class="badge b-ce" title="${esc(d.meta.ce[i.ce] || '')}">${esc(i.ce)}</span> ${pqBadge(o.st)}</h3>
     <p><b>${esc(i.q)}</b></p>${capRef(i.id)}
     <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
     ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
+    ${refsBlock(R)}
     <h4>Самооценка</h4>
     <form class="form" id="pqForm">
       <div class="two">
@@ -516,14 +561,24 @@ function openPQ(i) {
         <label>${esc(t('Срок'))}<input type="date" name="due" value="${esc(o.due || '')}"></label>
       </div>
       <label>${esc(t('Ответственный'))}${(r => r && r.byArea ? ` <span class="dim">(${esc(t('по области'))}: ${esc(r.name)})</span>` : '')(respOfPQ(i))}${respSelect('resp', o.resp || '', true)}</label>
-      <label>${esc(t('Доказательства'))} (документы, пункты, ссылки на Drive)<textarea name="ev">${esc(o.ev || '')}</textarea></label>
+      <div class="evhead"><b>${esc(t('Доказательства'))}</b> <span class="dim small">документ · пункт или страница · дата — как требует USAP</span></div>
+      <div id="evList"></div>
+      <datalist id="evDocs">${R.docs.map(({ x }) => `<option value="${esc(x.ru)}">`).join('')}</datalist>
+      <div class="row"><button type="button" class="btn sm ghost" id="evAdd">+ ${esc(t('Добавить доказательство'))}</button></div>
+      ${o.ev ? `<label class="mt">${esc(t('Ранее внесённый текст доказательств'))} <span class="dim small">(перенесите в список выше и очистите поле)</span><textarea name="ev">${esc(o.ev)}</textarea></label>` : ''}
       <label>${esc(t('Примечание'))}<textarea name="note">${esc(o.note || '')}</textarea></label>
       <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="pqClear">Очистить</button><span class="dim small grow">${o.at ? 'изменено ' + esc(o.at) : ''}</span></div>
     </form>`);
+  const evBox = $('#evList');
+  const evRow = (v = {}) => { const r = el('div', 'evrow', `<input class="inp" data-k="doc" list="evDocs" placeholder="Документ" value="${esc(v.doc || '')}"><input class="inp" data-k="ref" placeholder="Пункт / страница" value="${esc(v.ref || '')}"><input class="inp" data-k="date" type="date" value="${esc(v.date || '')}"><button type="button" class="btn sm ghost evdel" title="Убрать">×</button>`);
+    r.querySelector('.evdel').onclick = () => r.remove(); return r; };
+  (evl.length ? evl : [{}]).forEach(v => evBox.appendChild(evRow(v)));
+  $('#evAdd').onclick = () => evBox.appendChild(evRow());
   $('#pqForm').onsubmit = e => {
     e.preventDefault(); const f = new FormData(e.target); const all = pqState();
-    const rec = { st: f.get('st'), due: f.get('due'), resp: (f.get('resp') || '').trim(), ev: f.get('ev').trim(), note: f.get('note').trim(), at: today() };
-    if (!rec.st && !rec.due && !rec.resp && !rec.ev && !rec.note) delete all[i.id]; else all[i.id] = rec;
+    const rows = $$('.evrow', evBox).map(r => { const g = k => (r.querySelector(`[data-k="${k}"]`).value || '').trim(); return { doc: g('doc'), ref: g('ref'), date: g('date') }; }).filter(x => x.doc || x.ref || x.date);
+    const rec = { st: f.get('st'), due: f.get('due'), resp: (f.get('resp') || '').trim(), evl: rows, ev: (f.get('ev') || '').trim(), note: f.get('note').trim(), at: today() };
+    if (!rec.st && !rec.due && !rec.resp && !rows.length && !rec.ev && !rec.note) delete all[i.id]; else all[i.id] = rec;
     LS.set(K.pq, all); toast('Сохранено: ВП ' + i.id, 'ok'); closeSheet(); render();
   };
   $('#pqClear').onclick = () => { const all = pqState(); delete all[i.id]; LS.set(K.pq, all); closeSheet(); render(); };
@@ -531,7 +586,7 @@ function openPQ(i) {
 function exportPQ(list) {
   const st = pqState();
   const rows = [['№ ВП', '★', 'Область', 'Подраздел', 'КЭ', 'Вопрос', 'Рекомендации', 'Документ ИКАО', 'Статус самооценки', 'Ответственный', 'Срок', 'Доказательства', 'Примечание']];
-  list.forEach(i => { const o = st[i.id] || {}; rows.push([i.id, i.star ? '*' : '', i.area, i.sub, i.ce, i.q, i.g.join('\n'), i.doc, PQST[o.st || ''], (respOfPQ(i) || {}).name || '', o.due || '', o.ev || '', o.note || '']); });
+  list.forEach(i => { const o = st[i.id] || {}; rows.push([i.id, i.star ? '*' : '', i.area, i.sub, i.ce, i.q, i.g.join('\n'), i.doc, PQST[o.st || ''], (respOfPQ(i) || {}).name || '', o.due || '', evText(o), o.note || '']); });
   download(csv(rows), `AvSec_PQ_${today()}.csv`, 'text/csv;charset=utf-8');
 }
 
