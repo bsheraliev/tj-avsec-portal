@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '18';
+const APP_VERSION = '19';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -298,7 +298,7 @@ const STAGES = [
   { id: 'sasaq', t: 'Заполнение и подача SASAQ (EN) через защищённую ссылку ИКАО', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const d = D('sasaq'); if (!d) return ''; const f = d.items.filter(i => i.filled).length; return `Черновик SASAQ 1 (19.06.2026): заполнено ${f} из ${d.items.length} вопросов. Подаётся вместе с CC и обновлённым CAP — не позднее чем за 60 дней до аудита.`; }, auto: () => (auditState().docs.sasaq || {}).st === 'sent' ? 'done' : 'wip' },
   { id: 'cc', t: 'Контрольные перечни соответствия (CC) по Прил. 17 и Прил. 9 (EN): заполнение, проверка, подача', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const u = U(); const d = D('cc'); const base = d ? `Редакция в3 (01.07.2026) в портале: ${d.items.filter(i => i.kind === 'std' || i.kind === 'rp').length} SARPs. ` : ''; return base + (u && u.ccCheck ? `Проверка редакции 12.09.2026 (${fmtDate(u.ccCheck.date)}): ${u.ccCheck.verdict} ${u.ccCheck.summary}` : ''); }, auto: () => (auditState().docs.cc || {}).st === 'sent' ? 'done' : 'wip' },
   { id: 'cap', t: 'Обновлённый план корректирующих действий (CAP) по итогам аудита USAP-CMA 2019', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const c = D('cap2019'); const u = U(); return c ? `${c.meta.update ? `Редакция EN (${c.meta.update.approved}): выполнено ${capStats(c).done} из ${capStats(c).total}, незакрыто ${capStats(c).open}. ` : ''}Основа — ПКД 2020: ${c.meta.findings} выводов, ${c.meta.items} рекомендаций (раздел «Выводы аудита 2019»). ${u ? `Результаты ИКАО 2019: EI ${u.previous.results2019.ei} %, соответствие Прил. 17 — ${u.previous.results2019.compliance} %; ${u.previous.results.source}: EI ${u.previous.results.ei} %, соответствие — ${u.previous.results.compliance} %.` : ''}` : ''; }, auto: () => (auditState().docs.cap || {}).st === 'sent' ? 'done' : (D('cap2019') && D('cap2019').meta.update ? 'wip' : '') },
-  { id: 'docs', t: 'Пакет национальной, аэропортовой и эксплуатантской документации (запрос ИКАО от 15.06.2026, SASAQ GEN-05) и переводы на английский', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const u = U(); if (!u) return ''; const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => (a.docs[r.id] || {}).st === 'sent').length; return `Отправлено ${sent} из ${n} позиций (чек-лист — раздел «Аудит USAP-CMA 2026»). Загрузка только через защищённую ссылку ИКАО, не по e-mail.`; }, auto: () => { const u = U(); if (!u) return 'wip'; const a = auditState(); const sent = u.requested.filter(r => (a.docs[r.id] || {}).st === 'sent').length; return sent === u.requested.length ? 'done' : 'wip'; } },
+  { id: 'docs', t: 'Пакет национальной, аэропортовой и эксплуатантской документации (запрос ИКАО от 15.06.2026, SASAQ GEN-05) и переводы на английский', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const u = U(); if (!u) return ''; const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => docSent(r, a.docs)).length; return `Отправлено ${sent} из ${n} позиций (чек-лист — раздел «Аудит USAP-CMA 2026»). Загрузка только через защищённую ссылку ИКАО, не по e-mail.`; }, auto: () => { const u = U(); if (!u) return 'wip'; const a = auditState(); const sent = u.requested.filter(r => docSent(r, a.docs)).length; return sent === u.requested.length ? 'done' : 'wip'; } },
   { id: 'pq', t: 'Самооценка по протокольным вопросам (ВП) — 9 областей, 8 КЭ', hint: () => { const d = D('pq'); if (!d) return ''; const st = pqState(); const n = d.items.filter(i => (st[i.id] || {}).st).length; return `Оценено ${n} из ${d.items.length} ВП (${pct(n, d.items.length)}%). Все ВП будут рассмотрены — аудит полномасштабный.`; }, auto: () => { const d = D('pq'); if (!d) return ''; const st = pqState(); const n = d.items.filter(i => (st[i.id] || {}).st).length; return n === 0 ? '' : n === d.items.length ? 'done' : 'wip'; } },
   { id: 'evidence', t: 'Доказательная база по ВП; адаптированные наборы ВП для DYU, эксплуатантов и госорганов; подготовка персонала к интервью', hint: 'Доказательства фиксируются в карточке каждого ВП (поле «Доказательства»). Группа ИКАО запрашивает письменные подтверждения по каждому ответу — у каждой проверяемой организации документы должны быть под рукой.', auto: () => { const st = pqState(); return Object.values(st).some(o => o.ev) ? 'wip' : ''; } },
   { id: 'logistics', t: 'Логистика аудита: план аудита, гостиницы, транспорт, переводчики, визы, площадка брифингов', hint: () => { const u = U(); if (!u) return ''; const a = auditState(); const n = u.logistics.length, d = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length; return `Выполнено ${d} из ${n} пунктов чек-листа (раздел «Аудит USAP-CMA 2026»). Лимит ООН на гостиницу — ${u.audit.hotelLimit}.`; }, auto: () => { const u = U(); if (!u) return ''; const a = auditState(); const d = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length; return d === 0 ? '' : d === u.logistics.length ? 'done' : 'wip'; } },
@@ -377,7 +377,7 @@ function todoCard(m) {
   const u = U(), pq = D('pq'), cap = D('cap2019'); const rows = [];
   const add = (html, href) => rows.push({ html, href });
   if (u) {
-    const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => (a.docs[r.id] || {}).st === 'sent').length; const dl = u.audit.docsDeadline; const late = daysTo(dl) < 0 && sent < n;
+    const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => docSent(r, a.docs)).length; const dl = u.audit.docsDeadline; const late = daysTo(dl) < 0 && sent < n;
     add(`<b>Документы для ИКАО</b>: отправлено ${sent} из ${n} · срок ${fmtDate(dl)}${late ? ` <span class="warn">· просрочен на ${-daysTo(dl)} дн.</span>` : ''}`, '#audit');
     if (u.ccCheck) add(`<b>CC</b>: проверка ${fmtDate(u.ccCheck.date)} — <span class="warn">${esc(u.ccCheck.verdict)}</span>`, '#audit');
     if (u.capCheck) add(`<b>ПКД</b>: проверка ${fmtDate(u.capCheck.date)} — <span class="warn">${esc(u.capCheck.verdict)}</span>`, '#audit');
@@ -636,14 +636,21 @@ function pPlan(m) {
 // Статусы документов: локальная отметка на устройстве; если её нет — факт отправки из данных (usap.requested[].sent),
 // чтобы «отправлено в ИКАО» было видно на любом устройстве без ручных галочек.
 function auditState() { const a = LS.get(K.audit, {}); const docs = { ...(a.docs || {}) }; const u = U();
-  if (u) u.requested.forEach(r => { if (r.sent && !(docs[r.id] && docs[r.id].st)) docs[r.id] = { ...(docs[r.id] || {}), st: 'sent', at: r.sent.date, note: (docs[r.id] || {}).note || `${fmtDate(r.sent.date)}: ${r.sent.files.join('; ')} — ${r.sent.via}`, data: true }; });
+  if (u) u.requested.forEach(r => {
+    if (r.sent && !(docs[r.id] && docs[r.id].st)) docs[r.id] = { ...(docs[r.id] || {}), st: 'sent', at: r.sent.date, note: (docs[r.id] || {}).note || `${fmtDate(r.sent.date)}: ${r.sent.files.join('; ')} — ${r.sent.via}`, data: true };
+    // подпункты (несколько документов эксплуатанта/аэропорта): факт отправки из данных, если нет ручной отметки
+    if (r.parts) r.parts.forEach(g => g.items.forEach(it => { if (it.sent && !(docs[it.id] && docs[it.id].st)) docs[it.id] = { st: 'sent', at: it.sent.date, note: `${fmtDate(it.sent.date)} — ${it.sent.via}`, data: true }; }));
+  });
   return { docs, log: a.log || {} }; }
 const saveAudit = a => LS.set(K.audit, { ...a, docs: Object.fromEntries(Object.entries(a.docs).filter(([, v]) => !v.data)) });   // факт из данных не дублируем в localStorage
+// Подпункты и агрегат по строке: строка с parts считается «отправленной», только когда отправлены все её документы
+function subStats(r, docs) { let s = 0, tot = 0; (r.parts || []).forEach(g => g.items.forEach(it => { tot++; if ((docs[it.id] || {}).st === 'sent') s++; })); return { s, tot }; }
+function docSent(r, docs) { if (r.parts && r.parts.length) { const { s, tot } = subStats(r, docs); return tot > 0 && s === tot; } return (docs[r.id] || {}).st === 'sent'; }
 const ADOC = { '': 'Не начато', wip: 'В работе', ready: 'Готово', sent: 'Отправлено в ИКАО', na: 'Не применимо' };
 const ADOCB = { '': 'none', wip: 'wip', ready: 'draft', sent: 'ok', na: 'na' };
 function auditBrief() {
   const u = U(); if (!u) return '';
-  const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => (a.docs[r.id] || {}).st === 'sent').length;
+  const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => docSent(r, a.docs)).length;
   const dl = u.audit.docsDeadline, late = daysTo(dl) < 0 && sent < n;
   return `<div class="small mt">${esc(t('Аудит на месте'))}: <b>${fmtDate(u.audit.start)} – ${fmtDate(u.audit.end)}</b>, ${esc(u.audit.placeShort)} · NCMC: ${esc(u.ncmc.name)}</div><div class="small ${late ? 'warn' : 'dim'}">Документы ИКАО: отправлено ${sent} из ${n} · срок ${fmtDate(dl)}${late ? ' · просрочен на ' + (-daysTo(dl)) + ' дн.' : ''}</div><div class="mt"><a class="btn sm ghost" href="#audit">${esc(t('Аудит USAP-CMA 2026'))} →</a></div>`;
 }
@@ -651,7 +658,7 @@ function pAudit(m) {
   const u = U(); if (!u) return m.appendChild(el('div', 'empty', 'Данные об аудите не загружены'));
   head(m, 'Аудит USAP-CMA 2026', `${esc(u.meta.title)} · обновлено ${fmtDate(u.meta.updated)} · факты — из переписки с ИКАО и SASAQ, статусы чек-листов — на этом устройстве`);
   const a = auditState();
-  const sent = u.requested.filter(r => (a.docs[r.id] || {}).st === 'sent').length, done = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length, dl = daysTo(u.audit.docsDeadline);
+  const sent = u.requested.filter(r => docSent(r, a.docs)).length, done = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length, dl = daysTo(u.audit.docsDeadline);
   const tiles = el('div', 'tiles');
   tiles.appendChild(tile('info', daysTo(u.audit.start), 'Дней до начала аудита', () => go('plan')));
   tiles.appendChild(tile(sent === u.requested.length ? 'ok' : 'miss', `${sent}/${u.requested.length}`, 'Документов отправлено в ИКАО', () => $('#reqDocs').scrollIntoView({ behavior: 'smooth' })));
@@ -693,16 +700,25 @@ function pAudit(m) {
   const reg = D('registry');
   const rd = el('div', 'card'); rd.id = 'reqDocs';
   rd.innerHTML = `<h2>${esc(t('Запрошенные документы'))} <span class="dim small">${sent}/${u.requested.length} отправлено</span></h2><p class="small dim">Письмо ИКАО от 01.05.2026 (не позднее чем за 60 дней), запрос руководителя группы от 15.06.2026, SASAQ GEN-05. Статус и примечание сохраняются на этом устройстве.</p>`;
+  // подпункты (несколько документов эксплуатанта/аэропорта) — галочки «что уже ушло»
+  const subList = r => !(r.parts && r.parts.length) ? '' : `<div class="subdocs">${r.parts.map(g => {
+    const gs = g.items.filter(it => (a.docs[it.id] || {}).st === 'sent').length;
+    return `<div class="subgrp"><div class="subhd">${esc(g.group)} <span class="dim small">${gs}/${g.items.length}</span></div>${g.items.map(it => { const on = (a.docs[it.id] || {}).st === 'sent';
+      return `<label class="subrow${on ? ' on' : ''}"><input type="checkbox" data-sub="${esc(it.id)}"${on ? ' checked' : ''}><span>${esc(it.ru)}<span class="dim small"> · ${esc(it.en)}</span>${it.note ? `<span class="dim small"> — ${esc(it.note)}</span>` : ''}</span></label>`; }).join('')}</div>`;
+  }).join('')}</div>`;
   rd.appendChild(table(['№', 'Документ', 'Основание', 'В реестре АБ', 'Статус', 'Примечание'], u.requested,
     r => { const o = a.docs[r.id] || {}; const ds = reg ? (r.reg || []).map(id => reg.docs.find(d => d.id === id)).filter(Boolean) : [];
-      return [r.n, `<b>${esc(r.ru)}</b><div class="small dim">${esc(r.en)}</div>${r.note ? `<div class="small">${esc(r.note)}</div>` : ''}`, `<span class="small">${esc(r.ref)}</span>`,
+      const hasParts = r.parts && r.parts.length; const ss = subStats(r, a.docs);
+      return [r.n, `<b>${esc(r.ru)}</b><div class="small dim">${esc(r.en)}</div>${r.note ? `<div class="small">${esc(r.note)}</div>` : ''}${subList(r)}`, `<span class="small">${esc(r.ref)}</span>`,
         ds.map(d => `<div class="small">${badge(d.bucket)} ${esc(d.ru)}</div>`).join('') || '<span class="dim small">—</span>',
-        `<select class="sel" data-doc="${esc(r.id)}" style="height:30px">${Object.entries(ADOC).map(([k, v]) => `<option value="${k}"${(o.st || '') === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select>${o.at ? `<div class="small dim">${esc(o.at)}</div>` : ''}`,
-        `<input class="inp" data-note="${esc(r.id)}" value="${esc(o.note || '')}" placeholder="файл, дата, кто отправил">`]; }));
+        hasParts ? `${badge(ss.s === ss.tot ? 'ok' : ss.s > 0 ? 'wip' : 'none', `${ss.s}/${ss.tot}`)} <span class="small dim">отправлено</span>`
+          : `<select class="sel" data-doc="${esc(r.id)}" style="height:30px">${Object.entries(ADOC).map(([k, v]) => `<option value="${k}"${(o.st || '') === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select>${o.at ? `<div class="small dim">${esc(o.at)}</div>` : ''}`,
+        hasParts ? '<span class="dim small">отметьте документы слева</span>' : `<input class="inp" data-note="${esc(r.id)}" value="${esc(o.note || '')}" placeholder="файл, дата, кто отправил">`]; }));
   rd.onchange = e => { const x = e.target; const st = auditState();
-    if (x.dataset.doc) st.docs[x.dataset.doc] = { ...(st.docs[x.dataset.doc] || {}), data: undefined, st: x.value, at: today() };
+    if (x.dataset.sub) st.docs[x.dataset.sub] = { ...(st.docs[x.dataset.sub] || {}), data: undefined, st: x.checked ? 'sent' : '', at: today() };
+    else if (x.dataset.doc) st.docs[x.dataset.doc] = { ...(st.docs[x.dataset.doc] || {}), data: undefined, st: x.value, at: today() };
     else if (x.dataset.note) st.docs[x.dataset.note] = { ...(st.docs[x.dataset.note] || {}), data: undefined, note: x.value.trim() };
-    else return; saveAudit(st); toast('Сохранено', 'ok'); if (x.dataset.doc) render(); };
+    else return; saveAudit(st); toast('Сохранено', 'ok'); if (x.dataset.doc || x.dataset.sub) render(); };
   // Enter в примечании — сохранить и перейти к следующей строке (быстрый ввод, как в Библиотеке Shohin)
   rd.addEventListener('keydown', e => { if (e.key !== 'Enter' || !e.target.dataset.note) return; e.preventDefault(); const ins = $$('input[data-note]', rd); const i = ins.indexOf(e.target); e.target.dispatchEvent(new Event('change', { bubbles: true })); if (ins[i + 1]) ins[i + 1].focus(); });
   m.appendChild(rd);
