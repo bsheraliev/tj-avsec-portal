@@ -817,7 +817,7 @@ const capKey = (f, idx) => f.n + '-' + (idx + 1);
 function capItem(f, idx, i) {
   const key = capKey(f, idx), o = capItemState()[key] || {}, st = i.status || {};
   return { key, step: idx + 1, action: i.action || '', org: o.org != null ? o.org : (st.orgEn || i.org || ''), evref: o.evref || '',
-    est: o.est || st.due || '', rev: o.rev || '', done: o.done || '', progress: o.progress || capProgOf(i), at: o.at || '', saved: !!o.at };
+    est: o.est || st.due || '', rev: o.rev || '', done: o.done || '', progress: o.progress || capProgOf(i), percent: o.percent || '', at: o.at || '', saved: !!o.at };
 }
 // стек «CAP Status by Audit Area» — как на дашборде OLF
 function capByArea(c) {
@@ -834,11 +834,15 @@ function capByArea(c) {
       + `<div class="ceval"><b>${Math.round(n.completed * 100 / n.total)}%</b> <span class="dim small">${n.completed}/${n.total}</span></div></div>`).join('');
   return box;
 }
+// Колонки листа CAPExportToExcel из выгруженного шаблона OLF (23.09.2026). Excel у OLF read-only:
+// файл годится для сверки и зеркала, обратно импортируется только .docx, выданный самим OLF.
+function capProgOLF(x) { if (x.percent) return `${x.percent}% complete`; if (x.progress === 'completed') return '100% complete'; return CAPPREN[x.progress] || ''; }
 function exportCapOLF(c) {
-  const rows = [['Finding No.', 'Audit Area', 'PQ', 'SARP', 'Step', 'Proposed Action', 'Action Office', 'Evidence Reference', 'Est.Imp.Date', 'Rev. Imp. Date', 'Date of Completion', 'Progress Status']];
+  const who = ((U() || {}).ncmc || {}).name || '';
+  const rows = [['Audit Area', 'CE Code', 'PQ Number', 'Description of Finding', 'Step', 'Actions Of CAP', 'Action Office', 'Evidence', 'Estimated Implementation Date', 'Revised Implementation Date', 'Date Of Completion', 'Progress', 'Latest Modified', 'Latest Modified By']];
   c.findings.forEach(f => f.items.forEach((i, idx) => { const x = capItem(f, idx, i);
-    rows.push([f.n, f.area, i.pq, i.sarp, x.step, x.action, x.org, x.evref, x.est, x.rev, x.done, CAPPREN[x.progress] || '']); }));
-  download(csv(rows), `AvSec_CAP_OLF_${today()}.csv`, 'text/csv;charset=utf-8');
+    rows.push([f.area, 'CE-' + i.ce, i.pq, i.rec, x.step, x.action, x.org, x.evref, x.est, x.rev, x.done, capProgOLF(x), x.at, x.at ? who : '']); }));
+  download(csv(rows), `AvSec_CAP_OLF_sverka_${today()}.csv`, 'text/csv;charset=utf-8');
 }
 const capHas = id => { const c = D('cap2019'); return !!c && c.findings.some(f => f.items.some(i => i.pq === id)); };
 function capRef(id) {
@@ -857,7 +861,7 @@ function openCapItem(i, f, idx) {
       ['Срок (EN v2)', st.due ? `${daysTo(st.due) < 0 && k !== 'done' ? '<span class="warn">⚠ ' : '<span>'}${esc(fmtDate(st.due))}</span> <span class="dim small">предложение, подтвердить</span>` : '']])}
     ${st.en ? `<h4>Статус (EN, редакция v2.1)</h4><p class="small">${esc(st.en)}</p>` : ''}
     <h4>Corrective Action Item (формат ИКАО OLF)</h4>
-    <p class="small dim">Колонки как в таблице Corrective Action Items в OLF. Значения по умолчанию взяты из ПКД и редакции EN v2.1; правки хранятся на этом устройстве и попадают в экспорт «ПКД в формате OLF».</p>
+    <p class="small dim">Колонки как в таблице Corrective Action Items в OLF. Значения по умолчанию взяты из ПКД и редакции EN v2.1; правки хранятся на этом устройстве и попадают в экспорт для сверки с OLF. <b>Импорт в OLF принимает только .docx, выданный самим OLF</b> — CSV годится для сверки, не для загрузки.</p>
     <form class="form" id="capForm">
       ${kv([['Step', String(ci.step)], ['Proposed Action', esc(ci.action || '—')]])}
       <label>Action Office<input class="inp" name="org" value="${esc(ci.org)}"></label>
@@ -870,6 +874,9 @@ function openCapItem(i, f, idx) {
         <label>Date of Completion<input type="date" name="done" value="${esc(ci.done)}"></label>
         <label>Progress Status<select name="progress">${Object.entries(CAPPR).map(([kk, v]) => `<option value="${kk}"${ci.progress === kk ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select></label>
       </div>
+      <div class="two">
+        <label>Progress, % <span class="dim small">колонка Progress в Excel OLF: «75% complete»</span><input class="inp" name="percent" inputmode="numeric" placeholder="напр. 75" value="${esc(ci.percent)}"></label>
+      </div>
       <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="capClear">Сбросить к данным ПКД</button><span class="dim small grow">${ci.saved ? 'изменено ' + esc(ci.at) : 'значения из ПКД'}</span></div>
     </form>
     <div class="row mt">${cur ? `<button class="btn sm" data-go="pq?s=${encodeURIComponent(i.pq)}">К ВП ${esc(i.pq)}</button>` : `<span class="dim small">ВП ${esc(i.pq)} — номер прежней редакции протокола, в текущем перечне нет</span>`}
@@ -877,7 +884,7 @@ function openCapItem(i, f, idx) {
       ${k !== 'done' && k !== 'na' ? '<button class="btn sm ghost" data-go="cap?st=open">Все незакрытые</button>' : ''}</div>`);
   $('#capForm').onsubmit = e => {
     e.preventDefault(); const fd = new FormData(e.target); const all = capItemState();
-    all[ci.key] = { org: (fd.get('org') || '').trim(), evref: (fd.get('evref') || '').trim(), est: fd.get('est') || '', rev: fd.get('rev') || '', done: fd.get('done') || '', progress: fd.get('progress'), at: today() };
+    all[ci.key] = { org: (fd.get('org') || '').trim(), evref: (fd.get('evref') || '').trim(), est: fd.get('est') || '', rev: fd.get('rev') || '', done: fd.get('done') || '', progress: fd.get('progress'), percent: (fd.get('percent') || '').trim(), at: today() };
     LS.set(K.capi, all); toast('Сохранено: вывод ' + f.n + ', шаг ' + ci.step, 'ok'); closeSheet(); render();
   };
   $('#capClear').onclick = () => { const all = capItemState(); delete all[ci.key]; LS.set(K.capi, all); toast('Сброшено к данным ПКД'); closeSheet(); render(); };
@@ -896,7 +903,7 @@ function pCAP(m) {
   if (up) tb.appendChild(selector('Статус ПКД', 'st', ['open', 'done', 'part', 'wip', 'ongoing', 'na'], k => k === 'open' ? t('Незакрытые') : t(CAPST[k])));
   tb.appendChild(inputFilter('Поиск по SARP, ВП, тексту'));
   const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => download(csv([['Вывод', 'Приоритет вывода', 'Область', 'Приоритет', 'SARP', 'КЭ', 'ВП (2019)', 'Рекомендация ИКАО', 'Замечания', 'Корректирующее действие', 'Организация', 'Начало', 'Окончание', 'Окончание (EN v2)', 'Срок (EN v2)', 'Статус', 'Статус (EN, редакция v2 2026)']].concat(list.flatMap(f => f.items.filter(itOk).map(i => [f.n, CAPP[f.priority], f.area, CAPP[i.prio], i.sarp, i.ce, i.pq, i.rec, i.comment, i.action, i.org, i.start, i.end, i.status ? i.status.endEn || '' : '', i.status ? i.status.due || '' : '', CAPST[capSt(i)], i.status ? i.status.en : ''])))), `AvSec_CAP2019_${today()}.csv`, 'text/csv;charset=utf-8'); tb.appendChild(ex);
-  const exo = el('button', 'btn ghost sm', esc(t('ПКД в формате OLF'))); exo.onclick = () => exportCapOLF(c); tb.appendChild(exo);
+  const exo = el('button', 'btn ghost sm', esc(t('ПКД — сверка с OLF (CSV)'))); exo.onclick = () => exportCapOLF(c); tb.appendChild(exo);
   m.appendChild(tb);
   if (up) {
     const s = capStats(c); const tiles = el('div', 'tiles');
