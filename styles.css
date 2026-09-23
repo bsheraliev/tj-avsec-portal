@@ -255,6 +255,9 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
 .cebar>span{display:block;height:100%;background:var(--ok)}
 .ceval{text-align:right;white-space:nowrap;font-size:12.5px}
 /* доказательства к ВП: документ · пункт · дата */
+.src{font-size:11.5px;color:var(--dim);margin-top:2px}
+.chk{display:flex;align-items:center;gap:8px;margin:2px 0 6px;font-size:13px;cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--accent);flex:0 0 auto}
 .evhead{margin-top:12px}
 .evrow{display:grid;grid-template-columns:2fr 1.4fr auto auto;gap:6px;margin-bottom:6px}
 .evrow .inp{width:100%;min-width:0}
