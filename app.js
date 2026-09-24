@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '24';
+const APP_VERSION = '25';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -790,6 +790,16 @@ function pAudit(m) {
   sc.appendChild(table(['Дата', 'Мероприятие'], u.schedule, r => [`<span class="mono">${r.date ? fmtDate(r.date) : ''}</span> <span class="dim small">${esc(r.dow || '')}</span>`, esc(r.text)]));
   g.appendChild(sc);
   m.appendChild(g);
+  if (u.audit.entities && u.audit.entities.length) {
+    const tbd = u.audit.entities.reduce((n, x) => n + (x.tbd || []).length, 0);
+    const ec = el('div', 'card');
+    ec.innerHTML = `<h2>${esc(t('Организации для раздела 5 плана'))} <span class="dim small">${u.audit.entities.reduce((n, x) => n + x.list.length, 0)} внесено${tbd ? ` · ${tbd} уточнить` : ''}</span></h2><p class="small dim">${esc(u.audit.entitiesNote || '')}</p>`;
+    ec.appendChild(table(['Область', 'Организации', 'Уточнить'], u.audit.entities,
+      x => [`<span class="badge b-area">${esc(x.code)}</span>`,
+        `<ul class="list small">${x.list.map(e => `<li>${esc(e)}</li>`).join('')}</ul>`,
+        (x.tbd || []).length ? `<ul class="list small warn">${x.tbd.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<span class="dim small">—</span>']));
+    m.appendChild(ec);
+  }
   if (u.audit.areaAuditors && u.audit.areaAuditors.length) {
     const ac = el('div', 'card');
     ac.innerHTML = `<h2>${esc(t('Области проверки и аудиторы ИКАО'))} <span class="dim small">план аудита v1.0 · две подгруппы с ротацией</span></h2>`;
