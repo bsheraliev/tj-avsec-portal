@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '23';
+const APP_VERSION = '24';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -462,6 +462,10 @@ function dash(m) {
     if (pq) { const nn = pq.items.filter(i => !(st[i.id] || {}).st).length;
       if (nn) tips.push(suggest(`ВП без самооценки: <b>${nn}</b> из ${pq.items.length} — без статуса и доказательств EI считается нулевым`, '#pq?st=none', 'К ВП')); }
     if (cap && cap.meta.update) { const cs = capStats(cap); if (cs.open) tips.push(suggest(`незакрытых рекомендаций ПКД: <b>${cs.open}</b> из ${cs.total}`, '#cap?st=open', 'К ПКД')); }
+    if (u && u.audit.docsApprovedDeadline && daysTo(u.audit.docsApprovedDeadline) >= 0) {
+      const a2 = auditState(); const nc = u.requested.find(r => r.id === 'ncasp');
+      if (nc && !docSent(nc, a2.docs)) tips.push(suggest(`НПАБГА не отправлена, а документы, требующие утверждения, принимаются только до <b>${fmtDate(u.audit.docsApprovedDeadline)}</b> (${daysTo(u.audit.docsApprovedDeadline)} дн.) — после начала аудита их не рассматривают`, '#audit', 'К документам'));
+    }
     if (tips.length) m.appendChild(el('div', 'card', `<h2>${esc(t('Что мешает готовности'))}</h2>` + tips.join('')));
   })();
 
@@ -773,6 +777,8 @@ function pAudit(m) {
     ['Охват', esc(u.audit.scope)], ['Язык', esc(u.audit.language)],
     ['Группа ИКАО', `${u.audit.teamSize} чел.; руководитель — ${esc(u.audit.teamLeader)} · <a href="#audit" onclick="document.getElementById('team').scrollIntoView({behavior:'smooth'});return false">состав ↓</a>`],
     ['Визы', esc(u.audit.visa || '')], ['Гостиница', esc(u.audit.hotel || '')], ['План аудита', esc(u.audit.auditPlan || '')], ['AvSec Week', esc(u.audit.avsecWeek || '')],
+    ['Брифинг и разбор', esc(u.audit.briefing || '')],
+    ['Срок утверждённых документов', u.audit.docsApprovedDeadline ? `<b class="${daysTo(u.audit.docsApprovedDeadline) < 30 ? 'warn' : ''}">${fmtDate(u.audit.docsApprovedDeadline)}</b> — через ${daysTo(u.audit.docsApprovedDeadline)} дн.<div class="src">${esc(u.audit.docsApprovedNote || '')}</div>` : ''],
     ['Срок подачи документов', `<span class="${dl < 0 ? 'warn' : ''}">${fmtDate(u.audit.docsDeadline)}</span> — ${esc(u.audit.docsDeadlineNote)}`],
     ['Загрузка документов', `<a href="${esc(u.audit.upload)}" target="_blank" rel="noopener">${esc(u.audit.upload)}</a> (не по e-mail)`],
     ['Портал ИКАО', `<a href="${esc(u.audit.portal)}" target="_blank" rel="noopener">${esc(u.audit.portal)}</a> — группа USAP (ВП, SASAQ, CC); доступ — по NC Welcome Package`],
@@ -784,15 +790,22 @@ function pAudit(m) {
   sc.appendChild(table(['Дата', 'Мероприятие'], u.schedule, r => [`<span class="mono">${r.date ? fmtDate(r.date) : ''}</span> <span class="dim small">${esc(r.dow || '')}</span>`, esc(r.text)]));
   g.appendChild(sc);
   m.appendChild(g);
+  if (u.audit.areaAuditors && u.audit.areaAuditors.length) {
+    const ac = el('div', 'card');
+    ac.innerHTML = `<h2>${esc(t('Области проверки и аудиторы ИКАО'))} <span class="dim small">план аудита v1.0 · две подгруппы с ротацией</span></h2>`;
+    ac.appendChild(table(['Область', 'Наименование', 'Аудитор ИКАО'], u.audit.areaAuditors,
+      x => [`<span class="badge b-area">${esc(x.code)}</span>`, `<span class="small">${esc(x.name)}</span>`, `<span class="small">${esc(x.auditor)}</span>`]));
+    m.appendChild(ac);
+  }
   if (u.audit.team) {
     const TEAMST = { confirmed: ['ok', 'Подтверждён'], pending: ['draft', 'Ожидает подтверждения'] };
     const tc = el('div', 'card'); tc.id = 'team';
     tc.innerHTML = `<h2>${esc(t('Группа аудита ИКАО'))} <span class="dim small">${u.audit.team.length} чел. · письма 03.07 и 31.07.2026</span></h2>`;
-    tc.appendChild(table(['Участник', 'Роль', 'Направлен', 'Паспорт / виза', 'Прибытие', 'Отъезд', 'Статус'], u.audit.team, x => [
+    tc.appendChild(table(['Участник', 'Роль', 'Области', 'Направлен', 'Паспорт / виза', 'Прибытие', 'Отъезд', 'Статус'], u.audit.team, x => [
       `<b>${esc(x.name)}</b>${x.email ? `<div class="small"><a href="mailto:${esc(x.email)}">${esc(x.email)}</a>${x.phone ? ' · ' + esc(x.phone) : ''}</div>` : ''}`,
-      `<span class="small">${esc(x.role)}</span>`, `<span class="small">${esc(x.org)}</span>`, `<span class="small">${esc(x.passport)}</span>`,
+      `<span class="small">${esc(x.role)}</span>`, `<span class="small mono">${esc(x.areas || '—')}</span>`, `<span class="small">${esc(x.org)}</span>`, `<span class="small">${esc(x.passport)}</span>`,
       `<span class="small mono">${esc(x.arrive)}</span>`, `<span class="small mono">${esc(x.depart)}</span>`, badge((TEAMST[x.status] || ['none', x.status])[0], (TEAMST[x.status] || ['none', x.status])[1])],
-      x => openSheet(`<h3>${esc(x.name)} ${badge((TEAMST[x.status] || ['none', x.status])[0], (TEAMST[x.status] || ['none', x.status])[1])}</h3>${kv([['Роль', esc(x.role)], ['Направлен', esc(x.org)], ['Паспорт / виза', esc(x.passport)], ['Прибытие', esc(x.arrive)], ['Отъезд', esc(x.depart)], ['E-mail', x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''], ['Телефон', esc(x.phone || '')]])}<p class="small dim">${esc(u.audit.teamNote || '')}</p><div class="row mt">${x.email ? `<a class="btn sm" href="mailto:${esc(x.email)}">Написать</a>` : ''}<button class="btn sm ghost" data-go="audit">К аудиту</button></div>`)));
+      x => openSheet(`<h3>${esc(x.name)} ${badge((TEAMST[x.status] || ['none', x.status])[0], (TEAMST[x.status] || ['none', x.status])[1])}</h3>${kv([['Роль', esc(x.role)], ['Области проверки', esc(x.areas || '')], ['Направлен', esc(x.org)], ['Паспорт / виза', esc(x.passport)], ['Прибытие', esc(x.arrive)], ['Отъезд', esc(x.depart)], ['E-mail', x.email ? `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>` : ''], ['Телефон', esc(x.phone || '')]])}<p class="small dim">${esc(u.audit.teamNote || '')}</p><div class="row mt">${x.email ? `<a class="btn sm" href="mailto:${esc(x.email)}">Написать</a>` : ''}<button class="btn sm ghost" data-go="audit">К аудиту</button></div>`)));
     if (u.audit.teamNote) tc.appendChild(el('p', 'small dim', esc(u.audit.teamNote)));
     m.appendChild(tc);
   }
