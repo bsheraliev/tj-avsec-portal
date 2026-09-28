@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '30';
+const APP_VERSION = '31';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -62,6 +62,7 @@ const TR = { en: {
   'Логистика': 'Logistics', 'Контакты': 'Contacts', 'Не начато': 'Not started', 'Готово': 'Ready', 'Отправлено в ИКАО': 'Sent to ICAO', 'Аудит на месте': 'On-site audit', 'Ключевые факты': 'Key facts', 'Где открыть': 'Where to open', 'Группа аудита ИКАО': 'ICAO audit team', 'Участник': 'Member', 'Роль': 'Role', 'Направлен': 'Seconded by', 'Паспорт / виза': 'Passport / visa', 'Прибытие': 'Arrival', 'Отъезд': 'Departure', 'Подтверждён': 'Confirmed', 'Ожидает подтверждения': 'Awaiting confirmation', 'Визы': 'Visas', 'Гостиница': 'Hotel', 'План аудита': 'Audit plan', 'Дней до начала аудита': 'Days to audit start',
   'Статус ПКД': 'CAP status', 'Выполнено': 'Completed', 'Частично': 'Partially completed', 'Постоянно': 'Ongoing', 'Нет статуса': 'No status', 'Незакрытые': 'Open', 'Незакрытых рекомендаций ПКД': 'Open CAP recommendations', 'Готовность ПКД к подаче': 'CAP readiness', 'Готовность CC к подаче': 'CC readiness', 'В работе / постоянно': 'In progress / ongoing',
   'Приём и культурная программа': 'Hospitality and cultural programme', 'Транспорт': 'Transport', 'Подарки': 'Gifts', 'Уточнить': 'To be confirmed', 'Приём: мероприятий готово': 'Hospitality: items ready',
+  'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
 } };
@@ -347,8 +348,8 @@ const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== un
 const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN' };
-const FILTER_BOOL = { star: 1, defs: 1, en: 1 };
+const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019' };
+const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
   if (k === 'b') return BUCKET[v] || v;
@@ -530,34 +531,84 @@ function dash(m) {
 }
 
 /* ---------- Протокольные вопросы ---------- */
+/* Раздел ВП: рабочий список, сводка и «к работе» — как в разделе аудита, вкладка лежит в адресе (#pq?t=sum). */
+const QTABS = [{ id: 'list', t: 'Список' }, { id: 'sum', t: 'Сводка' }, { id: 'todo', t: 'К работе' }];
+// Аудитор ИКАО по области — из плана аудита v1.0; область и её наименование живут здесь, в разделе ВП
+const areaAuditor = code => { const u = U(); const x = u && (u.audit.areaAuditors || []).find(y => y.code === code); return x ? x.auditor : ''; };
 function pPQ(m) {
   const d = D('pq'); if (!d) return m.appendChild(el('div', 'empty', 'Данные ВП не загружены'));
   head(m, 'Протокольные вопросы', `${esc(d.meta.title)} · опубликовано ${fmtDate(d.meta.published)} · ${d.items.length} ВП. Статус, ответственный, срок и доказательства — самооценка государства, хранится на этом устройстве.`);
   const st = pqState();
-  const tb = el('div', 'toolbar');
-  tb.appendChild(selector('Все области', 'area', d.meta.areas.map(a => a.code), c => { const a = d.meta.areas.find(x => x.code === c); return `${c} — ${a.name}`; }));
-  const subs = d.meta.subs.filter(s => !S.f.area || s.code[0] === (d.meta.areas.findIndex(a => a.code === S.f.area) + 1 + ''));
-  tb.appendChild(selector('Подраздел', 'sub', subs.map(s => s.code), c => { const s = subs.find(x => x.code === c); return `${c} ${s.name}`; }));
-  tb.appendChild(selector('Все КЭ', 'ce', Object.keys(d.meta.ce), c => `${c} — ${d.meta.ce[c]}`));
-  tb.appendChild(selector('Все статусы', 'st', ['', 'wip', 'sat', 'unsat', 'na'].filter(Boolean).concat(['none']), c => c === 'none' ? t('Не оценено') : t(PQST[c])));
-  tb.appendChild(toggle('Только со звёздочкой', 'star'));
-  tb.appendChild(selector('Все ответственные', 'resp', team().map(x => x.id).concat(['none']), c => c === 'none' ? t('Не назначен') : nameOf(c)));
-  tb.appendChild(inputFilter('Поиск по тексту ВП'));
-  const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => exportPQ(list); tb.appendChild(ex);
-  const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
-  m.appendChild(tb);
-  let list = d.items.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star)
-    && (!S.f.st || (S.f.st === 'none' ? !(st[i.id] || {}).st : (st[i.id] || {}).st === S.f.st))
-    && (!S.f.resp || (S.f.resp === 'none' ? !respOfPQ(i) : (respOfPQ(i) || {}).id === S.f.resp))
-    && has(S.f.s, i.id, i.q, i.g.join(' '), i.doc, (respOfPQ(i) || {}).name, evText(st[i.id])));
-  const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; list.forEach(i => { const s = (st[i.id] || {}).st; if (s) cnt[s]++; });
-  const n = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
-  m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${n} (${pct(n, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
-  m.appendChild(ceEI(d, list, st));
-  m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], list,
-    i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
-      `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, pqBadge(o.st), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
-    openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const s = d.meta.subs.find(x => x.code === i.sub); return s ? `${s.code} ${s.name}` : i.area; }) }));
+  const tab = QTABS.some(x => x.id === S.f.t) ? S.f.t : 'list';
+  const goTab = id => go('pq', { ...S.f, t: id === 'list' ? '' : id }, S.q);
+  const all = d.items;
+  const none = all.filter(i => !(st[i.id] || {}).st).length;
+  const unsat = all.filter(i => (st[i.id] || {}).st === 'unsat').length;
+  const over = all.filter(i => { const o = st[i.id] || {}; return o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0; }).length;
+  m.appendChild(segbar(QTABS.map(x => ({ ...x, n: x.id === 'list' ? all.length : x.id === 'todo' ? none + unsat + over : null })), tab, goTab));
+
+  if (tab === 'list') {
+    const tb = el('div', 'toolbar');
+    tb.appendChild(selector('Все области', 'area', d.meta.areas.map(a => a.code), c => { const a = d.meta.areas.find(x => x.code === c); return `${c} — ${a.name}`; }));
+    const subs = d.meta.subs.filter(x => !S.f.area || x.code[0] === (d.meta.areas.findIndex(a => a.code === S.f.area) + 1 + ''));
+    tb.appendChild(selector('Подраздел', 'sub', subs.map(x => x.code), c => { const x = subs.find(y => y.code === c); return `${c} ${x.name}`; }));
+    tb.appendChild(selector('Все КЭ', 'ce', Object.keys(d.meta.ce), c => `${c} — ${d.meta.ce[c]}`));
+    tb.appendChild(selector('Все статусы', 'st', ['wip', 'sat', 'unsat', 'na', 'none'], c => c === 'none' ? t('Не оценено') : t(PQST[c])));
+    tb.appendChild(toggle('Только со звёздочкой', 'star'));
+    tb.appendChild(selector('Все ответственные', 'resp', team().map(x => x.id).concat(['none']), c => c === 'none' ? t('Не назначен') : nameOf(c)));
+    tb.appendChild(inputFilter('Поиск по тексту ВП'));
+    const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => exportPQ(list); tb.appendChild(ex);
+    const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
+    m.appendChild(tb);
+    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star)
+      && (!S.f.st || (S.f.st === 'none' ? !(st[i.id] || {}).st : (st[i.id] || {}).st === S.f.st))
+      && (!S.f.resp || (S.f.resp === 'none' ? !respOfPQ(i) : (respOfPQ(i) || {}).id === S.f.resp))
+      && (!S.f.over || (o => o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0)(st[i.id] || {}))
+      && (!S.f.cap || capHas(i.id))
+      && has(S.f.s, i.id, i.q, i.g.join(' '), i.doc, (respOfPQ(i) || {}).name, evText(st[i.id])));
+    const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; list.forEach(i => { const o = (st[i.id] || {}).st; if (o) cnt[o]++; });
+    const nn = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
+    m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${nn} (${pct(nn, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
+    m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], list,
+      i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
+        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, pqBadge(o.st), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
+      openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) }));
+  }
+
+  if (tab === 'sum') {
+    const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; all.forEach(i => { const o = (st[i.id] || {}).st; if (o) cnt[o]++; });
+    const nn = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
+    m.appendChild(el('div', 'card', `<h2>${esc(t('Самооценка'))} <span class="dim small">${nn} из ${all.length} (${pct(nn, all.length)}%)</span></h2>${prog(cnt, all.length)}`
+      + `<div class="small dim mt">Удовлетворительно ${cnt.sat} · в работе ${cnt.wip} · не соответствует ${cnt.unsat} · не применимо ${cnt.na} · не оценено ${all.length - nn}</div>`));
+    m.appendChild(ceEI(d, all, st));
+    const ar = el('div', 'card');
+    ar.innerHTML = `<h2>${esc(t('Области проверки'))} <span class="dim small">${d.meta.areas.length} областей · аудиторы по плану v1.0, две подгруппы с ротацией</span></h2>`;
+    ar.appendChild(table(['Область', 'Наименование', 'Аудитор ИКАО', 'ВП', 'Оценено', 'EI'], d.meta.areas, x => {
+      const items = all.filter(i => i.area === x.code);
+      const n = { sat: 0, na: 0, done: 0 };
+      items.forEach(i => { const k = (st[i.id] || {}).st; if (k) n.done++; if (k === 'sat') n.sat++; if (k === 'na') n.na++; });
+      const appl = items.length - n.na; const ei = appl ? Math.round(n.sat * 100 / appl) : null;
+      return [`<span class="badge b-area">${esc(x.code)}</span>`, `<span class="small">${esc(x.name)}</span>`,
+        `<span class="small">${esc(areaAuditor(x.code) || '—')}</span>`, items.length,
+        `${n.done} <span class="dim small">(${pct(n.done, items.length)}%)</span>`,
+        ei == null ? '<span class="dim">—</span>' : `<b class="${ei < 60 ? 'warn' : ''}">${ei}%</b>`];
+    }, x => go('pq', { area: x.code })));
+    m.appendChild(ar);
+  }
+
+  if (tab === 'todo') {
+    const block = (title, n, href, note) => `<div class="subgrp"><div class="subhd">${esc(title)} <span class="dim small">${n}</span></div><div class="small dim">${esc(note)}</div>${n ? `<div class="row mt"><a class="btn sm ghost" href="${href}">Открыть →</a></div>` : ''}</div>`;
+    const cap = all.filter(i => capHas(i.id)).length;
+    const c = el('div', 'card');
+    c.innerHTML = `<h2>${esc(t('К работе'))}</h2><p class="small dim">Списки открываются во вкладке «Список» с уже выставленным фильтром.</p>`
+      + `<div class="subdocs">`
+      + block('Не оценено', none, '#pq?st=none', 'Без статуса EI считается нулевым — это первое, что смотрит ИКАО')
+      + block('Не соответствует', unsat, '#pq?st=unsat', 'Требуют корректирующего действия и доказательства до начала аудита')
+      + block('Просрочен срок', over, '#pq?over=1', 'Срок в самооценке прошёл, а статус не «удовлетворительно»')
+      + block('Есть вывод аудита 2019', cap, '#pq?cap=1', 'По этим ВП были выводы ИКАО — проверьте, закрыты ли рекомендации')
+      + `</div>`;
+    m.appendChild(c);
+  }
 }
 // Справочные материалы к ВП — как вкладка «Reference & Guidance» в OLF: документы реестра, пункты матрицы, документы ИКАО.
 // Связь по пункту Приложения (i.doc), критическому элементу (i.ce) и области аудита (i.area) — точное совпадение важнее общего.
@@ -860,13 +911,6 @@ function pAudit(m) {
     const sc = el('div', 'card'); sc.innerHTML = `<h2>${esc(t('План аудита'))} <span class="dim small">редакция v1.0 от 18.09.2026</span></h2>`;
     sc.appendChild(table(['Дата', 'Мероприятие'], u.schedule, r => [`<span class="mono">${r.date ? fmtDate(r.date) : ''}</span> <span class="dim small">${esc(r.dow || '')}</span>`, esc(r.text)]));
     m.appendChild(sc);
-    if (u.audit.areaAuditors && u.audit.areaAuditors.length) {
-      const ac = el('div', 'card');
-      ac.innerHTML = `<h2>${esc(t('Области проверки и аудиторы ИКАО'))} <span class="dim small">две подгруппы с ротацией</span></h2>`;
-      ac.appendChild(table(['Область', 'Наименование', 'Аудитор ИКАО'], u.audit.areaAuditors,
-        x => [`<span class="badge b-area">${esc(x.code)}</span>`, `<span class="small">${esc(x.name)}</span>`, `<span class="small">${esc(x.auditor)}</span>`]));
-      m.appendChild(ac);
-    }
     if (u.audit.team) {
       const TEAMST = { confirmed: ['ok', 'Подтверждён'], pending: ['draft', 'Ожидает подтверждения'] };
       const tc = el('div', 'card'); tc.id = 'team';
