@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '32';
+const APP_VERSION = '33';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -62,7 +62,7 @@ const TR = { en: {
   'Логистика': 'Logistics', 'Контакты': 'Contacts', 'Не начато': 'Not started', 'Готово': 'Ready', 'Отправлено в ИКАО': 'Sent to ICAO', 'Аудит на месте': 'On-site audit', 'Ключевые факты': 'Key facts', 'Где открыть': 'Where to open', 'Группа аудита ИКАО': 'ICAO audit team', 'Участник': 'Member', 'Роль': 'Role', 'Направлен': 'Seconded by', 'Паспорт / виза': 'Passport / visa', 'Прибытие': 'Arrival', 'Отъезд': 'Departure', 'Подтверждён': 'Confirmed', 'Ожидает подтверждения': 'Awaiting confirmation', 'Визы': 'Visas', 'Гостиница': 'Hotel', 'План аудита': 'Audit plan', 'Дней до начала аудита': 'Days to audit start',
   'Статус ПКД': 'CAP status', 'Выполнено': 'Completed', 'Частично': 'Partially completed', 'Постоянно': 'Ongoing', 'Нет статуса': 'No status', 'Незакрытые': 'Open', 'Незакрытых рекомендаций ПКД': 'Open CAP recommendations', 'Готовность ПКД к подаче': 'CAP readiness', 'Готовность CC к подаче': 'CC readiness', 'В работе / постоянно': 'In progress / ongoing',
   'Приём и культурная программа': 'Hospitality and cultural programme', 'Транспорт': 'Transport', 'Подарки': 'Gifts', 'Уточнить': 'To be confirmed', 'Приём: мероприятий готово': 'Hospitality: items ready',
-  'Приём': 'Hospitality', 'Мероприятие плана и приём': 'Plan activity and hospitality', 'Приём и культурная программа': 'Hospitality and cultural programme',
+  'Приём': 'Hospitality', 'ответственный': 'responsible', 'Мероприятие плана и приём': 'Plan activity and hospitality', 'Приём и культурная программа': 'Hospitality and cultural programme',
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
@@ -831,15 +831,20 @@ function auditBrief() {
 }
 /* Приём группы: транспорт, питание, культурная программа, подарки — внутренняя организация, в план ИКАО не входит.
    Отметки «готово» хранятся на устройстве (auditState().hos). */
-const HOSK = { meet: '✈ Встреча', transfer: '🚐 Трансфер', lunch: '🍽 Обед', dinner: '🍽 Ужин', tour: '🏛 Экскурсия', meeting: '👥 Встреча', org: '📦 Организация' };
-function hosStats(h, hos) { let n = 0, d = 0; (h.days || []).forEach(x => x.items.forEach(i => { n++; if ((hos[i.id] || {}).done) d++; })); return { n, d }; }
+const HOSK = { meet: ['✈', 'Встреча'], transfer: ['🚐', 'Трансфер'], lunch: ['🍽', 'Обед'], dinner: ['🌙', 'Ужин'], tour: ['🏛', 'Экскурсия'], meeting: ['👥', 'Встреча'], org: ['📋', 'Организация'], gift: ['🎁', 'Подарки'] };
+// считаем только пункты, требующие действия (бронь, закуп, заказ): встреча и трансфер отмечать нечего
+function hosStats(h, hos) { let n = 0, d = 0; (h.days || []).forEach(x => x.items.forEach(i => { if (!i.task) return; n++; if ((hos[i.id] || {}).done) d++; })); return { n, d }; }
 // Мероприятия приёма за один день плана — врезкой в строку подневного плана ИКАО
 function hosDayBlock(x, a) {
   if (!x || !x.items.length) return '';
-  const ds = x.items.filter(i => (a.hos[i.id] || {}).done).length;
-  return `<div class="subdocs"><div class="subgrp"><div class="subhd">${esc(t('Приём'))} <span class="dim small">${ds}/${x.items.length}</span></div>`
+  const tk = x.items.filter(i => i.task); const ds = tk.filter(i => (a.hos[i.id] || {}).done).length;
+  const ic = i => { const k = HOSK[i.kind] || ['·', '']; return `<span title="${esc(k[1])}">${k[0]}</span>`; };
+  return `<div class="subdocs"><div class="subgrp"><div class="subhd">${esc(t('Приём'))}${tk.length ? ` <span class="dim small">${ds}/${tk.length}</span>` : ''}</div>`
     + x.items.map(i => { const on = (a.hos[i.id] || {}).done;
-      return `<label class="subrow${on ? ' on' : ''}"><input type="checkbox" data-hos="${esc(i.id)}"${on ? ' checked' : ''}><span><b>${esc(HOSK[i.kind] || '')}</b>${i.time ? ` <span class="dim">${esc(i.time)}</span>` : ''} — ${esc(i.text)}</span></label>`; }).join('')
+      // галочка — только у пунктов, которые надо подтвердить или закупить; остальное просто строка программы
+      return i.task
+        ? `<label class="subrow${on ? ' on' : ''}"><input type="checkbox" data-hos="${esc(i.id)}"${on ? ' checked' : ''}><span>${ic(i)} ${esc(i.text)}</span></label>`
+        : `<div class="subrow nb"><span>${ic(i)} ${esc(i.text)}</span></div>`; }).join('')
     + '</div></div>';
 }
 /* Раздел аудита раньше был одним экраном из 11 карточек — читать было тяжело, факты повторялись.
@@ -908,9 +913,7 @@ function pAudit(m) {
     const h = u.hospitality; const byDate = {}; if (h) (h.days || []).forEach(x => { byDate[x.date] = x; });
     const sc = el('div', 'card'); sc.id = 'hosp';
     sc.innerHTML = `<h2>${esc(t('План аудита'))} <span class="dim small">редакция v1.0 от 18.09.2026${h ? ` · приём ${hs.d}/${hs.n}` : ''}</span></h2>`
-      + (h ? `<p class="small dim">${esc(h.note || '')}</p>` + kv([
-          ['Транспорт', `<b>${esc(h.transport.vehicle)}</b> · водитель ${esc(h.transport.driver)}<div class="small dim">${esc(h.transport.text)}</div>`],
-          ['Подарки', `${esc(h.gifts.text)}<div class="small dim">готовит ${esc(h.gifts.who)} · вручение ${fmtDate(h.gifts.when)}</div>`]]) : '');
+      + (h && h.transport ? `<p class="small dim">${esc(t('Транспорт'))}: <b>${esc(h.transport.vehicle)}</b> · ${esc(t('ответственный'))} ${esc(h.transport.resp)} · ${esc(h.transport.text)}</p>` : '');
     sc.appendChild(table(['Дата', 'Мероприятие плана и приём'], u.schedule,
       r => [`<span class="mono">${r.date ? fmtDate(r.date) : ''}</span> <span class="dim small">${esc(r.dow || '')}</span>`,
         esc(r.text) + hosDayBlock(byDate[r.date], a)]));
@@ -988,7 +991,7 @@ function pAudit(m) {
     const st = el('div', 'card'); st.innerHTML = `<h2>${esc(t('Проживание, въезд, транспорт'))}</h2>` + kv([
       ['Гостиница', esc(u.audit.hotel || '')], ['Суточные и лимит', esc(u.audit.hotelLimit || '')],
       ['Визы', esc(u.audit.visa || '')], ['Переводчики', esc(u.audit.interpreters || '')],
-      ['Транспорт', tr ? `<b>${esc(tr.vehicle)}</b> · водитель ${esc(tr.driver)}<div class="src">${esc(tr.text)}</div>` : ''],
+      ['Транспорт', tr ? `<b>${esc(tr.vehicle)}</b> · ${esc(t('ответственный'))} ${esc(tr.resp)}<div class="src">${esc(tr.text)}</div>` : ''],
     ]);
     m.appendChild(st);
   }
