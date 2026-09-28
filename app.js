@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '25';
+const APP_VERSION = '26';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -61,6 +61,7 @@ const TR = { en: {
   'Аудит USAP-CMA 2026': 'USAP-CMA audit 2026', 'Выводы аудита 2019 (CAP)': '2019 audit findings (CAP)', 'План аудита': 'Audit plan', 'Запрошенные документы': 'Requested documents',
   'Логистика': 'Logistics', 'Контакты': 'Contacts', 'Не начато': 'Not started', 'Готово': 'Ready', 'Отправлено в ИКАО': 'Sent to ICAO', 'Аудит на месте': 'On-site audit', 'Ключевые факты': 'Key facts', 'Где открыть': 'Where to open', 'Группа аудита ИКАО': 'ICAO audit team', 'Участник': 'Member', 'Роль': 'Role', 'Направлен': 'Seconded by', 'Паспорт / виза': 'Passport / visa', 'Прибытие': 'Arrival', 'Отъезд': 'Departure', 'Подтверждён': 'Confirmed', 'Ожидает подтверждения': 'Awaiting confirmation', 'Визы': 'Visas', 'Гостиница': 'Hotel', 'План аудита': 'Audit plan', 'Дней до начала аудита': 'Days to audit start',
   'Статус ПКД': 'CAP status', 'Выполнено': 'Completed', 'Частично': 'Partially completed', 'Постоянно': 'Ongoing', 'Нет статуса': 'No status', 'Незакрытые': 'Open', 'Незакрытых рекомендаций ПКД': 'Open CAP recommendations', 'Готовность ПКД к подаче': 'CAP readiness', 'Готовность CC к подаче': 'CC readiness', 'В работе / постоянно': 'In progress / ongoing',
+  'Приём и культурная программа': 'Hospitality and cultural programme', 'Транспорт': 'Transport', 'Подарки': 'Gifts', 'Уточнить': 'To be confirmed', 'Приём: мероприятий готово': 'Hospitality: items ready',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
 } };
 const t = s => (S.lang === 'en' && TR.en[s]) || s;
@@ -407,6 +408,7 @@ function todoCard(m) {
     if (u.ccCheck && !docSent({ id: 'cc' }, a.docs)) add(`<b>CC</b>: проверка ${fmtDate(u.ccCheck.date)} — <span class="warn">${esc(u.ccCheck.verdict)}</span>`, '#audit');
     if (u.capCheck && !docSent({ id: 'cap' }, a.docs)) add(`<b>ПКД</b>: проверка ${fmtDate(u.capCheck.date)} — <span class="warn">${esc(u.capCheck.verdict)}</span>`, '#audit');
     const ld = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length; if (ld < u.logistics.length) add(`<b>Логистика аудита</b>: выполнено ${ld} из ${u.logistics.length}`, '#audit');
+    if (u.hospitality) { const h = hosStats(u.hospitality, a.hos); if (h.d < h.n) add(`<b>Приём группы</b>: подтверждено ${h.d} из ${h.n} мероприятий (транспорт, питание, экскурсии)`, '#audit'); }
   }
   if (cap && cap.meta.update) { const s = capStats(cap); if (s.open) add(`<b>ПКД</b>: незакрытых рекомендаций ${s.open} из ${s.total}`, '#cap?st=open'); }
   if (pq) {
@@ -744,7 +746,7 @@ function auditState() { const a = LS.get(K.audit, {}); const docs = { ...(a.docs
     // подпункты (несколько документов эксплуатанта/аэропорта): факт отправки из данных, если нет ручной отметки
     if (r.parts) r.parts.forEach(g => g.items.forEach(it => { if (it.sent && !(docs[it.id] && docs[it.id].st)) docs[it.id] = { st: 'sent', at: it.sent.date, note: `${fmtDate(it.sent.date)} — ${it.sent.via}`, data: true }; }));
   });
-  return { docs, log: a.log || {} }; }
+  return { docs, log: a.log || {}, hos: a.hos || {} }; }
 const saveAudit = a => LS.set(K.audit, { ...a, docs: Object.fromEntries(Object.entries(a.docs).filter(([, v]) => !v.data)) });   // факт из данных не дублируем в localStorage
 // Подпункты и агрегат по строке: строка с parts считается «отправленной», только когда отправлены все её документы
 function subStats(r, docs) { let s = 0, tot = 0; (r.parts || []).forEach(g => g.items.forEach(it => { tot++; if ((docs[it.id] || {}).st === 'sent') s++; })); return { s, tot }; }
@@ -757,6 +759,25 @@ function auditBrief() {
   const dl = u.audit.docsDeadline, late = daysTo(dl) < 0 && sent < n;
   return `<div class="small mt">${esc(t('Аудит на месте'))}: <b>${fmtDate(u.audit.start)} – ${fmtDate(u.audit.end)}</b>, ${esc(u.audit.placeShort)} · NCMC: ${esc(u.ncmc.name)}</div><div class="small ${late ? 'warn' : 'dim'}">Документы ИКАО: отправлено ${sent} из ${n} · срок ${fmtDate(dl)}${late ? ' · просрочен на ' + (-daysTo(dl)) + ' дн.' : ''}</div><div class="mt"><a class="btn sm ghost" href="#audit">${esc(t('Аудит USAP-CMA 2026'))} →</a></div>`;
 }
+/* Приём группы: транспорт, питание, культурная программа, подарки — внутренняя организация, в план ИКАО не входит.
+   Отметки «готово» хранятся на устройстве (auditState().hos). */
+const HOSK = { meet: '✈ Встреча', transfer: '🚐 Трансфер', lunch: '🍽 Обед', dinner: '🍽 Ужин', tour: '🏛 Экскурсия', meeting: '👥 Встреча', org: '📦 Организация' };
+function hosStats(h, hos) { let n = 0, d = 0; (h.days || []).forEach(x => x.items.forEach(i => { n++; if ((hos[i.id] || {}).done) d++; })); return { n, d }; }
+function hosCard(h, a) {
+  const c = el('div', 'card'); c.id = 'hosp'; const st = hosStats(h, a.hos);
+  c.innerHTML = `<h2>${esc(t('Приём и культурная программа'))} <span class="dim small">${st.d}/${st.n} готово</span></h2><p class="small dim">${esc(h.note || '')}</p>`
+    + kv([['Транспорт', `<b>${esc(h.transport.vehicle)}</b> · водитель ${esc(h.transport.driver)}<div class="small dim">${esc(h.transport.text)}</div>`],
+      ['Подарки', `${esc(h.gifts.text)}<div class="small dim">готовит ${esc(h.gifts.who)} · вручение ${fmtDate(h.gifts.when)}</div>`]]);
+  c.appendChild(el('div', 'subdocs', (h.days || []).map(x => {
+    const ds = x.items.filter(i => (a.hos[i.id] || {}).done).length;
+    return `<div class="subgrp"><div class="subhd">${fmtDate(x.date)}, ${esc(x.dow)} <span class="dim small">${ds}/${x.items.length}</span>${x.note ? `<div class="small dim" style="font-weight:400">${esc(x.note)}</div>` : ''}</div>`
+      + x.items.map(i => { const on = (a.hos[i.id] || {}).done;
+        return `<label class="subrow${on ? ' on' : ''}"><input type="checkbox" data-hos="${esc(i.id)}"${on ? ' checked' : ''}><span><b>${esc(HOSK[i.kind] || '')}</b>${i.time ? ` <span class="dim">${esc(i.time)}</span>` : ''} — ${esc(i.text)}</span></label>`; }).join('') + '</div>';
+  }).join('')));
+  if ((h.open || []).length) c.appendChild(el('div', '', `<div class="small"><b>${esc(t('Уточнить'))}:</b></div><ul class="list small">${h.open.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
+  c.onchange = e => { const x = e.target; if (!x.dataset.hos) return; const s = auditState(); s.hos[x.dataset.hos] = { done: x.checked, at: today() }; saveAudit(s); render(); };
+  return c;
+}
 function pAudit(m) {
   const u = U(); if (!u) return m.appendChild(el('div', 'empty', 'Данные об аудите не загружены'));
   head(m, 'Аудит USAP-CMA 2026', `${esc(u.meta.title)} · обновлено ${fmtDate(u.meta.updated)} · факты — из переписки с ИКАО и SASAQ, статусы чек-листов — на этом устройстве`);
@@ -766,6 +787,8 @@ function pAudit(m) {
   tiles.appendChild(tile('info', daysTo(u.audit.start), 'Дней до начала аудита', () => go('plan')));
   tiles.appendChild(tile(sent === u.requested.length ? 'ok' : 'miss', `${sent}/${u.requested.length}`, 'Документов отправлено в ИКАО', () => $('#reqDocs').scrollIntoView({ behavior: 'smooth' })));
   tiles.appendChild(tile(done === u.logistics.length ? 'ok' : 'draft', `${done}/${u.logistics.length}`, 'Логистика: пунктов выполнено', () => $('#logi').scrollIntoView({ behavior: 'smooth' })));
+  if (u.hospitality) { const h = hosStats(u.hospitality, a.hos);
+    tiles.appendChild(tile(h.d === h.n ? 'ok' : 'draft', `${h.d}/${h.n}`, 'Приём: мероприятий готово', () => $('#hosp').scrollIntoView({ behavior: 'smooth' }))); }
   tiles.appendChild(tile(dl < 0 && sent < u.requested.length ? 'miss' : 'draft', dl < 0 ? `−${-dl}` : dl, dl < 0 ? 'Дней просрочки подачи документов' : 'Дней до срока подачи документов', () => $('#reqDocs').scrollIntoView({ behavior: 'smooth' })));
   m.appendChild(tiles);
   const g = el('div', 'grid2');
@@ -856,6 +879,7 @@ function pAudit(m) {
   lg.appendChild(table(['', 'Пункт', 'Источник'], u.logistics, l => { const o = a.log[l.id] || (l.done ? { done: true, at: l.done } : {}); return [`<input type="checkbox" data-log="${esc(l.id)}"${o.done ? ' checked' : ''}>`, `<span class="${o.done ? 'dim' : ''}">${esc(l.text)}</span>${o.at ? ` <span class="dim small">${esc(o.at)}</span>` : ''}`, `<span class="small dim">${esc(l.ref || '')}</span>`]; }));
   lg.onchange = e => { const x = e.target; if (!x.dataset.log) return; const st = auditState(); st.log[x.dataset.log] = { done: x.checked, at: today() }; saveAudit(st); render(); };
   m.appendChild(lg);
+  if (u.hospitality) m.appendChild(hosCard(u.hospitality, a));
   const g2 = el('div', 'grid2');
   const ct = el('div', 'card'); ct.innerHTML = `<h2>${esc(t('Контакты'))}</h2>` + kv(u.contacts.map(c => [c.who, `${esc(c.role)}${c.email ? ' · <a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : ''}${c.phone ? ' · ' + esc(c.phone) : ''}`]));
   g2.appendChild(ct);
