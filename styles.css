@@ -309,3 +309,11 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
   .tile{padding:10px 26px 10px 12px}.tile .n{font-size:22px}
   .sheet-card{border-radius:16px 16px 0 0}
 }
+
+/* Вкладки раздела: длинный экран разбит на смысловые блоки, активная — в адресе (#audit?t=plan) */
+.segs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.seg{background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;color:var(--dim);cursor:pointer;white-space:nowrap}
+.seg:hover{border-color:var(--accent);color:var(--ink)}
+.seg.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
+.seg .n{margin-left:6px;opacity:.7;font-variant-numeric:tabular-nums}
+@media(max-width:700px){.segs{gap:5px;padding-bottom:10px}.seg{padding:6px 11px;font-size:12.5px}}
