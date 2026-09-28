@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '27';
+const APP_VERSION = '28';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -200,6 +200,9 @@ function go(page, f = {}, q = '') {
 function route() {
   const { page, f, q } = parseHash();
   const next = PAGES[page] ? page : 'dash'; const changed = next !== S.page;
+  // ссылка из карточки-модалки («→ ПКД») меняет хэш, но сама модалка не закрывалась:
+  // новый раздел оставался под затемнением с заблокированной прокруткой
+  if (!$('#sheet').hidden) closeSheet();
   S.page = next; S.f = f; S.q = q;
   if (S.page !== 'find') $('#q').value = '';
   markNav(); $('#side').classList.remove('open'); render(); tgSync();
@@ -297,7 +300,11 @@ const ccState = () => LS.get(K.cc, {});
 const sasaqState = () => LS.get(K.sasaq, {});
 const planState = () => LS.get(K.plan, {});
 /* настройки: значения по умолчанию — из usap.json (дата аудита, NCMC), ручные правки на устройстве — поверх */
-const settings = () => { const u = U(); const d = u ? { auditDate: u.audit.start, ncmc: `${u.ncmc.name}, ${u.ncmc.title}` } : {}; const s = LS.get(K.set, {}); Object.keys(s).forEach(k => { if (s[k] === '' || s[k] == null) delete s[k]; }); return { ...d, ...s }; };
+// usap.json правится руками: отсутствие audit/ncmc не должно ронять обзор, дорожную карту и «Данные»
+const settings = () => { const u = U() || {}; const d = {};
+  if (u.audit && u.audit.start) d.auditDate = u.audit.start;
+  if (u.ncmc && u.ncmc.name) d.ncmc = [u.ncmc.name, u.ncmc.title].filter(Boolean).join(', ');
+  const s = LS.get(K.set, {}); Object.keys(s).forEach(k => { if (s[k] === '' || s[k] == null) delete s[k]; }); return { ...d, ...s }; };
 /* команда: список по умолчанию — из team.json, правки списка — на устройстве */
 const team = () => { const o = LS.get(K.team, null); if (o) return o; const d = D('team'); return d ? d.members : []; };
 const member = id => team().find(m => m.id === id);
@@ -320,7 +327,7 @@ const ccOf = it => { const o = ccState()[it.annex + ':' + it.id] || {}; return {
 /* ---------- дорожная карта USAP-CMA ---------- */
 const STAGES = [
   { id: 'ncmc', t: 'Назначение национального координатора (NCMC) и рабочей группы по USAP-CMA', hint: () => { const u = U(); return u ? `${u.ncmc.name} — ${u.ncmc.title} (${u.ncmc.source}). Рабочая группа: ${team().length} чел. — раздел «Ответственные».` : 'SASAQ GEN-01: координатор назначен.'; }, auto: () => 'done' },
-  { id: 'mou', t: 'МоВ с ИКАО, уведомление об аудите и согласование сроков', hint: () => { const u = U(); return u ? `МоВ подписан ${fmtDate(u.mou.signed)}. Уведомление ИКАО от ${fmtDate(u.notification.date)} (${u.notification.ref}): предложено ${u.notification.proposed}. Согласовано: ${fmtDate(u.audit.start)} – ${fmtDate(u.audit.end)} (${u.audit.agreedBy}).` : 'Дата аудита задаётся в «Данные → Настройки».'; }, auto: () => U() ? 'done' : (settings().auditDate ? 'wip' : '') },
+  { id: 'mou', t: 'МоВ с ИКАО, уведомление об аудите и согласование сроков', hint: () => { const u = U(); return u ? `МоВ подписан ${fmtDate(u.mou.signed)}. Уведомление ИКАО от ${fmtDate(u.notification.date)} (${u.notification.ref}): предложено ${u.notification.proposed}. Согласовано: ${fmtDate(u.audit.start)} – ${fmtDate(u.audit.end)}${u.audit.agreedBy ? ` (${esc(u.audit.agreedBy)})` : ''}.` : 'Дата аудита задаётся в «Данные → Настройки».'; }, auto: () => U() ? 'done' : (settings().auditDate ? 'wip' : '') },
   { id: 'sasaq', t: 'Заполнение и подача SASAQ (EN) через защищённую ссылку ИКАО', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const d = D('sasaq'); if (!d) return ''; const f = d.items.filter(i => i.filled).length; return `Черновик SASAQ 1 (19.06.2026): заполнено ${f} из ${d.items.length} вопросов. Подаётся вместе с CC и обновлённым CAP — не позднее чем за 60 дней до аудита.`; }, auto: () => (auditState().docs.sasaq || {}).st === 'sent' ? 'done' : 'wip' },
   { id: 'cc', t: 'Контрольные перечни соответствия (CC) по Прил. 17 и Прил. 9 (EN): заполнение, проверка, подача', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const u = U(); const d = D('cc'); const base = d ? `Редакция в3 (01.07.2026) в портале: ${d.items.filter(i => i.kind === 'std' || i.kind === 'rp').length} SARPs. ` : ''; const sent = (auditState().docs.cc || {}).st === 'sent'; return base + (sent ? 'Отправлено в ИКАО.' : (u && u.ccCheck ? `Проверка редакции 12.09.2026 (${fmtDate(u.ccCheck.date)}): ${u.ccCheck.verdict} ${u.ccCheck.summary}` : '')); }, auto: () => (auditState().docs.cc || {}).st === 'sent' ? 'done' : 'wip' },
   { id: 'cap', t: 'Обновлённый план корректирующих действий (CAP) по итогам аудита USAP-CMA 2019', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const c = D('cap2019'); const u = U(); return c ? `${c.meta.update ? `Редакция EN (${c.meta.update.approved}): выполнено ${capStats(c).done} из ${capStats(c).total}, незакрыто ${capStats(c).open}. ` : ''}Основа — ПКД 2020: ${c.meta.findings} выводов, ${c.meta.items} рекомендаций (раздел «Выводы аудита 2019»). ${u ? `Результаты ИКАО 2019: EI ${u.previous.results2019.ei} %, соответствие Прил. 17 — ${u.previous.results2019.compliance} %; ${u.previous.results.source}: EI ${u.previous.results.ei} %, соответствие — ${u.previous.results.compliance} %.` : ''}` : ''; }, auto: () => (auditState().docs.cap || {}).st === 'sent' ? 'done' : (D('cap2019') && D('cap2019').meta.update ? 'wip' : '') },
@@ -546,7 +553,7 @@ function pPQ(m) {
   m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${n} (${pct(n, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
   m.appendChild(ceEI(d, list, st));
   m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], list,
-    i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
+    i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
       `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, pqBadge(o.st), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
     openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const s = d.meta.subs.find(x => x.code === i.sub); return s ? `${s.code} ${s.name}` : i.area; }) }));
 }
@@ -727,12 +734,21 @@ function pPlan(m) {
   c.onchange = e => { const x = e.target; if (!x.dataset.id) return; const all = planState(); all[x.dataset.id] = { ...(all[x.dataset.id] || {}), [x.dataset.k]: x.value }; LS.set(K.plan, all); render(); };
   c.onclick = e => { const b = e.target.closest('[data-note]'); if (!b) return; const id = b.dataset.note; const all = planState(); const v = prompt('Примечание к этапу', (all[id] || {}).note || ''); if (v === null) return; all[id] = { ...(all[id] || {}), note: v.trim() }; LS.set(K.plan, all); render(); };
   m.appendChild(c);
-  // пакет документов GEN-05
-  const reg = D('registry');
-  if (reg) {
-    const need = [['Primary aviation security legislation', ['R01']], ['Aviation security regulations', ['R06', 'R05', 'R09']], ['National Civil Aviation Security Programme', ['R02']], ['National Civil Aviation Security Training Programme/Policy', ['R04']], ['National Civil Aviation Security Quality Control Programme', ['R05', 'R16']], ['National Air Transport Facilitation Programme', ['R03']], ['Airport Security Programme(s) — Dushanbe (DYU)', []], ['Schedule of national quality control activities (2 предыдущих года + текущий)', []]];
-    const k = el('div', 'card'); k.innerHTML = `<h2>Пакет документов к подаче (SASAQ GEN-05)</h2>`;
-    k.appendChild(table(['№', 'Документ', 'В реестре АБ', 'Статус'], need.map((n, i) => ({ i: i + 1, n })), r => { const ds = r.n[1].map(id => reg.docs.find(d => d.id === id)).filter(Boolean); return [r.i, esc(r.n[0]), ds.map(d => `<div class="small">${esc(d.ru)}</div>`).join('') || '<span class="dim small">' + (r.i === 7 ? 'ПАБ аэропорта — за эксплуатантом (в папке «перевод на англ» есть ASP DYU 2026 EN)' : 'график КК — формируется отделом АБ') + '</span>', ds.map(d => badge(d.bucket)).join(' ') || badge('tbd')]; }));
+  // Пакет документов GEN-05 — из usap.json (requested): один перечень с чек-листом раздела «Аудит», а не второй вшитый список
+  const reg = D('registry'), up = U();
+  if (up && reg) {
+    const a = auditState(); const sent = up.requested.filter(r => docSent(r, a.docs)).length;
+    const k = el('div', 'card');
+    k.innerHTML = `<h2>Пакет документов к подаче (SASAQ GEN-05) <span class="dim small">${sent}/${up.requested.length} отправлено</span></h2>`
+      + `<p class="small dim">Перечень и статусы — из раздела «Аудит USAP-CMA 2026»; менять их там.</p>`;
+    k.appendChild(table(['№', 'Документ', 'В реестре АБ', 'Статус'], up.requested, r => {
+      const ds = (r.reg || []).map(id => reg.docs.find(d => d.id === id)).filter(Boolean);
+      const o = a.docs[r.id] || {}; const ss = subStats(r, a.docs); const hasParts = r.parts && r.parts.length;
+      return [r.n, `${esc(r.ru)}<div class="small dim">${esc(r.en)}</div>`,
+        ds.map(d => `<div class="small">${badge(d.bucket)} ${esc(d.ru)}</div>`).join('') || `<span class="dim small">${esc(r.note || '—')}</span>`,
+        hasParts ? badge(ss.s === ss.tot ? 'ok' : ss.s > 0 ? 'wip' : 'none', `${ss.s}/${ss.tot} отправлено`) : badge(ADOCB[o.st || ''], ADOC[o.st || ''])];
+    }));
+    k.appendChild(el('div', 'row', `<a class="btn sm ghost" href="#audit">Чек-лист подачи →</a>`));
     m.appendChild(k);
   }
 }
@@ -775,7 +791,7 @@ function hosCard(h, a) {
         return `<label class="subrow${on ? ' on' : ''}"><input type="checkbox" data-hos="${esc(i.id)}"${on ? ' checked' : ''}><span><b>${esc(HOSK[i.kind] || '')}</b>${i.time ? ` <span class="dim">${esc(i.time)}</span>` : ''} — ${esc(i.text)}</span></label>`; }).join('') + '</div>';
   }).join('')));
   if ((h.open || []).length) c.appendChild(el('div', '', `<div class="small"><b>${esc(t('Уточнить'))}:</b></div><ul class="list small">${h.open.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
-  c.onchange = e => { const x = e.target; if (!x.dataset.hos) return; const s = auditState(); s.hos[x.dataset.hos] = { done: x.checked, at: today() }; saveAudit(s); render(); };
+  c.onchange = e => { const x = e.target; if (!x.dataset.hos) return; const s = auditState(); s.hos[x.dataset.hos] = x.checked ? { done: true, at: today() } : { done: false }; saveAudit(s); render(); };
   return c;
 }
 function pAudit(m) {
@@ -857,11 +873,12 @@ function pAudit(m) {
       return [r.n, `<b>${esc(r.ru)}</b><div class="small dim">${esc(r.en)}</div>${r.note ? `<div class="small">${esc(r.note)}</div>` : ''}${subList(r)}`, `<span class="small">${esc(r.ref)}</span>`,
         ds.map(d => `<div class="small">${badge(d.bucket)} ${esc(d.ru)}</div>`).join('') || '<span class="dim small">—</span>',
         hasParts ? `${badge(ss.s === ss.tot ? 'ok' : ss.s > 0 ? 'wip' : 'none', `${ss.s}/${ss.tot}`)} <span class="small dim">отправлено</span>`
-          : `<select class="sel" data-doc="${esc(r.id)}" style="height:30px">${Object.entries(ADOC).map(([k, v]) => `<option value="${k}"${(o.st || '') === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select>${o.at ? `<div class="small dim">${esc(o.at)}</div>` : ''}`,
+          : `<select class="sel" data-doc="${esc(r.id)}" style="height:30px">${Object.entries(ADOC).map(([k, v]) => `<option value="${k}"${(o.st || '') === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select>${o.st && o.at ? `<div class="small dim">${esc(o.at)}</div>` : ''}`,
         hasParts ? '<span class="dim small">отметьте документы слева</span>' : `<input class="inp" data-note="${esc(r.id)}" value="${esc(o.note || '')}" placeholder="файл, дата, кто отправил">`]; }));
   rd.onchange = e => { const x = e.target; const st = auditState();
-    if (x.dataset.sub) st.docs[x.dataset.sub] = { ...(st.docs[x.dataset.sub] || {}), data: undefined, st: x.checked ? 'sent' : '', at: today() };
-    else if (x.dataset.doc) st.docs[x.dataset.doc] = { ...(st.docs[x.dataset.doc] || {}), data: undefined, st: x.value, at: today() };
+    // дату ставим только вместе со статусом: снятая галочка не должна выглядеть как «выполнено сегодня»
+    if (x.dataset.sub) st.docs[x.dataset.sub] = { ...(st.docs[x.dataset.sub] || {}), data: undefined, st: x.checked ? 'sent' : '', at: x.checked ? today() : '' };
+    else if (x.dataset.doc) st.docs[x.dataset.doc] = { ...(st.docs[x.dataset.doc] || {}), data: undefined, st: x.value, at: x.value ? today() : '' };
     else if (x.dataset.note) st.docs[x.dataset.note] = { ...(st.docs[x.dataset.note] || {}), data: undefined, note: x.value.trim() };
     else return; saveAudit(st); toast('Сохранено', 'ok'); if (x.dataset.doc || x.dataset.sub) render(); };
   // Enter в примечании — сохранить и перейти к следующей строке (быстрый ввод, как в Библиотеке Shohin)
@@ -876,8 +893,8 @@ function pAudit(m) {
   if (u.ccCheck) m.appendChild(checkCard(u.ccCheck, 'Готовность CC к подаче', '#cc', 'Контрольный перечень в портале', 'cc'));
   if (u.capCheck) m.appendChild(checkCard(u.capCheck, 'Готовность ПКД к подаче', '#cap?st=open', 'Незакрытые рекомендации ПКД', 'cap'));
   const lg = el('div', 'card'); lg.id = 'logi'; lg.innerHTML = `<h2>${esc(t('Логистика'))} и организация <span class="dim small">${done}/${u.logistics.length}</span></h2>`;
-  lg.appendChild(table(['', 'Пункт', 'Источник'], u.logistics, l => { const o = a.log[l.id] || (l.done ? { done: true, at: l.done } : {}); return [`<input type="checkbox" data-log="${esc(l.id)}"${o.done ? ' checked' : ''}>`, `<span class="${o.done ? 'dim' : ''}">${esc(l.text)}</span>${o.at ? ` <span class="dim small">${esc(o.at)}</span>` : ''}`, `<span class="small dim">${esc(l.ref || '')}</span>`]; }));
-  lg.onchange = e => { const x = e.target; if (!x.dataset.log) return; const st = auditState(); st.log[x.dataset.log] = { done: x.checked, at: today() }; saveAudit(st); render(); };
+  lg.appendChild(table(['', 'Пункт', 'Источник'], u.logistics, l => { const o = a.log[l.id] || (l.done ? { done: true, at: l.done } : {}); return [`<input type="checkbox" data-log="${esc(l.id)}"${o.done ? ' checked' : ''}>`, `<span class="${o.done ? 'dim' : ''}">${esc(l.text)}</span>${o.done && o.at ? ` <span class="dim small">${esc(o.at)}</span>` : ''}`, `<span class="small dim">${esc(l.ref || '')}</span>`]; }));
+  lg.onchange = e => { const x = e.target; if (!x.dataset.log) return; const st = auditState(); st.log[x.dataset.log] = x.checked ? { done: true, at: today() } : { done: false }; saveAudit(st); render(); };
   m.appendChild(lg);
   if (u.hospitality) m.appendChild(hosCard(u.hospitality, a));
   const g2 = el('div', 'grid2');
@@ -936,11 +953,21 @@ function exportCapOLF(c) {
     rows.push([f.area, 'CE-' + i.ce, i.pq, i.rec, x.step, x.action, x.org, x.evref, x.est, x.rev, x.done, capProgOLF(x), x.at, x.at ? who : '']); }));
   download(csv(rows), `AvSec_CAP_OLF_sverka_${today()}.csv`, 'text/csv;charset=utf-8');
 }
-const capHas = id => { const c = D('cap2019'); return !!c && c.findings.some(f => f.items.some(i => i.pq === id)); };
+// Индекс «ВП → выводы 2019» строится один раз на загруженные данные: иначе 493 строки × 176 рекомендаций на каждую перерисовку
+const CAPIDX = new WeakMap();
+function capIdx() { const c = D('cap2019'); if (!c) return null; let m = CAPIDX.get(c);
+  if (!m) { m = new Map(); c.findings.forEach(f => f.items.forEach(i => { if (!m.has(i.pq)) m.set(i.pq, []); m.get(i.pq).push({ f, i }); })); CAPIDX.set(c, m); }
+  return m; }
+const capHas = id => { const m = capIdx(); return !!m && m.has(id); };
+// Номера ВП в ПКД 2020 — по протоколу 2019; в Поправке 18 (2025) часть номеров переиспользована.
+// 18 номеров вовсе не находятся, а совпавшие сверяем по критическому элементу: расходится — ссылку помечаем «сверить».
+const ceNorm = v => String(v == null ? '' : v).replace(/КЭ-?/gi, '').trim();
+const capSusp = (i, cur) => !!cur && ceNorm(i.ce) !== ceNorm(cur.ce);
 function capRef(id) {
-  const c = D('cap2019'); if (!c) return '';
-  const hits = c.findings.flatMap(f => f.items.filter(i => i.pq === id).map(i => ({ f, i }))); if (!hits.length) return '';
-  return `<div class="callout small"><b>Аудит 2019:</b> ${hits.map(({ f, i }) => `вывод № ${f.n} (${esc(CAPP[f.priority] || f.priority)}, SARP ${esc(i.sarp)}, КЭ-${esc(i.ce)}) — ${esc(i.rec)} ${i.status ? badge(CAPSB[capSt(i)], CAPST[capSt(i)]) : ''}`).join('<br>')} <a href="#cap?s=${encodeURIComponent(id)}">→ ПКД</a></div>`;
+  const m = capIdx(); if (!m) return '';
+  const hits = m.get(id); if (!hits || !hits.length) return '';
+  const pq = D('pq'); const cur = pq && pq.items.find(x => x.id === id); const any = hits.some(({ i }) => capSusp(i, cur));
+  return `<div class="callout small"><b>Аудит 2019:</b> ${hits.map(({ f, i }) => `вывод № ${f.n} (${esc(CAPP[f.priority] || f.priority)}, SARP ${esc(i.sarp)}, КЭ-${esc(i.ce)}) — ${esc(i.rec)} ${i.status ? badge(CAPSB[capSt(i)], CAPST[capSt(i)]) : ''}${capSusp(i, cur) ? ' ' + badge('missing', 'сверить номер') : ''}`).join('<br>')} <a href="#cap?s=${encodeURIComponent(id)}">→ ПКД</a>${any ? '<div class="dim">Номер ВП взят из протокола 2019; критический элемент не совпал с Поправкой 18 — проверьте, тот ли это вопрос.</div>' : ''}</div>`;
 }
 // карточка рекомендации ПКД: полный текст, статус EN, срок, переходы к ВП и к фильтрам
 function openCapItem(i, f, idx) {
@@ -1181,8 +1208,9 @@ function pGlossary(m) {
 /* ---------- Данные и резервная копия ---------- */
 function pData(m) {
   head(m, 'Данные и резервная копия', 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
-  const s = settings();
-  const c = el('div', 'card', `<h2>${esc(t('Настройки'))}</h2><p class="small dim">По умолчанию дата аудита и NCMC берутся из данных портала (usap.json: 9–18.11.2026, Шералиев Б.); здесь их можно переопределить — пустое поле возвращает значение по умолчанию.</p><form class="form" id="setForm"><div class="two"><label>Дата аудита на месте<input type="date" name="auditDate" value="${esc(s.auditDate || '')}"></label><label>Национальный координатор (NCMC)<input name="ncmc" value="${esc(s.ncmc || '')}" placeholder="Ф.И.О., должность"></label></div><div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>`);
+  // в полях — только сохранённые переопределения: иначе «Сохранить» без правок заморозило бы текущие данные портала
+  const s = settings(); const so = LS.get(K.set, {});
+  const c = el('div', 'card', `<h2>${esc(t('Настройки'))}</h2><p class="small dim">Дата аудита и NCMC берутся из данных портала; здесь их можно переопределить на этом устройстве — пустое поле возвращает значение из данных.</p><form class="form" id="setForm"><div class="two"><label>Дата аудита на месте<input type="date" name="auditDate" value="${esc(so.auditDate || '')}"><span class="small dim">Из данных: ${s.auditDate ? fmtDate(s.auditDate) : '—'}</span></label><label>Национальный координатор (NCMC)<input name="ncmc" value="${esc(so.ncmc || '')}" placeholder="${esc(s.ncmc || 'Ф.И.О., должность')}"><span class="small dim">Из данных: ${esc(s.ncmc || '—')}</span></label></div><div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>`);
   m.appendChild(c);
   $('#setForm').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target); LS.set(K.set, { auditDate: fd.get('auditDate'), ncmc: fd.get('ncmc').trim() }); toast('Настройки сохранены', 'ok'); render(); };
   const st = pqState(), cs = ccState(), ss = sasaqState(), ps = planState();
@@ -1222,7 +1250,7 @@ function pFind(m) {
   if (pq) group('Протокольные вопросы', pq.items.filter(i => has(q, i.id, i.q, i.g.join(' '), i.doc)), i => `<span class="code">${esc(i.id)}</span> <span class="badge b-area">${i.area}</span> ${esc(i.q)}`, openPQ);
   if (cc) group('Контрольный перечень (CC)', cc.items.filter(i => i.kind !== 'hdr' && has(q, i.id, i.text, i.ref, i.remarks)), i => `<span class="badge b-${i.kind}">Прил. ${i.annex} · ${esc(i.id)}</span> ${esc(i.text.slice(0, 220))}<div class="small dim">${esc(i.ref)}</div>`, openCC);
   if (sq) group('SASAQ', sq.items.filter(i => has(q, i.code, i.text, i.rows.flat().join(' '))), i => `<span class="code">${esc(i.code)}</span> ${esc(i.text)}`, openSASAQ);
-  if (cap) group('Выводы аудита 2019 (CAP)', cap.findings.filter(f => f.items.some(i => has(q, i.sarp, i.pq, i.rec, i.action, i.status && i.status.en))), f => `${badge(CAPB[f.priority], CAPP[f.priority])} <span class="badge b-area">${f.area}</span> Вывод № ${f.n}: ${esc(f.items.map(i => i.rec).join(' · ').slice(0, 220))}`, f => go('cap', { area: f.area }, ''));
+  if (cap) group('Выводы аудита 2019 (CAP)', cap.findings.filter(f => f.items.some(i => has(q, i.sarp, i.pq, i.rec, i.action, i.status && i.status.en))), f => `${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} <span class="badge b-area">${f.area}</span> Вывод № ${f.n}: ${esc(f.items.map(i => i.rec).join(' · ').slice(0, 220))}`, f => go('cap', { area: f.area }, q));
   if (reg) group('Реестр документов', reg.docs.filter(x => has(q, x.ru, x.tj, x.en, x.approved, x.icao.join(' '))), x => `${badge(x.bucket)} <b>${esc(x.ru)}</b><div class="small dim">${esc(x.en)}</div>`, openDoc);
   if (mx) group('Матрица ИКАО', mx.sections.flatMap(s => s.items).filter(i => has(q, i.title, i.icao, i.status, i.analog)), i => `${badge(i.bucket)} ${esc(i.title)} <span class="dim small">${esc(i.icao)}</span>`, () => go('matrix', {}, ''));
   if (gm) group('Инструктивные материалы', gm.items.filter(i => has(q, i.code, i.title, i.ncasp)), i => `<span class="code">${esc(i.code)}</span> ${esc(i.title)}`, i => window.open(i.folder, '_blank'));
