@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '34';
+const APP_VERSION = '35';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -228,8 +228,11 @@ function head(m, title, sub) { m.appendChild(el('h1', '', esc(t(title)))); if (s
 const TABLE_NA = new Set(['', '—', '-', '0', 'Н/П', 'н/п', 'Нет статуса', 'Не начато']);   // на телефоне такие ячейки в карточке скрыты (колонка на десктопе остаётся)
 function table(cols, rows, rowFn, onClick, opts = {}) {
   const w = el('div', 'tw');
-  const tb = el('table');
-  tb.innerHTML = `<thead><tr>${cols.map(c => `<th>${esc(t(c))}</th>`).join('')}</tr></thead>`;
+  const tb = el('table', opts.w ? 'fixedw' : '');
+  // opts.w — доли ширины колонок: с table-layout:fixed длинное наименование получает своё место,
+  // а короткий статус не растягивает колонку (без этого ширины считаются по содержимому)
+  tb.innerHTML = (opts.w ? `<colgroup>${opts.w.map(x => `<col style="width:${x}">`).join('')}</colgroup>` : '')
+    + `<thead><tr>${cols.map(c => `<th>${esc(t(c))}</th>`).join('')}</tr></thead>`;
   const body = el('tbody');
   if (!rows.length) body.innerHTML = `<tr><td class="empty" colspan="${cols.length}">${esc(t(opts.empty || 'Ничего не найдено'))}</td></tr>`;
   let lastG = null;
@@ -961,7 +964,7 @@ function pAudit(m) {
           ds.map(d => `<div class="small">${badge(d.bucket)} ${esc(d.ru)}</div>`).join('') || '<span class="dim small">—</span>',
           hasParts ? `${badge(ss.s === ss.tot ? 'ok' : ss.s > 0 ? 'wip' : 'none', `${ss.s}/${ss.tot}`)} <span class="small dim">отправлено</span>`
             : `<select class="sel" data-doc="${esc(r.id)}" style="height:30px">${Object.entries(ADOC).map(([k, v]) => `<option value="${k}"${(o.st || '') === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select>${o.st && o.at ? `<div class="small dim">${esc(o.at)}</div>` : ''}`,
-          hasParts ? '<span class="dim small">отметьте документы слева</span>' : `<input class="inp" data-note="${esc(r.id)}" value="${esc(o.note || '')}" placeholder="файл, дата, кто отправил">`]; }));
+          hasParts ? '<span class="dim small">отметьте документы слева</span>' : `<input class="inp" data-note="${esc(r.id)}" value="${esc(o.note || '')}" placeholder="файл, дата, кто отправил">`]; }, null, { w: ['3%', '34%', '13%', '17%', '16%', '17%'] }));
     rd.onchange = e => { const x = e.target; const st = auditState();
       // дату ставим только вместе со статусом: снятая галочка не должна выглядеть как «выполнено сегодня»
       if (x.dataset.sub) st.docs[x.dataset.sub] = { ...(st.docs[x.dataset.sub] || {}), data: undefined, st: x.checked ? 'sent' : '', at: x.checked ? today() : '' };

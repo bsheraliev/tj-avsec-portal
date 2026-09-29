@@ -318,3 +318,4 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
 .seg .n{margin-left:6px;opacity:.7;font-variant-numeric:tabular-nums}
 @media(max-width:700px){.segs{gap:5px;padding-bottom:10px}.seg{padding:6px 11px;font-size:12.5px}}
 .subrow.nb{padding-left:24px;cursor:default}
+table.fixedw{table-layout:fixed;min-width:900px}
