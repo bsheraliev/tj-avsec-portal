@@ -83,7 +83,7 @@ h3{font-size:14px;margin:14px 0 6px}
 .grow{flex:1}
 .mt{margin-top:14px}
 
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:12px;margin-bottom:18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:12px;margin-bottom:18px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit}
 .tile:hover{border-color:var(--accent)}
 .tile .n{font-size:26px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -323,3 +323,8 @@ table.fixedw{table-layout:fixed;min-width:900px}
 .idc{display:inline-block;font-family:var(--mono);font-size:12px;line-height:1.5;padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);white-space:nowrap;vertical-align:baseline}
 button.idc.clk{cursor:pointer;font:inherit;font-family:var(--mono);font-size:12px;margin:2px 0}
 button.idc.clk:hover{border-color:var(--accent)}
+
+/* свёрнутые карточки: заголовок в summary, статус рядом */
+details.card>summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+details.card>summary h2{margin:0;display:inline}
+details.card>summary::after{margin-left:auto}

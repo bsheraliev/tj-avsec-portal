@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '40';
+const APP_VERSION = '41';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -271,6 +271,19 @@ function toggle(label, key) {
 }
 function tile(cls, n, label, onclick) { const b = el('button', 'tile ' + cls, `<div class="n">${n}</div><div class="t">${esc(t(label))}</div>`); b.onclick = onclick; return b; }
 const has = (q, ...fields) => { q = norm(q); return !q || fields.some(f => norm(f).includes(q)); };
+const PAGE = 60;
+// Длинные списки (493 ВП, 139 SARPs, 329 терминов) — порциями: первые 60 строк, дальше по кнопке.
+// Фильтры и поиск работают по всему списку; порция запоминается на адрес (фильтры + поиск), пока открыт портал.
+function paged(m, rows, draw) {
+  const key = S.page + '?' + Object.entries(S.f).filter(([, v]) => v).map(([k, v]) => k + '=' + v).join('&') + '#' + (S.q || '');
+  S.more = S.more || {}; const lim = S.more[key] || PAGE;
+  draw(rows.slice(0, lim));
+  if (rows.length <= lim) return;
+  const b = el('div', 'row mt');
+  const more = el('button', 'btn sm', `${esc(t('Показать ещё'))} ${Math.min(PAGE, rows.length - lim)}`); more.onclick = () => { S.more[key] = lim + PAGE; render(); };
+  const all = el('button', 'btn sm ghost', `${esc(t('Показать все'))} (${rows.length})`); all.onclick = () => { S.more[key] = rows.length; render(); };
+  b.append(more, all, el('span', 'dim small', `${esc(t('показано'))} ${lim} ${esc(t('из'))} ${rows.length}`)); m.appendChild(b);
+}
 function prog(parts, total) {
   const segs = Object.entries(parts).filter(([, v]) => v > 0).map(([k, v]) => `<span class="p-${k}" style="width:${v * 100 / (total || 1)}%" title="${esc(t(PQST[k] || k))}: ${v}"></span>`).join('');
   return `<div class="prog">${segs}</div>`;
@@ -451,61 +464,36 @@ function suggest(text, href, label) {
 function dash(m) {
   head(m, 'Обзор', 'Состояние подготовки к USAP-CMA и нормативной базы АБ · Агентство гражданской авиации при Правительстве Республики Таджикистан');
   todoCard(m);
-  const pq = D('pq'), cc = D('cc'), sq = D('sasaq'), reg = D('registry'), mx = D('matrix'), cap = D('cap2019');
-  const tiles = el('div', 'tiles');
+  const pq = D('pq'), cc = D('cc'), sq = D('sasaq'), reg = D('registry'), mx = D('matrix'), cap = D('cap2019'), u = U();
   const st = pqState();
+  // единственное предупреждение, которого нет в списке дел: срок для документов, требующих утверждения (НПАБГА)
+  if (u && u.audit.docsApprovedDeadline && daysTo(u.audit.docsApprovedDeadline) >= 0) {
+    const nc = u.requested.find(r => r.id === 'ncasp');
+    if (nc && !docSent(nc, auditState().docs)) m.appendChild(el('div', 'card', suggest(`НПАБГА не отправлена, а документы, требующие утверждения, принимаются только до <b>${fmtDate(u.audit.docsApprovedDeadline)}</b> (${daysTo(u.audit.docsApprovedDeadline)} дн.) — после начала аудита их не рассматривают`, '#audit?t=docs', 'К документам')));
+  }
+  // четыре числа состояния; показатели реестра и матрицы живут в своих разделах
+  const tiles = el('div', 'tiles');
+  const ad = settings().auditDate;
+  if (ad) tiles.appendChild(tile(daysTo(ad) < 30 ? 'miss' : 'info', daysTo(ad) >= 0 ? daysTo(ad) : '—', `дней до аудита · ${fmtDate(ad)}`, () => go('audit')));
   if (pq) {
-    const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; pq.items.forEach(i => { const s = (st[i.id] || {}).st; if (s) cnt[s]++; });
+    const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; pq.items.forEach(i => { const x = (st[i.id] || {}).st; if (x) cnt[x]++; });
     const n = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
-    tiles.appendChild(tile('info', `${pct(n, pq.items.length)}%`, `ВП оценено (${n} из ${pq.items.length})`, () => go('pq')));
-    tiles.appendChild(tile('ok', cnt.sat, 'ВП удовлетворительно', () => go('pq', { st: 'sat' })));
-    tiles.appendChild(tile('miss', cnt.unsat, 'ВП неудовлетворительно', () => go('pq', { st: 'unsat' })));
+    tiles.appendChild(tile(n ? 'info' : 'miss', `${pct(n, pq.items.length)}%`, `ВП оценено (${n} из ${pq.items.length})`, () => go('pq', { t: 'sum' })));
   }
   if (cc) {
-    const s = cc.items.filter(i => i.kind === 'std' || i.kind === 'rp');
-    const bad = s.filter(i => ccOf(i).st !== 'ok');
-    tiles.appendChild(tile(bad.length ? 'draft' : 'ok', bad.length, `CC: SARPs с расхождением / частично (из ${s.length})`, () => go('cc', { st: 'bad' })));
+    const sarps = cc.items.filter(i => i.kind === 'std' || i.kind === 'rp'); const bad = sarps.filter(i => ccOf(i).st !== 'ok');
+    tiles.appendChild(tile(bad.length ? 'draft' : 'ok', bad.length, `CC: расхождения / частично (из ${sarps.length})`, () => go('cc', { st: 'bad' })));
   }
   if (sq) { const f = sq.items.filter(i => i.filled).length; tiles.appendChild(tile(f === sq.items.length ? 'ok' : 'draft', `${f}/${sq.items.length}`, 'SASAQ: вопросов заполнено', () => go('sasaq'))); }
-  if (reg) {
-    const b = {}; reg.docs.forEach(d => { b[d.bucket] = (b[d.bucket] || 0) + 1; });
-    tiles.appendChild(tile('ok', b.ok || 0, 'Документов АБ действует', () => go('docs', { b: 'ok' })));
-    tiles.appendChild(tile('draft', (b.draft || 0) + (b.ready || 0), 'Проекты и готовые к утверждению', () => go('docs', { b: 'draft' })));
-    tiles.appendChild(tile('miss', b.tbd || 0, 'Уточняется / отсутствует', () => go('docs', { b: 'tbd' })));
-  }
-  if (mx) { const all = mx.sections.flatMap(s => s.items); const miss = all.filter(i => i.bucket === 'missing').length; tiles.appendChild(tile('miss', miss, `Матрица ИКАО: требований без акта (из ${all.length})`, () => go('matrix', { b: 'missing' }))); }
   m.appendChild(tiles);
-  // подсказки под сводкой: что именно тормозит подготовку
-  (() => {
-    const u = U(); const tips = [];
-    if (u) { const a = auditState(); const notSent = u.requested.filter(r => !docSent(r, a.docs));
-      if (notSent.length) tips.push(suggest(`не отправлено позиций в ИКАО: <b>${notSent.length}</b> (${esc(notSent.map(r => r.ru.split(':')[0]).slice(0, 3).join(', '))}${notSent.length > 3 ? '…' : ''})`, '#audit?t=docs', 'К документам')); }
-    if (pq) { const nn = pq.items.filter(i => !(st[i.id] || {}).st).length;
-      if (nn) tips.push(suggest(`ВП без самооценки: <b>${nn}</b> из ${pq.items.length} — без статуса и доказательств EI считается нулевым`, '#pq?st=none', 'К ВП')); }
-    if (cap && cap.meta.update) { const cs = capStats(cap); if (cs.open) tips.push(suggest(`незакрытых рекомендаций ПКД: <b>${cs.open}</b> из ${cs.total}`, '#cap?st=open', 'К ПКД')); }
-    if (u && u.audit.docsApprovedDeadline && daysTo(u.audit.docsApprovedDeadline) >= 0) {
-      const a2 = auditState(); const nc = u.requested.find(r => r.id === 'ncasp');
-      if (nc && !docSent(nc, a2.docs)) tips.push(suggest(`НПАБГА не отправлена, а документы, требующие утверждения, принимаются только до <b>${fmtDate(u.audit.docsApprovedDeadline)}</b> (${daysTo(u.audit.docsApprovedDeadline)} дн.) — после начала аудита их не рассматривают`, '#audit?t=docs', 'К документам'));
-    }
-    if (tips.length) m.appendChild(el('div', 'card', `<h2>${esc(t('Что мешает готовности'))}</h2>` + tips.join('')));
-  })();
 
   const g = el('div', 'grid2');
-  // обратный отсчёт
-  const ad = settings().auditDate;
-  const cd = el('div', 'card');
-  cd.innerHTML = `<h2>${esc(t('Дней до аудита'))}</h2>` + (ad
-    ? `<div class="countdown ${daysTo(ad) < 60 ? 'warn' : ''}">${daysTo(ad) >= 0 ? daysTo(ad) : 'аудит прошёл'}</div><div class="dim">${esc(t('Аудит на месте'))}: ${fmtDate(ad)}${settings().ncmc ? ' · NCMC: ' + esc(settings().ncmc) : ''}</div>`
-    : `<div class="dim">${esc(t('Дата аудита не задана'))}. <a href="#data">${esc(t('Настройки'))} →</a></div>`)
-    + auditBrief() + `<h3>Дорожная карта USAP-CMA</h3>` + STAGES.map((s, i) => { const stt = stageStatus(s); return `<div class="row small" style="padding:3px 0"><span class="badge b-${stt === 'done' ? 'ok' : stt === 'wip' ? 'wip' : 'none'}" style="min-width:26px;text-align:center">${i + 1}</span><span class="grow">${esc(s.t)}</span></div>`; }).join('')
-    + `<div class="mt"><a class="btn sm ghost" href="#plan">Открыть дорожную карту</a></div>`;
-  g.appendChild(cd);
-  // по областям
+  // по областям проверки
   if (pq) {
     const c = el('div', 'card'); c.innerHTML = `<h2>Готовность по областям проверки</h2>`;
     pq.meta.areas.forEach(a => {
       const its = pq.items.filter(i => i.area === a.code); const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 };
-      its.forEach(i => { const s = (st[i.id] || {}).st; if (s) cnt[s]++; });
+      its.forEach(i => { const x = (st[i.id] || {}).st; if (x) cnt[x]++; });
       const n = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
       const r = el('div', '', `<div class="row small" style="margin-top:8px"><span class="badge b-area">${a.code}</span><span class="grow">${esc(a.name)}</span><span class="dim">${n}/${its.length}</span></div>${prog(cnt, its.length)}`);
       r.style.cursor = 'pointer'; r.onclick = () => go('pq', { area: a.code }); c.appendChild(r);
@@ -513,30 +501,26 @@ function dash(m) {
     c.appendChild(el('div', 'legend', `<span><i style="background:var(--ok)"></i>${esc(t('Удовлетворительно'))}</span><span><i style="background:var(--draft)"></i>${esc(t('В работе'))}</span><span><i style="background:var(--miss)"></i>${esc(t('Неудовлетворительно'))}</span><span><i style="background:var(--na)"></i>${esc(t('Не применимо'))}</span>`));
     g.appendChild(c);
   }
-  // на что смотреть
-  const w = el('div', 'card'); w.innerHTML = `<h2>Требует внимания</h2>`;
-  const ul = el('ul', 'list');
-  if (mx) mx.sections.flatMap(s => s.items).filter(i => i.bucket === 'missing').forEach(i => ul.appendChild(el('li', '', `${badge('missing')} ${esc(i.title)} <span class="dim small">— ${esc(i.icao)}</span>`)));
-  if (reg) reg.docs.filter(d => d.bucket === 'draft' || d.bucket === 'ready').forEach(d => ul.appendChild(el('li', '', `${badge(d.bucket)} ${esc(d.ru)} <span class="dim small">— ${esc(d.approved)}</span>`)));
-  if (cc) cc.items.filter(i => (i.kind === 'std' || i.kind === 'rp') && ccOf(i).st === 'missing').forEach(i => ul.appendChild(el('li', '', `${badge('missing', 'CC')} Прил. ${i.annex} ${esc(i.kind === 'rp' ? 'РП' : 'Ст.')} ${esc(i.id)} <span class="dim small">— ${esc((i.remarks || i.desc || i.ref).slice(0, 140))}</span>`)));
-  if (cap && cap.meta.update) { const s = capStats(cap); if (s.open) ul.appendChild(el('li', '', `${badge('draft', 'ПКД')} ${esc(t('Незакрытых рекомендаций ПКД'))}: ${s.open} из ${s.total} <a href="#cap?st=open">→</a>`)); }
-  if (!ul.children.length) ul.appendChild(el('li', 'dim', 'Открытых позиций нет.'));
-  w.appendChild(ul); g.appendChild(w);
-  // по ответственным
-  if (pq && team().length) {
-    const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('Ответственные'))}</h2>`;
-    c.appendChild(table(['Ответственный', 'ВП', 'Оценено', 'Удовл.', 'Неудовл.', 'Просрочено'], teamStats(), r => [`<b>${esc(r.name)}</b>${r.areas.length ? `<div class="small dim">${r.areas.join(', ')}</div>` : ''}`, r.total, r.assessed, r.sat, r.unsat, r.overdue ? `<span class="warn">${r.overdue}</span>` : '0'], r => go('pq', { resp: r.id })));
-    c.appendChild(el('div', 'row', `<a class="btn sm ghost" href="#team">${esc(t('Ответственные'))} →</a>`));
+  // дорожная карта — только где мы сейчас; полный список этапов в своём разделе
+  {
+    const done = STAGES.filter(x => stageStatus(x) === 'done').length;
+    const cur = STAGES.find(x => stageStatus(x) !== 'done'); const nxt = cur ? STAGES[STAGES.indexOf(cur) + 1] : null;
+    const c = el('div', 'card');
+    c.innerHTML = `<h2>${esc(t('Дорожная карта'))} <span class="dim small">${done} ${esc(t('из'))} ${STAGES.length}</span></h2>${prog({ sat: done, wip: cur && stageStatus(cur) === 'wip' ? 1 : 0 }, STAGES.length)}`
+      + (cur ? `<div class="mt"><span class="badge b-${stageStatus(cur) === 'wip' ? 'wip' : 'none'}">${STAGES.indexOf(cur) + 1}</span> <b>${esc(cur.t)}</b></div>` : `<div class="mt">${esc(t('Все этапы выполнены'))}</div>`)
+      + (nxt ? `<div class="small dim mt">${esc(t('Далее'))}: ${STAGES.indexOf(nxt) + 1}. ${esc(nxt.t)}</div>` : '')
+      + auditBrief()
+      + `<div class="row mt"><a class="btn sm ghost" href="#plan">${esc(t('Открыть дорожную карту'))}</a><a class="btn sm ghost" href="#team">${esc(t('Ответственные'))} →</a></div>`;
     g.appendChild(c);
   }
-  // ссылки
-  const l = el('div', 'card'); const dr = D('drive');
-  l.innerHTML = `<h2>Быстрые ссылки</h2>` + links([
-    dr && { title: 'Папка проекта Avsec в Google Drive', url: dr.meta.root },
-    { title: 'Реестр документов АБ', url: '#docs' }, { title: 'Протокольные вопросы USAP-CMA', url: '#pq' }, { title: 'Документы ИКАО (Прил. 17, Doc 8973, Doc 10047, Doc 9807)', url: '#icao' },
-    { title: 'Словарь RU·TJ·EN', url: '#glossary' }].filter(Boolean));
-  g.appendChild(l);
   m.appendChild(g);
+  // нормативная база и CC: что требует внимания — свёрнуто, чтобы обзор оставался обзором
+  const items = [];
+  if (mx) mx.sections.flatMap(x => x.items).filter(i => i.bucket === 'missing').forEach(i => items.push(`<li>${badge('missing')} ${esc(i.title)} <span class="dim small">— ${esc(i.icao)}</span></li>`));
+  if (reg) reg.docs.filter(d => d.bucket === 'draft' || d.bucket === 'ready').forEach(d => items.push(`<li>${badge(d.bucket)} ${esc(d.ru)} <span class="dim small">— ${esc(d.approved)}</span></li>`));
+  if (cc) cc.items.filter(i => (i.kind === 'std' || i.kind === 'rp') && ccOf(i).st === 'missing').forEach(i => items.push(`<li>${badge('missing', 'CC')} Прил. ${i.annex} ${esc(i.kind === 'rp' ? 'РП' : 'Ст.')} ${esc(i.id)} <span class="dim small">— ${esc((i.remarks || i.desc || i.ref).slice(0, 140))}</span></li>`));
+  if (items.length) { const d = el('details', 'card'); d.innerHTML = `<summary><b>${esc(t('Требует внимания'))}</b> <span class="dim small">${items.length} ${esc(t('позиций: матрица, реестр, CC'))}</span></summary><ul class="list mt">${items.join('')}</ul>`; m.appendChild(d); }
+  const dr = D('drive'); if (dr) m.appendChild(el('p', 'small dim', `<a href="${esc(dr.meta.root)}" target="_blank" rel="noopener">${esc(t('Папка проекта Avsec в Google Drive'))} →</a>`));
 }
 
 /* ---------- Протокольные вопросы ---------- */
@@ -578,10 +562,10 @@ function pPQ(m) {
     const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; list.forEach(i => { const o = (st[i.id] || {}).st; if (o) cnt[o]++; });
     const nn = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
     m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${nn} (${pct(nn, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
-    m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], list,
+    paged(m, list, part => m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], part,
       i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
         `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, pqBadge(o.st), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
-      openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) }));
+      openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) })));
   }
 
   if (tab === 'sum') {
@@ -812,10 +796,10 @@ function pCC(m) {
   if (S.f.st) list = list.filter(i => { const s = ccOf(i).st; return S.f.st === 'bad' ? (s === 'part' || s === 'missing') : s === S.f.st; });
   const sarps = items.filter(i => i.kind === 'std' || i.kind === 'rp'); const cnt = {}; sarps.forEach(i => { const s = ccOf(i).st; cnt[s] = (cnt[s] || 0) + 1; });
   m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b><span class="dim">строк · Прил. ${annex}: SARPs ${sarps.length} — ${badge('ok', CCST.ok)} ${cnt.ok || 0} · ${badge('part', CCST.part)} ${cnt.part || 0} · ${badge('missing', CCST.missing)} ${cnt.missing || 0}</span></div>`));
-  m.appendChild(table(['Пункт', 'Текст SARP', 'Национальная норма', 'Статус', 'Замечание'], list,
+  paged(m, list, part => m.appendChild(table(['Пункт', 'Текст SARP', 'Национальная норма', 'Статус', 'Замечание'], part,
     i => { const o = ccOf(i); return [i.kind === 'hdr' ? `<b>${esc(i.text)}</b>` : `<span class="badge b-${i.kind}">${i.kind === 'std' ? 'Ст.' : i.kind === 'rp' ? 'РП' : 'Опр.'}</span> <span class="mono">${esc(i.id)}</span>`,
       i.kind === 'hdr' ? '' : `<div class="td-wrap clamp" title="${esc(i.text)}">${esc(i.text)}</div>`, `<div class="td-wrap clamp">${esc(i.ref || '—')}</div>`, o.st ? badge(o.st, CCST[o.st]) + (o.auto ? '' : ' <span class="dim small">✎</span>') : '', `<div class="td-wrap clamp small">${esc(i.remarks || i.desc || '')}</div>`]; },
-    i => i.kind !== 'hdr' && openCC(i), { groupKey: i => i.section || `Глава ${i.ch}` }));
+    i => i.kind !== 'hdr' && openCC(i), { groupKey: i => i.section || `Глава ${i.ch}` })));
 }
 // ВП, которые ссылаются на пункт CC, — по ключу A17:3.1.1, а не поиском подстроки «3.1.1» (та находила и 3.1.10, и номера ВП)
 function ccPQList(i) {
@@ -1001,7 +985,7 @@ function pAudit(m) {
     g2.appendChild(ct);
     const fl = el('div', 'card'); fl.innerHTML = `<h2>${esc(t('Файлы'))} (Drive)</h2>` + links(u.files); g2.appendChild(fl);
     m.appendChild(g2);
-    m.appendChild(el('div', 'card small dim', `Источники: ${u.meta.sources.map(esc).join('; ')}.`));
+    m.appendChild(el('details', 'card small dim', `<summary>${esc(t('Источники'))} <span class="dim">${u.meta.sources.length}</span></summary><div class="mt">${u.meta.sources.map(esc).join('; ')}.</div>`));
   }
 
   if (tab === 'plan') {
@@ -1234,8 +1218,10 @@ function pCAP(m) {
   m.appendChild(capByArea(c));
   const pq = D('pq');
   list.forEach(f => {
-    const card = el('div', 'card');
-    card.innerHTML = `<h2>Вывод № ${f.n} <span class="badge b-area">${f.area}</span> ${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)}</h2>`;
+    // 50 раскрытых карточек с таблицами — 73 000 px на одной странице; теперь свёрнуты, раскрываются при фильтре, поиске или по клику
+    const its = f.items.filter(itOk); const nd = its.filter(i => capSt(i) === 'done' || capSt(i) === 'na').length;
+    const card = el('details', 'card'); if (list.length <= 5 || S.f.s || S.q || S.f.st) card.open = true;
+    card.innerHTML = `<summary><h2>Вывод № ${f.n} <span class="badge b-area">${f.area}</span> ${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)}</h2><span class="dim small">${its.length} ${esc(t('рекомендаций'))}${up ? ` · ${esc(t('выполнено'))} ${nd}` : ''}</span></summary>`;
     card.appendChild(table(['Приоритет', 'SARP', 'КЭ', 'ВП (2019)', 'Рекомендация ИКАО', 'Корректирующее действие (ПКД 2020)', 'Сроки', 'Статус'], f.items.filter(itOk),
       i => { const cur = pq && pq.items.find(x => x.id === i.pq); const k = capSt(i); return [badge(CAPB[i.prio], CAPP[i.prio] || i.prio), `<span class="mono">${esc(i.sarp)}</span>`, `<span class="badge b-ce">КЭ-${esc(i.ce)}</span>`,
         cur ? `<a href="#pq?s=${encodeURIComponent(i.pq)}" class="code">${esc(i.pq)}</a>` : `<span class="code dim" title="номер прежней редакции ВП">${esc(i.pq)}</span>`,
@@ -1480,7 +1466,7 @@ function pGlossary(m) {
   m.appendChild(tb);
   const list = d.terms.filter(x => (!S.f.sec || x.sec === S.f.sec) && (!S.f.en || x.en) && has(S.f.s, x.ru, x.tj, x.en));
   m.appendChild(el('div', 'count', `${list.length} терминов`));
-  m.appendChild(table(['№', 'Русский', 'Тоҷикӣ', 'English'], list, x => [x.n, esc(x.ru), esc(x.tj || '—'), esc(x.en || '—')], null, { groupKey: S.f.s ? null : (x => x.sec) }));
+  paged(m, list, part => m.appendChild(table(['№', 'Русский', 'Тоҷикӣ', 'English'], part, x => [x.n, esc(x.ru), esc(x.tj || '—'), esc(x.en || '—')], null, { groupKey: S.f.s ? null : (x => x.sec) })));
   if (!S.f.s) { m.appendChild(el('h2', 'mt', 'Сокращения (фиксированные соответствия RU → EN)')); m.appendChild(table(['RU', 'EN'], d.abbr, a => [`<b>${esc(a.ru)}</b>`, esc(a.en)])); m.appendChild(el('div', 'card', `<h2>Правила перевода</h2><ul class="list">${d.meta.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ul>`)); }
 }
 
