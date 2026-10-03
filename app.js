@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '44';
+const APP_VERSION = '45';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -66,7 +66,7 @@ const TR = { en: {
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
-  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
+  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
   'Подготовлено': 'Prepared', 'области': 'areas', 'принято': 'accepted', 'не принято': 'not accepted', 'Принять все непринятые': 'Accept all not accepted', 'Открыть непринятые': 'Open not accepted', 'Принято: ВП': 'Accepted: PQ', 'Принято ВП': 'PQs accepted', 'Открыть →': 'Open →',
   'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите': 'Prepared by a session from the texts of the NCASP and the QC Regulations — open the PQ, check and accept',
   'Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.': 'Evidence from the assessment will be added to the existing rows; the note and translation stay as they are.',
@@ -771,6 +771,7 @@ function assessBlock(i) {
     ${ev.length ? `<ul class="list small">${ev.map(e => `<li>${esc([e.doc, e.ref].filter(Boolean).join(' · '))}${e.date ? ` <span class="dim">${esc(fmtDate(e.date))}</span>` : ''}</li>`).join('')}</ul>` : ''}
     ${a.note ? `<p class="small">${esc(a.note)}</p>` : ''}${a.en ? `<p class="small dim">EN: ${esc(a.en)}</p>` : ''}
     ${a.gap ? `<p class="small warn">⚠ ${esc(t('Что нужно'))}: ${esc(a.gap)}</p>` : ''}
+    ${a.ask ? `<p class="small">📎 ${esc(t('Запросить у коллег'))}: ${esc(a.ask)}</p>` : ''}
     <div class="row mt"><button type="button" class="btn sm" data-assessapply="1">${esc(t(o.st ? 'Обновить из предварительной оценки' : 'Принять в самооценку'))}</button>${o.st ? `<span class="dim small">${esc(t('в самооценке'))}: ${pqBadge(o.st)}</span>` : ''}</div></div>`;
 }
 // «Сводка» ВП: сколько подготовлено, принято и не принято; массовое принятие — только ВП без статуса на устройстве
