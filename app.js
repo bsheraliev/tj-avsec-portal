@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '39';
+const APP_VERSION = '40';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -80,6 +80,8 @@ const ROUTES = [
     { id: 'plan', ic: '⏱', t: 'Дорожная карта', short: 'План' },
     { id: 'team', ic: '👥', t: 'Ответственные', cnt: () => team().length || '' },
     { id: 'cap', ic: '⚑', t: 'Выводы аудита 2019 (CAP)', cnt: () => D('cap2019') ? D('cap2019').findings.length : '' } ] },
+  { g: 'Надзор АБ', items: [
+    { id: 'subjects', ic: '🏢', t: 'Субъекты надзора', short: 'Субъекты', cnt: () => D('subjects') ? D('subjects').orgs.length : '' } ] },
   { g: 'Документы АБ', items: [
     { id: 'docs', ic: '📚', t: 'Реестр документов', cnt: () => D('registry') ? D('registry').docs.length : '' },
     { id: 'matrix', ic: '⊞', t: 'Соответствие ИКАО', cnt: () => D('matrix') ? D('matrix').sections.reduce((a, s) => a + s.items.length, 0) : '' },
@@ -349,10 +351,10 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019' };
+const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы' };
 const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
@@ -360,6 +362,9 @@ function filterVal(k, v) {
   if (k === 'prio') return CAPP[v] || v;
   if (k === 'resp') return v === 'none' ? 'Не назначен' : nameOf(v);
   if (k === 'l') return String(v).toUpperCase();
+  if (k === 'type') return subjType(v).name_ru;
+  if (k === 'kind') return ORGK[v] || v;
+  if (k === 'pst') return PSTL[v] || v;
   return v;
 }
 function injectActiveFilters(m) {
@@ -1010,14 +1015,20 @@ function pAudit(m) {
       r => [`<span class="mono">${r.date ? fmtDate(r.date) : ''}</span> <span class="dim small">${esc(r.dow || '')}</span>`,
         esc(r.text) + hosDayBlock(byDate[r.date], a)]));
     if (h && (h.open || []).length) sc.appendChild(el('div', '', `<div class="small mt"><b>${esc(t('Уточнить'))}:</b></div><ul class="list small">${h.open.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
-    if (u.audit.entities && u.audit.entities.length) {
-      const tbd = u.audit.entities.reduce((n, x) => n + (x.tbd || []).length, 0);
+    const sjd = SUBJ();
+    if (sjd) {
+      // раздел 5 плана: по областям проверки — организации из реестра субъектов с текстом, отправленным ИКАО; «уточнить» — позиции без наименования
+      const areas = D('pq') ? D('pq').meta.areas.map(a => a.code) : [...new Set(sjd.orgs.flatMap(o => o.areas.map(a => a.code)))];
+      const rows = areas.map(code => ({ code,
+        list: sjd.orgs.filter(o => !o.tbd && o.areas.some(a => a.code === code)).map(o => ({ o, text: o.areas.find(a => a.code === code).text || orgName(o) })),
+        tbd: sjd.orgs.filter(o => o.tbd && o.areas.some(a => a.code === code)) })).filter(r => r.list.length || r.tbd.length);
+      const nIn = new Set(rows.flatMap(r => r.list.map(x => x.o.code))).size, nTbd = sjd.orgs.filter(o => o.tbd).length;
       const dt = el('details', 'mt');
-      dt.innerHTML = `<summary><b>${esc(t('Организации для раздела 5 плана'))}</b> <span class="dim small">${u.audit.entities.reduce((n, x) => n + x.list.length, 0)} внесено${tbd ? ` · ${tbd} уточнить` : ''}</span></summary><p class="small dim">${esc(u.audit.entitiesNote || '')}</p>`;
-      dt.appendChild(table(['Область', 'Организации', 'Уточнить'], u.audit.entities,
+      dt.innerHTML = `<summary><b>${esc(t('Организации для раздела 5 плана'))}</b> <span class="dim small">${nIn} ${esc(t('организаций'))}${nTbd ? ` · ${nTbd} ${esc(t('уточнить'))}` : ''} · <a href="#subjects">${esc(t('реестр субъектов'))}</a></span></summary><p class="small dim">${esc(u.audit.entitiesNote || '')}</p>`;
+      dt.appendChild(table(['Область', 'Организации', 'Уточнить'], rows,
         x => [`<span class="badge b-area">${esc(x.code)}</span>`,
-          `<ul class="list small">${x.list.map(e => `<li>${esc(e)}</li>`).join('')}</ul>`,
-          (x.tbd || []).length ? `<ul class="list small warn">${x.tbd.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<span class="dim small">—</span>']));
+          `<ul class="list small">${x.list.map(e => `<li><button class="idc clk" data-openorg="${esc(e.o.code)}">${esc(e.o.code)}</button> ${esc(e.text)}</li>`).join('')}</ul>`,
+          x.tbd.length ? `<ul class="list small warn">${x.tbd.map(o => `<li><button class="idc clk" data-openorg="${esc(o.code)}">${esc(o.code)}</button> ${esc(o.tbd)}</li>`).join('')}</ul>` : '<span class="dim small">—</span>']));
       sc.appendChild(dt);
     }
     sc.onchange = e => { const x = e.target; if (!x.dataset.hos) return; const st = auditState(); st.hos[x.dataset.hos] = x.checked ? { done: true, at: today() } : { done: false }; saveAudit(st); render(); };
@@ -1244,6 +1255,90 @@ function teamStats() {
     return r;
   });
 }
+/* ---------- субъекты надзора АБ (этап 1 «прогнать АБ»): организации, объекты, программы безопасности ---------- */
+// Статусы программ — как в целевой схеме БД (security_programme.status); null = статус ещё не внесён.
+const PGST = { draft: 'Проект', submitted: 'Представлена', under_review: 'На рассмотрении', returned: 'Возвращена', approved: 'Согласована', expired: 'Истекла', withdrawn: 'Отозвана' };
+const PGSB = { draft: 'draft', submitted: 'wip', under_review: 'wip', returned: 'unsat', approved: 'ok', expired: 'missing', withdrawn: 'na' };
+const PSTL = { none: 'Статус не внесён', nosent: 'Не отправлены в ИКАО', has: 'Есть программы' };
+const ORGK = { oversight: 'Субъект надзора', party: 'Участник (госорган)', tbd: 'Уточнить' };
+const SITET = { terminal: 'Терминал', screening_checkpoint: 'Пункт досмотра', hold_baggage_screening: 'Досмотр багажа', sra_access_point: 'Точка доступа в охраняемую зону', perimeter_sector: 'Периметр', cargo_terminal: 'Грузовой терминал', catering_facility: 'Цех бортпитания', other: 'Прочее' };
+const SUBJ = () => D('subjects');
+const subjOrgs = () => (SUBJ() ? SUBJ().orgs : []);
+const subjType = code => (SUBJ() && SUBJ().entity_types.find(x => x.code === code)) || { code, name_ru: code, oversight: true };
+const subjProg = code => (SUBJ() && SUBJ().programme_types.find(x => x.code === code)) || { code, name_ru: code };
+const orgName = o => o.name || o.name_en || o.code;
+// роль организации: субъект надзора (обязан иметь программу) / участник НПАБГА (госорган) / позиция «уточнить» без наименования
+const orgKind = o => o.tbd ? 'tbd' : subjType(o.entity_type).oversight ? 'oversight' : 'party';
+const kindBadge = o => { const k = orgKind(o); return badge(k === 'tbd' ? 'tbd' : k === 'oversight' ? 'info' : 'none', ORGK[k]); };
+const progBadge = st => badge(st ? PGSB[st] || 'none' : 'tbd', st ? PGST[st] || st : 'Статус не внесён');
+// запрошенный ИКАО документ по id части (usap.requested[].parts[].items[].id) — статус отправки программы в ИКАО
+function reqPart(id) { const u = U(); if (!u || !id) return null; for (const r of u.requested || []) for (const p of r.parts || []) for (const it of p.items || []) if (it.id === id) return { ...it, req: r }; return null; }
+const progNotSent = p => { const r = reqPart(p.req); return !!r && !r.sent; };
+function reqCell(p) {
+  const r = reqPart(p.req); if (!r) return '<span class="dim">—</span>';
+  return r.sent ? `${badge('ok', 'Отправлен')} <span class="small dim">${fmtDate(r.sent.date)}</span>`
+    : `${badge('missing', 'Не отправлен')} <span class="small dim">${esc(t('запрос ИКАО, поз.'))} ${r.req.n}</span>`;
+}
+function openOrg(o) {
+  const ty = subjType(o.entity_type);
+  const areas = (o.areas || []).map(a => `<a href="#pq?area=${esc(a.code)}"><span class="badge b-area">${esc(a.code)}</span></a>`).join(' ');
+  const codes = [o.iata && `IATA ${o.iata}`, o.icao_code && `ICAO ${o.icao_code}`].filter(Boolean).join(' · ');
+  const progs = o.programmes || [];
+  const dates = p => [p.approved_on && `${t('согласована')} ${fmtDate(p.approved_on)}`, p.valid_until && `${t('до')} ${fmtDate(p.valid_until)}`].filter(Boolean).join(' · ') || '—';
+  const pt = progs.length ? table(['Программа', 'Версия', 'Статус', 'Сроки', 'Запрос ИКАО'], progs,
+    p => [`<b>${esc(p.programme_type)}</b> <span class="small dim">${esc(subjProg(p.programme_type).name_ru)}</span>${p.note ? `<div class="small">${esc(p.note)}</div>` : ''}`,
+      esc(p.version || '—') + (p.lang ? ` <span class="small dim">${esc(p.lang)}</span>` : ''), progBadge(p.status), dates(p), reqCell(p)]).outerHTML
+    : `<p class="dim small">${esc(t('Программы не внесены'))}</p>`;
+  const sites = o.sites || [];
+  const stt = sites.length ? table(['Код', 'Объект', 'Тип', 'Области'], sites,
+    x => [idChip(`S:${o.code}/${x.code}`), esc(x.name) + (x.note ? ` <span class="small dim">${esc(x.note)}</span>` : ''), esc(t(SITET[x.site_type] || x.site_type)),
+      (x.areas || []).map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' ')]).outerHTML : '';
+  const plan5 = (o.areas || []).filter(a => a.text).map(a => `<li><span class="badge b-area">${esc(a.code)}</span> ${esc(a.text)}</li>`).join('');
+  openSheet(`<div class="sheet-head"><div class="small dim">${idChip('S:' + o.code)} ${kindBadge(o)}</div><h2>${esc(orgName(o))}</h2></div>
+    ${kv([['Тип', `${esc(ty.name_ru)}${ty.ncasp ? ` <span class="small dim">НПАБГА ${esc(ty.ncasp)}</span>` : ''}`], ['Наименование (EN)', esc(o.name_en || '')], ['Коды', esc(codes)], ['Город', esc(o.city || '')],
+      ['Международные рейсы', o.intl_ops == null ? '' : esc(t(o.intl_ops ? 'Да' : 'Нет'))], ['Области проверки', areas], ['Уточнить', o.tbd ? `<span class="warn">${esc(o.tbd)}</span>` : '']])}
+    ${plan5 ? `<h3 class="mt">${esc(t('В разделе 5 плана аудита'))}</h3><ul class="list small">${plan5}</ul>` : ''}
+    <h3 class="mt">${esc(t('Программы безопасности'))} <span class="dim small">${progs.length}</span></h3>${pt}
+    ${sites.length ? `<h3 class="mt">${esc(t('Объекты'))} <span class="dim small">${sites.length}</span></h3>${stt}` : ''}
+    ${o.note ? `<p class="small mt">${esc(o.note)}</p>` : ''}`);
+}
+function pSubjects(m) {
+  const d = SUBJ(); if (!d) return m.appendChild(el('div', 'empty', 'Данные субъектов не загружены'));
+  const orgs = d.orgs;
+  head(m, 'Субъекты надзора', `${esc(d.meta.title)} · ${orgs.length} ${esc(t('организаций'))} · ${esc(t('основание'))}: ${esc(d.meta.basis)}`);
+  const progs = orgs.flatMap(o => (o.programmes || []).map(p => ({ o, p })));
+  const nOv = orgs.filter(o => orgKind(o) === 'oversight').length, nTbd = orgs.filter(o => o.tbd).length;
+  const noSt = progs.filter(x => !x.p.status).length, noSent = progs.filter(x => progNotSent(x.p)).length;
+  const tiles = el('div', 'tiles');
+  tiles.appendChild(tile('info', nOv, `субъектов надзора (из ${orgs.length})`, () => go('subjects', { kind: 'oversight' })));
+  tiles.appendChild(tile(nTbd ? 'draft' : 'ok', nTbd, 'уточнить наименование', () => go('subjects', { kind: 'tbd' })));
+  tiles.appendChild(tile(noSt ? 'draft' : 'ok', noSt, `программ без статуса (из ${progs.length})`, () => go('subjects', { pst: 'none' })));
+  tiles.appendChild(tile(noSent ? 'miss' : 'ok', noSent, 'программ не отправлено в ИКАО', () => go('subjects', { pst: 'nosent' })));
+  m.appendChild(tiles);
+  const tb = el('div', 'toolbar');
+  tb.appendChild(selector('Все типы', 'type', d.entity_types.map(x => x.code), c => subjType(c).name_ru));
+  const areas = D('pq') ? D('pq').meta.areas.map(a => a.code) : [...new Set(orgs.flatMap(o => o.areas.map(a => a.code)))];
+  tb.appendChild(selector('Все области', 'area', areas));
+  tb.appendChild(selector('Все роли', 'kind', Object.keys(ORGK), k => ORGK[k]));
+  tb.appendChild(selector('Все программы', 'pst', Object.keys(PSTL), v => PSTL[v]));
+  m.appendChild(tb);
+  const byPst = o => { const ps = o.programmes || []; return S.f.pst === 'has' ? ps.length : S.f.pst === 'none' ? ps.some(p => !p.status) : ps.some(progNotSent); };
+  const rows = orgs.filter(o => (!S.f.type || o.entity_type === S.f.type) && (!S.f.area || o.areas.some(a => a.code === S.f.area))
+    && (!S.f.kind || orgKind(o) === S.f.kind) && (!S.f.pst || byPst(o)) && has(S.q, o.code, o.name, o.name_en, o.short_name, o.tbd));
+  m.appendChild(el('p', 'small dim', `${rows.length} ${esc(t('из'))} ${orgs.length}`));
+  m.appendChild(table(['Код', 'Организация', 'Тип', 'Области', 'Программы', 'Роль'], rows,
+    o => [`<span class="code">${esc(o.code)}</span>`, `<b>${esc(orgName(o))}</b>${o.tbd ? `<div class="small warn">${esc(o.tbd)}</div>` : ''}`, esc(subjType(o.entity_type).name_ru),
+      o.areas.map(a => `<span class="badge b-area">${esc(a.code)}</span>`).join(' '),
+      (o.programmes || []).map(p => `<span class="badge b-${p.status ? PGSB[p.status] || 'none' : 'tbd'}" title="${esc(subjProg(p.programme_type).name_ru)}">${esc(p.programme_type)}</span>`).join(' ') || '<span class="dim">—</span>',
+      kindBadge(o)], openOrg));
+  const c = el('div', 'card mt'); c.innerHTML = `<h2>${esc(t('Типы субъектов по НПАБГА'))}</h2><p class="small dim">${esc(d.meta.note || '')}</p>`;
+  c.appendChild(table(['Тип', 'НПАБГА', 'Программа', 'Организаций'], d.entity_types,
+    x => [esc(x.name_ru) + (x.note ? ` <div class="small dim">${esc(x.note)}</div>` : ''), esc(x.ncasp || ''),
+      x.programme ? `<b>${esc(x.programme)}</b> <span class="small dim">${esc(subjProg(x.programme).name_ru)}</span>` : '<span class="dim">—</span>',
+      orgs.filter(o => o.entity_type === x.code).length], x => go('subjects', { type: x.code })));
+  m.appendChild(c);
+}
+
 function pTeam(m) {
   const d = D('team') || { meta: {}, members: [] };
   head(m, 'Ответственные', `${esc(d.meta.title || '')} · ${esc(d.meta.sub || '')} · источник: ${esc(d.meta.source || '')}`);
@@ -1435,6 +1530,7 @@ function pFind(m) {
   if (cc) group('Контрольный перечень (CC)', cc.items.filter(i => i.kind !== 'hdr' && has(q, i.id, i.text, i.ref, i.remarks)), i => `<span class="badge b-${i.kind}">Прил. ${i.annex} · ${esc(i.id)}</span> ${esc(i.text.slice(0, 220))}<div class="small dim">${esc(i.ref)}</div>`, openCC);
   if (sq) group('SASAQ', sq.items.filter(i => has(q, i.code, i.text, i.rows.flat().join(' '))), i => `<span class="code">${esc(i.code)}</span> ${esc(i.text)}`, openSASAQ);
   if (cap) group('Выводы аудита 2019 (CAP)', cap.findings.filter(f => f.items.some(i => has(q, i.sarp, i.pq, i.rec, i.action, i.status && i.status.en))), f => `${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} <span class="badge b-area">${f.area}</span> Вывод № ${f.n}: ${esc(f.items.map(i => i.rec).join(' · ').slice(0, 220))}`, f => go('cap', { area: f.area }, q));
+  const sj = D('subjects'); if (sj) group('Субъекты надзора', sj.orgs.filter(o => has(q, o.code, o.name, o.name_en, o.short_name, o.tbd, (o.programmes || []).map(p => p.programme_type).join(' '))), o => `<span class="code">${esc(o.code)}</span> <b>${esc(orgName(o))}</b> <span class="dim small">${esc(subjType(o.entity_type).name_ru)}</span>${o.tbd ? ` <span class="warn small">${esc(o.tbd)}</span>` : ''}`, openOrg);
   if (reg) group('Реестр документов', reg.docs.filter(x => has(q, x.ru, x.tj, x.en, x.approved, x.icao.join(' '))), x => `${badge(x.bucket)} <b>${esc(x.ru)}</b><div class="small dim">${esc(x.en)}</div>`, openDoc);
   if (mx) group('Матрица ИКАО', mx.sections.flatMap(s => s.items).filter(i => has(q, i.title, i.icao, i.status, i.analog)), i => `${badge(i.bucket)} ${esc(i.title)} <span class="dim small">${esc(i.icao)}</span>`, () => go('matrix', {}, ''));
   if (gm) group('Инструктивные материалы', gm.items.filter(i => has(q, i.code, i.title, i.ncasp)), i => `<span class="code">${esc(i.code)}</span> ${esc(i.title)}`, i => window.open(i.folder, '_blank'));
@@ -1485,6 +1581,7 @@ async function boot() {
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
+    const oorg = e.target.closest('[data-openorg]'); if (oorg) { const it = subjOrgs().find(x => x.code === oorg.dataset.openorg); if (it) openOrg(it); return; }
     const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it) openPQ(it); return; }
     const occ = e.target.closest('[data-opencc]'); if (occ) { const [a, id] = occ.dataset.opencc.split(':'); const it = D('cc') && D('cc').items.find(x => String(x.annex) === a && x.id === id); if (it) openCC(it); return; }
     const opn = e.target.closest('[data-open]'); if (opn) { window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
