@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '41';
+const APP_VERSION = '42';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -81,7 +81,8 @@ const ROUTES = [
     { id: 'team', ic: '👥', t: 'Ответственные', cnt: () => team().length || '' },
     { id: 'cap', ic: '⚑', t: 'Выводы аудита 2019 (CAP)', cnt: () => D('cap2019') ? D('cap2019').findings.length : '' } ] },
   { g: 'Надзор АБ', items: [
-    { id: 'subjects', ic: '🏢', t: 'Субъекты надзора', short: 'Субъекты', cnt: () => D('subjects') ? D('subjects').orgs.length : '' } ] },
+    { id: 'subjects', ic: '🏢', t: 'Субъекты надзора', short: 'Субъекты', cnt: () => D('subjects') ? D('subjects').orgs.length : '' },
+    { id: 'qc', ic: '🔍', t: 'Контроль качества', short: 'КК', cnt: () => D('qc') ? (D('qc').findings.length || D('qc').activities.length || '') : '' } ] },
   { g: 'Документы АБ', items: [
     { id: 'docs', ic: '📚', t: 'Реестр документов', cnt: () => D('registry') ? D('registry').docs.length : '' },
     { id: 'matrix', ic: '⊞', t: 'Соответствие ИКАО', cnt: () => D('matrix') ? D('matrix').sections.reduce((a, s) => a + s.items.length, 0) : '' },
@@ -364,10 +365,10 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы' };
+const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
 const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
@@ -375,7 +376,8 @@ function filterVal(k, v) {
   if (k === 'prio') return CAPP[v] || v;
   if (k === 'resp') return v === 'none' ? 'Не назначен' : nameOf(v);
   if (k === 'l') return String(v).toUpperCase();
-  if (k === 'type') return subjType(v).name_ru;
+  if (k === 'type') return S.page === 'qc' ? qcType(v).name_ru : subjType(v).name_ru;
+  if (k === 'sev') return qcSev(v).level + ' — ' + qcSev(v).name_ru;
   if (k === 'kind') return ORGK[v] || v;
   if (k === 'pst') return PSTL[v] || v;
   return v;
@@ -1325,6 +1327,91 @@ function pSubjects(m) {
   m.appendChild(c);
 }
 
+/* ---------- контроль качества АБ (этап 2 «прогнать АБ»): основа, план, мероприятия, находки, CAP субъектов ---------- */
+const QCTABS = [{ id: 'ref', t: 'Основа' }, { id: 'plan', t: 'План' }, { id: 'acts', t: 'Мероприятия' }, { id: 'findings', t: 'Находки' }];
+// статусы — как в целевой схеме БД (oversight_activity.status, finding.status)
+const ACTST = { planned: 'Запланировано', in_progress: 'Идёт', report_draft: 'Акт готовится', report_issued: 'Акт выдан', closed: 'Закрыто', cancelled: 'Отменено' };
+const ACTSB = { planned: 'none', in_progress: 'wip', report_draft: 'wip', report_issued: 'info', closed: 'ok', cancelled: 'na' };
+const FST = { open: 'Открыта', cap_submitted: 'ПКД подан', cap_accepted: 'ПКД принят', cap_rejected: 'ПКД отклонён', implemented: 'Выполнено', closed: 'Закрыта', escalated: 'Эскалация', cancelled: 'Снята' };
+const FSB = { open: 'missing', cap_submitted: 'wip', cap_accepted: 'wip', cap_rejected: 'unsat', implemented: 'ready', closed: 'ok', escalated: 'unsat', cancelled: 'na' };
+const SEVB = { critical: 'unsat', major: 'missing', minor: 'draft', compliant: 'ok', na: 'na', nc: 'tbd' };
+const PLST = { planned: 'none', done: 'ok', postponed: 'draft', cancelled: 'na' };
+const QC = () => D('qc');
+const qcType = c => (QC() && QC().activity_types.find(x => x.code === c)) || { code: c, name_ru: c };
+const qcSev = c => (QC() && QC().severity.find(x => x.code === c)) || { code: c, name_ru: c, level: '?' };
+const orgChip = code => { const o = subjOrgs().find(x => x.code === code); return o ? `<button class="idc clk" data-openorg="${esc(code)}" title="${esc(orgName(o))}">S:${esc(code)}</button>` : esc(code || '—'); };
+const sevBadge = c => { const x = qcSev(c); return `<span class="badge b-${SEVB[c] || 'none'}" title="${esc(x.name_ru)}">${esc(x.level)} · ${esc(t(c === 'critical' ? 'критическое' : c === 'major' ? 'существенное' : c === 'minor' ? 'незначительное' : x.name_ru))}</span>`; };
+function openActivity(a) {
+  const d = QC(); const fs = (d.findings || []).filter(f => f.activity === a.ref_no);
+  openSheet(`<div class="sheet-head"><div class="small dim">${idChip(a.ref_no)} ${badge(ACTSB[a.status] || 'none', ACTST[a.status] || a.status)}</div><h2>${esc(qcType(a.activity_type).name_ru)}</h2></div>
+    ${kv([['Субъект', orgChip(a.org)], ['Объект', a.site ? idChip(`S:${a.org}/${a.site}`) : ''], ['Сроки', `${fmtDate(a.start_on)}${a.end_on ? ' – ' + fmtDate(a.end_on) : ''}`], ['Форма', a.is_covert ? t('негласное') : a.is_unannounced ? t('без уведомления') : ''], ['Руководитель', esc(a.lead || '')], ['Акт / отчёт', a.report_issued_on ? `${esc(a.report_no || '')} ${t('от')} ${fmtDate(a.report_issued_on)}` : ''], ['Итог', esc(a.summary || '')]])}
+    <h3 class="mt">${esc(t('Находки'))} <span class="dim small">${fs.length}</span></h3>
+    ${fs.length ? table(['Находка', 'Требование', 'Тяжесть', 'Статус', 'Срок'], fs, f => [`<button class="idc clk" data-openfinding="${esc(f.ref_no)}">${esc(f.ref_no)}</button>`, idChip(f.requirement), sevBadge(f.severity), badge(FSB[f.status] || 'none', FST[f.status] || f.status), fmtDate(f.close_due_on) || '—']).outerHTML : `<p class="dim small">${esc(t('Находок не внесено'))}</p>`}`);
+}
+function openFinding(f) {
+  const d = QC(); const a = (d.activities || []).find(x => x.ref_no === f.activity);
+  const X = xref(); const node = X && X.byKey.get(f.requirement);
+  const cc = node && node.cc; const pqs = node ? node.pqs || [] : [];
+  const caps = f.caps || [];
+  openSheet(`<div class="sheet-head"><div class="small dim">${idChip(f.ref_no)} ${sevBadge(f.severity)} ${badge(FSB[f.status] || 'none', FST[f.status] || f.status)}${f.repeat_of ? ` ${badge('unsat', 'повторная')}` : ''}</div><h2>${esc(f.description || '')}</h2></div>
+    ${kv([['Субъект', orgChip(f.org)], ['Мероприятие', a ? `<button class="idc clk" data-openactivity="${esc(a.ref_no)}">${esc(a.ref_no)}</button> ${esc(qcType(a.activity_type).name_ru)}` : esc(f.activity || '')], ['Выявлена', fmtDate(f.identified_on)], ['Срок ПКД', f.cap_due_on ? fmtDate(f.cap_due_on) : ''], ['Срок устранения', f.close_due_on ? fmtDate(f.close_due_on) : ''], ['Причина', esc(f.root_cause || '')], ['Закрыта', f.closed_on ? fmtDate(f.closed_on) : '']])}
+    <h4 class="mt">${esc(t('Трассировка'))}</h4>
+    ${kv([['Требование', `${idChip(f.requirement)}${f.national_ref ? ` <span class="small">${esc(f.national_ref)}</span>` : ''}`], ['Пункт CC', cc ? `<button class="idc clk" data-opencc="${esc(f.requirement.replace(/^A/, ''))}">${esc(cc.id)}</button> ${esc(cc.ref || '')}` : ''], ['ВП по пункту', pqs.map(p => `<button class="idc clk" data-openpq="${esc(p.id)}">PQ:${esc(p.id)}</button>`).join(' ')]])}
+    <h3 class="mt">${esc(t('План корректирующих действий'))} <span class="dim small">${caps.length}</span></h3>
+    ${caps.length ? table(['Ред.', 'Подан', 'Причина', 'Действия', 'Ответственный', 'Срок', 'Статус'], caps, c => [c.revision || 1, fmtDate(c.submitted_on), esc(c.root_cause || ''), `<div class="small">${(c.actions || []).map(x => `• ${esc(x.action)} — ${fmtDate(x.due_on)}${x.completed_on ? ' ✓' : ''}`).join('<br>')}</div>`, esc(c.responsible || ''), fmtDate(c.target_date), badge(c.status === 'accepted' ? 'ok' : c.status === 'rejected' ? 'unsat' : c.status === 'superseded' ? 'na' : 'wip', c.status === 'accepted' ? 'Принят' : c.status === 'rejected' ? 'Отклонён' : c.status === 'superseded' ? 'Заменён' : 'Подан')]).outerHTML : `<p class="dim small">${esc(t('ПКД не внесён'))}${(QC().cap_rules || {}).submit_days ? ` · ${esc(t('срок подачи'))} ${QC().cap_rules.submit_days} ${esc(t('календарных дней после акта'))}` : ''}</p>`}`);
+}
+function pQC(m) {
+  const d = QC(); if (!d) return m.appendChild(el('div', 'empty', 'Данные контроля качества не загружены'));
+  head(m, 'Контроль качества АБ', `${esc(d.meta.title)} · ${esc(t('основание'))}: ${esc((d.meta.basis || [])[0] || '')}`);
+  const tab = QCTABS.some(x => x.id === S.f.t) ? S.f.t : 'ref';
+  const items = (d.plan || {}).items || [], acts = d.activities || [], fs = d.findings || [];
+  m.appendChild(segbar(QCTABS.map(x => ({ ...x, n: x.id === 'plan' ? items.length : x.id === 'acts' ? acts.length : x.id === 'findings' ? fs.length : null })), tab, id => go('qc', { ...S.f, t: id === 'ref' ? '' : id }, S.q)));
+  if (tab === 'ref') {
+    const c1 = el('div', 'card'); c1.innerHTML = `<h2>${esc(t('Виды мероприятий'))}</h2>`;
+    c1.appendChild(table(['Вид', 'Основание', 'Уведомление', 'Акт / отчёт', 'Что проверяется'], d.activity_types, x => [`<b>${esc(x.name_ru)}</b>${x.classification ? ` ${badge('unsat', 'конфиденциально')}` : ''}<div class="small dim">${esc(x.name_en || '')}</div>`, `<span class="small">${esc(x.basis)}</span>`, `<span class="small">${esc(x.notice || '')}</span>`, `<span class="small">${esc(x.report || '')}</span>`, `<span class="small">${esc(x.scope || '')}</span>`]));
+    m.appendChild(c1);
+    const g = el('div', 'grid2');
+    const c2 = el('div', 'card'); c2.innerHTML = `<h2>${esc(t('Уровни несоответствия'))} <span class="dim small">Правила КК п. 113</span></h2>`;
+    c2.appendChild(table(['Уровень', 'Описание', 'Действие'], d.severity, x => [sevBadge(x.code), `<span class="small">${esc(x.name_ru)}</span>`, `<span class="small">${esc(x.action)}</span>`]));
+    c2.innerHTML += `<h3 class="mt">${esc(t('Сроки устранения по Программе КК'))}</h3>`;
+    c2.appendChild(table(['Уровень', 'Срок', 'Основание'], d.levels_abc, x => [`<b>${esc(x.code)}</b> <span class="small">${esc(x.name_ru)}</span>`, x.deadline_days ? `${x.deadline_days} ${t('дн.')}` : esc(x.deadline || ''), `<span class="small dim">${esc(x.basis)}</span>`]));
+    g.appendChild(c2);
+    const c3 = el('div', 'card'); c3.innerHTML = `<h2>${esc(t('Категории риска и периодичность'))}</h2><p class="small dim">${esc(d.risk_basis || '')}</p>`;
+    c3.appendChild(table(['Категория', 'Одна проверка в', 'Сертификат не более'], d.risk_categories, x => [esc(x.name_ru), `${x.period_months} ${t('мес.')}`, `${x.cert_months} ${t('мес.')}`]));
+    const r = d.cap_rules || {};
+    c3.innerHTML += `<h3 class="mt">${esc(t('План корректирующих действий субъекта'))}</h3>` + kv([['Подача', `${r.submit_days} ${esc(r.submit_basis || '')}`], ['Содержание', `<ul class="list small">${(r.contents || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul><span class="small dim">${esc(r.contents_basis || '')}</span>`], ['Утверждение', esc(r.approval || '')], ['Рассмотрение', esc(r.review || '')], ['Закрытие', esc(r.closure || '')]]);
+    g.appendChild(c3); m.appendChild(g);
+    if ((d.meta.issues || []).length) { const w = el('div', 'card'); w.innerHTML = `<h2>${esc(t('Требует решения'))} <span class="dim small">${d.meta.issues.length}</span></h2><ul class="list">${d.meta.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; m.appendChild(w); }
+    m.appendChild(el('p', 'small dim', esc(d.meta.note || '')));
+  }
+  if (tab === 'plan') {
+    const p = d.plan || {};
+    const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('План контроля качества'))} ${p.year || ''} <span class="dim small">${esc(p.version || '')} · ${badge(p.status === 'approved' ? 'ok' : p.status === 'closed' ? 'na' : 'draft', p.status === 'approved' ? 'Утверждён' : p.status === 'closed' ? 'Закрыт' : 'Проект')}${p.approved_on ? ' · ' + fmtDate(p.approved_on) : ''}</span></h2><p class="small dim">${esc(p.basis || '')}</p><p class="small">${esc(p.note || '')}</p>`;
+    c.appendChild(table(['№', 'Субъект', 'Мероприятие', 'Месяц', 'Категория риска', 'Статус', 'Факт'], items, x => [esc(x.id), orgChip(x.org), esc(qcType(x.activity_type).name_ru), x.planned_month, esc((d.risk_categories.find(r => r.code === x.risk_category) || {}).name_ru || x.risk_category || '—'), badge(PLST[x.status] || 'none', x.status === 'done' ? 'Выполнено' : x.status === 'postponed' ? 'Перенесено' : x.status === 'cancelled' ? 'Отменено' : 'Запланировано'), x.activity ? `<button class="idc clk" data-openactivity="${esc(x.activity)}">${esc(x.activity)}</button>` : '—'], null, { empty: 'Позиции плана не внесены — источник: график КК, направленный ИКАО 23.09.2026' }));
+    m.appendChild(c);
+  }
+  if (tab === 'acts') {
+    const tb = el('div', 'toolbar');
+    tb.appendChild(selector('Все виды', 'type', d.activity_types.map(x => x.code), c => qcType(c).name_ru));
+    tb.appendChild(selector('Все субъекты', 'org', [...new Set(acts.map(a => a.org))], c => { const o = subjOrgs().find(x => x.code === c); return o ? orgName(o) : c; }));
+    tb.appendChild(selector('Все статусы', 'st', Object.keys(ACTST), k => ACTST[k]));
+    m.appendChild(tb);
+    const rows = acts.filter(a => (!S.f.type || a.activity_type === S.f.type) && (!S.f.org || a.org === S.f.org) && (!S.f.st || a.status === S.f.st) && has(S.q, a.ref_no, a.org, a.summary, a.lead));
+    m.appendChild(table(['Ключ', 'Мероприятие', 'Субъект', 'Сроки', 'Статус', 'Находок'], rows, a => [`<span class="code">${esc(a.ref_no)}</span>`, `${esc(qcType(a.activity_type).name_ru)}${a.is_covert ? ` ${badge('unsat', 'негласно')}` : ''}`, orgChip(a.org), `${fmtDate(a.start_on)}${a.end_on ? ' – ' + fmtDate(a.end_on) : ''}`, badge(ACTSB[a.status] || 'none', ACTST[a.status] || a.status), fs.filter(f => f.activity === a.ref_no).length || '—'], openActivity, { empty: 'Мероприятия не внесены — источник: акты проверок, инспекций и испытаний 2025–2026' }));
+  }
+  if (tab === 'findings') {
+    const tb = el('div', 'toolbar');
+    tb.appendChild(selector('Все субъекты', 'org', [...new Set(fs.map(f => f.org))], c => { const o = subjOrgs().find(x => x.code === c); return o ? orgName(o) : c; }));
+    tb.appendChild(selector('Все уровни', 'sev', d.severity.map(x => x.code), c => `${qcSev(c).level} — ${qcSev(c).name_ru.slice(0, 40)}`));
+    tb.appendChild(selector('Все статусы', 'st', Object.keys(FST), k => FST[k]));
+    m.appendChild(tb);
+    const rows = fs.filter(f => (!S.f.org || f.org === S.f.org) && (!S.f.sev || f.severity === S.f.sev) && (!S.f.st || f.status === S.f.st) && has(S.q, f.ref_no, f.description, f.requirement, f.org));
+    const over = rows.filter(f => f.close_due_on && !['closed', 'cancelled'].includes(f.status) && daysTo(f.close_due_on) < 0).length;
+    m.appendChild(el('p', 'small dim', `${rows.length} ${esc(t('из'))} ${fs.length}${over ? ` · <span class="warn">${esc(t('просрочено'))}: ${over}</span>` : ''}`));
+    m.appendChild(table(['Ключ', 'Субъект', 'Несоответствие', 'Требование', 'Уровень', 'Статус', 'Срок устранения'], rows, f => [`<span class="code">${esc(f.ref_no)}</span>`, orgChip(f.org), `<div class="td-wrap clamp" title="${esc(f.description || '')}">${esc(f.description || '')}</div>`, idChip(f.requirement), sevBadge(f.severity), badge(FSB[f.status] || 'none', FST[f.status] || f.status), f.close_due_on ? `<span class="${!['closed', 'cancelled'].includes(f.status) && daysTo(f.close_due_on) < 0 ? 'warn' : ''}">${fmtDate(f.close_due_on)}</span>` : '—'], openFinding, { empty: 'Находки не внесены — источник: акты проверок 2025–2026; каждая находка со ссылкой на требование (A17:… или R..:…)' }));
+  }
+}
+
 function pTeam(m) {
   const d = D('team') || { meta: {}, members: [] };
   head(m, 'Ответственные', `${esc(d.meta.title || '')} · ${esc(d.meta.sub || '')} · источник: ${esc(d.meta.source || '')}`);
@@ -1517,6 +1604,7 @@ function pFind(m) {
   if (sq) group('SASAQ', sq.items.filter(i => has(q, i.code, i.text, i.rows.flat().join(' '))), i => `<span class="code">${esc(i.code)}</span> ${esc(i.text)}`, openSASAQ);
   if (cap) group('Выводы аудита 2019 (CAP)', cap.findings.filter(f => f.items.some(i => has(q, i.sarp, i.pq, i.rec, i.action, i.status && i.status.en))), f => `${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} <span class="badge b-area">${f.area}</span> Вывод № ${f.n}: ${esc(f.items.map(i => i.rec).join(' · ').slice(0, 220))}`, f => go('cap', { area: f.area }, q));
   const sj = D('subjects'); if (sj) group('Субъекты надзора', sj.orgs.filter(o => has(q, o.code, o.name, o.name_en, o.short_name, o.tbd, (o.programmes || []).map(p => p.programme_type).join(' '))), o => `<span class="code">${esc(o.code)}</span> <b>${esc(orgName(o))}</b> <span class="dim small">${esc(subjType(o.entity_type).name_ru)}</span>${o.tbd ? ` <span class="warn small">${esc(o.tbd)}</span>` : ''}`, openOrg);
+  const qd = D('qc'); if (qd) { group('Контроль качества — мероприятия', qd.activities.filter(a => has(q, a.ref_no, a.org, a.summary)), a => `<span class="code">${esc(a.ref_no)}</span> ${esc(qcType(a.activity_type).name_ru)} · ${esc(a.org)}`, openActivity); group('Контроль качества — находки', qd.findings.filter(f => has(q, f.ref_no, f.description, f.requirement, f.org)), f => `<span class="code">${esc(f.ref_no)}</span> ${esc((f.description || '').slice(0, 160))} ${idChip(f.requirement)}`, openFinding); }
   if (reg) group('Реестр документов', reg.docs.filter(x => has(q, x.ru, x.tj, x.en, x.approved, x.icao.join(' '))), x => `${badge(x.bucket)} <b>${esc(x.ru)}</b><div class="small dim">${esc(x.en)}</div>`, openDoc);
   if (mx) group('Матрица ИКАО', mx.sections.flatMap(s => s.items).filter(i => has(q, i.title, i.icao, i.status, i.analog)), i => `${badge(i.bucket)} ${esc(i.title)} <span class="dim small">${esc(i.icao)}</span>`, () => go('matrix', {}, ''));
   if (gm) group('Инструктивные материалы', gm.items.filter(i => has(q, i.code, i.title, i.ncasp)), i => `<span class="code">${esc(i.code)}</span> ${esc(i.title)}`, i => window.open(i.folder, '_blank'));
@@ -1567,6 +1655,8 @@ async function boot() {
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
+    const oact = e.target.closest('[data-openactivity]'); if (oact) { const it = QC() && QC().activities.find(x => x.ref_no === oact.dataset.openactivity); if (it) openActivity(it); return; }
+    const ofin = e.target.closest('[data-openfinding]'); if (ofin) { const it = QC() && QC().findings.find(x => x.ref_no === ofin.dataset.openfinding); if (it) openFinding(it); return; }
     const oorg = e.target.closest('[data-openorg]'); if (oorg) { const it = subjOrgs().find(x => x.code === oorg.dataset.openorg); if (it) openOrg(it); return; }
     const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it) openPQ(it); return; }
     const occ = e.target.closest('[data-opencc]'); if (occ) { const [a, id] = occ.dataset.opencc.split(':'); const it = D('cc') && D('cc').items.find(x => String(x.annex) === a && x.id === id); if (it) openCC(it); return; }
