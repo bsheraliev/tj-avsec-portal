@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '36';
+const APP_VERSION = '39';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -62,7 +62,7 @@ const TR = { en: {
   'Логистика': 'Logistics', 'Контакты': 'Contacts', 'Не начато': 'Not started', 'Готово': 'Ready', 'Отправлено в ИКАО': 'Sent to ICAO', 'Аудит на месте': 'On-site audit', 'Ключевые факты': 'Key facts', 'Где открыть': 'Where to open', 'Группа аудита ИКАО': 'ICAO audit team', 'Участник': 'Member', 'Роль': 'Role', 'Направлен': 'Seconded by', 'Паспорт / виза': 'Passport / visa', 'Прибытие': 'Arrival', 'Отъезд': 'Departure', 'Подтверждён': 'Confirmed', 'Ожидает подтверждения': 'Awaiting confirmation', 'Визы': 'Visas', 'Гостиница': 'Hotel', 'План аудита': 'Audit plan', 'Дней до начала аудита': 'Days to audit start',
   'Статус ПКД': 'CAP status', 'Выполнено': 'Completed', 'Частично': 'Partially completed', 'Постоянно': 'Ongoing', 'Нет статуса': 'No status', 'Незакрытые': 'Open', 'Незакрытых рекомендаций ПКД': 'Open CAP recommendations', 'Готовность ПКД к подаче': 'CAP readiness', 'Готовность CC к подаче': 'CC readiness', 'В работе / постоянно': 'In progress / ongoing',
   'Приём и культурная программа': 'Hospitality and cultural programme', 'Транспорт': 'Transport', 'Подарки': 'Gifts', 'Уточнить': 'To be confirmed', 'Приём: мероприятий готово': 'Hospitality: items ready',
-  'Приём': 'Hospitality', 'ответственный': 'responsible', 'Мероприятие плана и приём': 'Plan activity and hospitality', 'Приём и культурная программа': 'Hospitality and cultural programme',
+  'Трассировка': 'Traceability', 'Приём': 'Hospitality', 'ответственный': 'responsible', 'Мероприятие плана и приём': 'Plan activity and hospitality', 'Приём и культурная программа': 'Hospitality and cultural programme',
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
@@ -598,6 +598,20 @@ function pPQ(m) {
         ei == null ? '<span class="dim">—</span>' : `<b class="${ei < 60 ? 'warn' : ''}">${ei}%</b>`];
     }, x => go('pq', { area: x.code })));
     m.appendChild(ar);
+    const X = xref();
+    if (X) {
+      const miss = all.filter(i => !(X.byKey.get(pqSarp(i)) || {}).cc);
+      const withDoc = all.filter(i => ((X.byKey.get(pqSarp(i)) || {}).docs || []).length).length;
+      const noNat = all.filter(i => { const c = (X.byKey.get(pqSarp(i)) || {}).cc; return c && !c.ref; }).length;
+      const tr = el('div', 'card');
+      tr.innerHTML = `<h2>${esc(t('Трассировка'))} <span class="dim small">ключи ${idChip('PQ:1.035')} → ${idChip('A17:3.1.1')} → ${idChip('R02')} → ${idChip('MX:А-2')}</span></h2>`
+        + kv([['ВП → пункт CC', `<b>${all.length - miss.length}</b> из ${all.length}`],
+          ['ВП → документ нормбазы по самому пункту', `<b>${withDoc}</b> из ${all.length} <span class="dim small">(остальные — через документы на всё приложение или по КЭ)</span>`],
+          ['Пункт CC без национальной нормы', noNat ? `<b class="warn">${noNat}</b> ВП` : '0']])
+        + (miss.length ? `<details class="mt"><summary class="small"><b>${miss.length} ВП не находят пункт CC</b> — для Прил. 9 ВП составлены по Поправке ${esc((D('pq').meta.title.match(/Поправка (\d+) к Приложению 9/) || [])[1] || '?')}, а CC — по Поправке ${esc((D('cc').meta.title.match(/Annex 9 Amendment (\d+)/) || [])[1] || '?')}</summary><div class="row mt">`
+          + miss.map(i => `<button class="idc clk" type="button" data-openpq="${esc(i.id)}">PQ:${esc(i.id)} → ${esc(pqSarp(i))}</button>`).join(' ') + '</div></details>' : '');
+      m.appendChild(tr);
+    }
   }
 
   if (tab === 'todo') {
@@ -614,19 +628,85 @@ function pPQ(m) {
     m.appendChild(c);
   }
 }
+/* ---------- Сквозные идентификаторы (трассировка) ----------
+   Один формат ключа на тип объекта:
+     A17:3.1.1 / A9:3.7 — стандарт или рекомендуемая практика (Приложение : пункт);
+     PQ:1.035 — вопрос протокола USAP-CMA;  R02 — документ нормбазы;  MX:А-2 — пункт матрицы;  CAP19:23.1 — рекомендация 2019.
+   Редакция (Поправка 18 к Прил. 17, Поправка 29/30 к Прил. 9, протокол 2025) в ключ не вшивается — берётся из meta набора
+   и показывается рядом: при смене поправки ключи стабильны, а расхождение редакций видно сразу.
+   Связи считаются из данных. Ссылки реестра и матрицы записаны диапазонами («3.4.1–3.4.7»), и прежний поиск подстроки
+   их не раскрывал: у 234 из 493 ВП терялись 345 привязок к документам нормбазы. */
+const sarpKey = (an, id) => `A${an}:${id}`;
+const pqDoc = i => String(i.doc || '').trim().replace(/^[АA]9\s+/, '').replace(/\.$/, '');   // «А9 8.13», «2.4.1.» → пункт
+const pqSarp = i => sarpKey(i.area === 'FAL' ? 9 : 17, pqDoc(i));
+const numCmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let k = 0; k < Math.max(x.length, y.length); k++) { const d = (x[k] ?? -1) - (y[k] ?? -1); if (d) return d; } return 0; };
+const underPara = (id, p) => id === p || id.startsWith(p + '.');
+// «Прил. 17 — 2.1.2, 3.4.1–3.4.7; Doc 8973» / «Прил. 17, ст. 4.2» → ключи пунктов CC.
+// «SARPs целиком» или «Прил. 9» без пунктов → A17:* / A9:* (документ охватывает всё приложение)
+function sarpRefs(str, ids) {
+  const out = new Set();
+  for (const m of String(str || '').matchAll(/Прил\.\s*(17|9)\b([^;]*)/g)) {
+    const an = +m[1], tail = m[2];
+    if (/целиком/i.test(tail) || !/\d+\.\d/.test(tail)) { out.add(`A${an}:*`); continue; }
+    for (const r of tail.matchAll(/(\d+(?:\.\d+)+)(?:\s*[–-]\s*(\d+(?:\.\d+)+))?/g)) {
+      const a = r[1], b = r[2];
+      (ids[an] || []).forEach(id => { if (b ? numCmp(id, a) >= 0 && (numCmp(id, b) <= 0 || underPara(id, b)) : underPara(id, a)) out.add(`A${an}:${id}`); });
+    }
+  }
+  return out;
+}
+// Индекс «ключ стандарта → пункт CC, ВП, документы нормбазы, пункты матрицы»; строится один раз на загруженные данные
+const XREF = new WeakMap();
+function xref() {
+  const cc = D('cc'); if (!cc) return null;
+  let x = XREF.get(cc); if (x) return x;
+  const ids = { 17: [], 9: [] };
+  cc.items.forEach(i => { if (i.id && (i.kind === 'std' || i.kind === 'rp')) (ids[i.annex] = ids[i.annex] || []).push(i.id); });
+  const byKey = new Map(); const node = k => { if (!byKey.has(k)) byKey.set(k, { cc: null, pqs: [], docs: [], mx: [] }); return byKey.get(k); };
+  cc.items.forEach(i => { if (i.id && (i.kind === 'std' || i.kind === 'rp')) node(sarpKey(i.annex, i.id)).cc = i; });
+  const pq = D('pq'); if (pq) pq.items.forEach(i => node(pqSarp(i)).pqs.push(i));
+  const reg = D('registry'); if (reg) reg.docs.forEach(d => sarpRefs((d.icao || []).join('; '), ids).forEach(k => node(k).docs.push(d)));
+  const mx = D('matrix'); if (mx) mx.sections.forEach(s => s.items.forEach(it => sarpRefs(it.icao, ids).forEach(k => node(k).mx.push({ s, it }))));
+  x = { byKey, ids }; XREF.set(cc, x); return x;
+}
+const idChip = (txt, attrs = '') => `<span class="idc"${attrs}>${esc(txt)}</span>`;
+// Блок «Трассировка» в карточке ВП: стандарт → национальная норма по CC → документы нормбазы → матрица → другие ВП по пункту
+function traceBlock(i) {
+  const X = xref(); if (!X) return '';
+  const k = pqSarp(i), n = X.byKey.get(k) || { cc: null, pqs: [], docs: [], mx: [] }, an = k.split(':')[0];
+  const whole = (X.byKey.get(an + ':*') || { docs: [] }).docs;
+  const ccm = D('cc').meta.title || '', pm = D('pq').meta.title || '';
+  const edCC = an === 'A9' ? (ccm.match(/Annex 9 Amendment (\d+)/) || [])[1] : (ccm.match(/Annex 17 Amendment (\d+)/) || [])[1];
+  const edPQ = an === 'A9' ? (pm.match(/Поправка (\d+) к Приложению 9/) || [])[1] : (pm.match(/Поправка (\d+) к Приложению 17/) || [])[1];
+  const c = n.cc; const st = c ? ccOf(c).st : '';
+  const others = n.pqs.filter(x => x.id !== i.id);
+  const rows = [
+    ['Стандарт ИКАО', c ? `${idChip(k)} ${badge(c.kind === 'std' ? 'info' : 'none', c.kind === 'std' ? 'Стандарт' : 'Рекомендуемая практика')} <span class="dim small">Поправка ${esc(edCC || '?')}</span> <button class="btn sm ghost" type="button" data-opencc="${esc(c.annex + ':' + c.id)}">Пункт CC →</button>`
+      : `${idChip(k)} <span class="warn small">нет в контрольном перечне${edCC && edPQ && edCC !== edPQ ? ` — CC по Поправке ${esc(edCC)}, ВП по Поправке ${esc(edPQ)}` : ''}</span>`],
+    ['Национальная норма (CC)', c ? `${esc(c.ref || '—')} ${st ? badge(st, CCST[st] || st) : ''}${c.diff ? `<div class="small dim">Различие: ${esc(c.diff)}</div>` : ''}` : ''],
+    ['Нормбаза', n.docs.length ? n.docs.map(d => `${idChip(d.id)} ${esc(d.ru.length > 70 ? d.ru.slice(0, 70) + '…' : d.ru)}`).join('<br>') + (whole.length ? `<div class="small dim">и всё приложение: ${whole.map(d => esc(d.id)).join(', ')}</div>` : '')
+      : (whole.length ? `<span class="dim small">точной ссылки нет; всё приложение охватывают ${whole.map(d => esc(d.id)).join(', ')}</span>` : '<span class="warn small">не найдено</span>')],
+    ['Матрица соответствия', n.mx.map(({ s, it }) => `${idChip('MX:' + s.code + '-' + it.n)} ${esc(it.title)}`).join('<br>')],
+    ['Другие ВП по пункту', others.length ? others.slice(0, 12).map(x => `<button class="idc clk" type="button" data-openpq="${esc(x.id)}">PQ:${esc(x.id)}</button>`).join(' ') + (others.length > 12 ? ` <span class="dim small">и ещё ${others.length - 12}</span>` : '') : ''],
+  ];
+  return `<h4>${esc(t('Трассировка'))} <span class="dim small">${idChip('PQ:' + i.id)}</span></h4>` + kv(rows);
+}
 // Справочные материалы к ВП — как вкладка «Reference & Guidance» в OLF: документы реестра, пункты матрицы, документы ИКАО.
 // Связь по пункту Приложения (i.doc), критическому элементу (i.ce) и области аудита (i.area) — точное совпадение важнее общего.
 function refsForPQ(i) {
   const reg = D('registry'), mx = D('matrix'), ic = D('icao');
+  // ранги: 3 — ссылка на сам пункт (с раскрытием диапазонов), 2 — документ на всё приложение или тот же КЭ, 1 — та же область
+  const X = xref(), k = pqSarp(i), node = X && X.byKey.get(k), an = k.split(':')[0];
+  const exact = new Set(node ? node.docs.map(d => d.id) : []), whole = new Set(X && X.byKey.get(an + ':*') ? X.byKey.get(an + ':*').docs.map(d => d.id) : []);
   const docs = [];
   if (reg) reg.docs.forEach(x => {
-    const ref = (x.icao || []).join(' ');
-    const rank = i.doc && ref.includes(i.doc) ? 3 : ref.includes(i.ce) ? 2 : (x.usap || []).includes(i.area) ? 1 : 0;
+    const rank = exact.has(x.id) ? 3 : whole.has(x.id) || (x.icao || []).includes(i.ce) ? 2 : (x.usap || []).includes(i.area) ? 1 : 0;
     if (rank) docs.push({ x, rank });
   });
   docs.sort((a, b) => b.rank - a.rank || a.x.n - b.x.n);
-  const mrows = [];
-  if (mx) mx.sections.forEach(s => s.items.forEach(it => { const txt = String(it.icao || ''); if ((i.doc && txt.includes(i.doc)) || txt.includes(i.ce)) mrows.push({ s, it }); }));
+  const mrows = node ? node.mx.slice() : [];
+  if (mx && !mrows.length) mx.sections.forEach(s => s.items.forEach(it => { if (String(it.icao || '').includes(i.ce)) mrows.push({ s, it }); }));
   const want = i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17';
   const icaoDocs = ic ? ic.items.filter(x => x.code === want || x.code === 'Doc 8973') : [];
   return { docs, mrows, icaoDocs };
@@ -663,6 +743,7 @@ function openPQ(i) {
     <p><b>${esc(i.q)}</b></p>${capRef(i.id)}
     <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
     ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
+    ${traceBlock(i)}
     ${refsBlock(R)}
     <h4>Самооценка</h4>
     <form class="form" id="pqForm">
@@ -731,6 +812,14 @@ function pCC(m) {
       i.kind === 'hdr' ? '' : `<div class="td-wrap clamp" title="${esc(i.text)}">${esc(i.text)}</div>`, `<div class="td-wrap clamp">${esc(i.ref || '—')}</div>`, o.st ? badge(o.st, CCST[o.st]) + (o.auto ? '' : ' <span class="dim small">✎</span>') : '', `<div class="td-wrap clamp small">${esc(i.remarks || i.desc || '')}</div>`]; },
     i => i.kind !== 'hdr' && openCC(i), { groupKey: i => i.section || `Глава ${i.ch}` }));
 }
+// ВП, которые ссылаются на пункт CC, — по ключу A17:3.1.1, а не поиском подстроки «3.1.1» (та находила и 3.1.10, и номера ВП)
+function ccPQList(i) {
+  const X = xref(); const n = X && X.byKey.get(sarpKey(i.annex, i.id));
+  if (!n || !n.pqs.length) return (i.kind === 'std' || i.kind === 'rp') ? `<h4>${esc(t('Трассировка'))} ${idChip(sarpKey(i.annex, i.id))}</h4><p class="small dim">Ни один ВП протокола не ссылается на этот пункт.</p>` : '';
+  return `<h4>${esc(t('Трассировка'))} ${idChip(sarpKey(i.annex, i.id))}</h4><p class="small">ВП по этому пункту: ${n.pqs.length}</p><div class="row">`
+    + n.pqs.map(x => `<button class="idc clk" type="button" data-openpq="${esc(x.id)}" title="${esc(x.q.slice(0, 160))}">PQ:${esc(x.id)} ${pqBadge((pqOf(x.id) || {}).st)}</button>`).join(' ') + '</div>'
+    + (n.docs.length ? `<p class="small mt">Нормбаза: ${n.docs.map(d => idChip(d.id) + ' ' + esc(d.ru.slice(0, 60))).join('; ')}</p>` : '');
+}
 function openCC(i) {
   const o = ccOf(i);
   openSheet(`<h3><span class="badge b-${i.kind}">${i.kind === 'std' ? 'Стандарт' : i.kind === 'rp' ? 'Рекомендуемая практика' : 'Определение'}</span> Приложение ${i.annex}, глава ${i.ch} ${esc(i.id)} ${o.st ? badge(o.st, CCST[o.st]) : ''}</h3>
@@ -739,7 +828,7 @@ function openCC(i) {
     ${(i.kind === 'std' || i.kind === 'rp') ? `<h4>Оценка соответствия (портал)</h4><form class="form" id="ccForm">
       <div class="two"><label>${esc(t('Статус'))}<select name="st"><option value="">авто: ${esc(t(CCST[ccAuto(i)] || ''))}</option>${Object.entries(CCST).map(([k, v]) => `<option value="${k}"${!o.auto && o.st === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select></label></div>
       <label>${esc(t('Примечание'))} (что нужно сделать, где норма)<textarea name="note">${esc(o.note)}</textarea></label>
-      <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><a class="btn ghost" href="#pq?s=${encodeURIComponent(i.id)}">ВП по пункту ${esc(i.id)}</a></div></form>` : ''}`);
+      <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>` : ''}${ccPQList(i)}`);
   const f = $('#ccForm'); if (f) f.onsubmit = e => {
     e.preventDefault(); const fd = new FormData(e.target); const all = ccState(); const k = i.annex + ':' + i.id;
     const rec = { st: fd.get('st'), note: fd.get('note').trim() }; if (!rec.st && !rec.note) delete all[k]; else all[k] = rec;
@@ -1395,6 +1484,9 @@ async function boot() {
   $('#burger').onclick = () => $('#side').classList.toggle('open');
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
+    // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
+    const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it) openPQ(it); return; }
+    const occ = e.target.closest('[data-opencc]'); if (occ) { const [a, id] = occ.dataset.opencc.split(':'); const it = D('cc') && D('cc').items.find(x => String(x.annex) === a && x.id === id); if (it) openCC(it); return; }
     const opn = e.target.closest('[data-open]'); if (opn) { window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
   // Esc — закрыть шторку; «/» — курсор в поиск, если не печатаем в поле
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); if (e.key === '/' && !/^(input|textarea|select)$/i.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); $('#q').focus(); } });

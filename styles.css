@@ -319,3 +319,7 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
 @media(max-width:700px){.segs{gap:5px;padding-bottom:10px}.seg{padding:6px 11px;font-size:12.5px}}
 .subrow.nb{padding-left:24px;cursor:default}
 table.fixedw{table-layout:fixed;min-width:900px}
+/* Сквозные идентификаторы: A17:3.1.1, PQ:1.035, R02, MX:А-2 — моноширинно, одинаково во всех карточках */
+.idc{display:inline-block;font-family:var(--mono);font-size:12px;line-height:1.5;padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);white-space:nowrap;vertical-align:baseline}
+button.idc.clk{cursor:pointer;font:inherit;font-family:var(--mono);font-size:12px;margin:2px 0}
+button.idc.clk:hover{border-color:var(--accent)}
