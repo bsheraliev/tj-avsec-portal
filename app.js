@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '43';
+const APP_VERSION = '44';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -66,6 +66,11 @@ const TR = { en: {
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
+  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
+  'Подготовлено': 'Prepared', 'области': 'areas', 'принято': 'accepted', 'не принято': 'not accepted', 'Принять все непринятые': 'Accept all not accepted', 'Открыть непринятые': 'Open not accepted', 'Принято: ВП': 'Accepted: PQ', 'Принято ВП': 'PQs accepted', 'Открыть →': 'Open →',
+  'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите': 'Prepared by a session from the texts of the NCASP and the QC Regulations — open the PQ, check and accept',
+  'Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.': 'Evidence from the assessment will be added to the existing rows; the note and translation stay as they are.',
+  'Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.': 'Status and evidence will be copied into the self-assessment on this device; PQs that already have a status are not changed.',
 } };
 const t = s => (S.lang === 'en' && TR.en[s]) || s;
 
@@ -368,8 +373,8 @@ const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== un
 const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
-const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1 };
+const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
+const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1, pre: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
   if (k === 'b') return BUCKET[v] || v;
@@ -555,7 +560,7 @@ function pPQ(m) {
     const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => exportPQ(list); tb.appendChild(ex);
     const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
     m.appendChild(tb);
-    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star) && (!S.f.hint || pqHintOpen(i))
+    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star) && (!S.f.hint || pqHintOpen(i)) && (!S.f.pre || pqPreOpen(i, st))
       && (!S.f.st || (S.f.st === 'none' ? !(st[i.id] || {}).st : (st[i.id] || {}).st === S.f.st))
       && (!S.f.resp || (S.f.resp === 'none' ? !respOfPQ(i) : (respOfPQ(i) || {}).id === S.f.resp))
       && (!S.f.over || (o => o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0)(st[i.id] || {}))
@@ -566,7 +571,7 @@ function pPQ(m) {
     m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${nn} (${pct(nn, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
     paged(m, list, part => m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], part,
       i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
-        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, pqBadge(o.st), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
+        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, (o.st || !pqAssess(i.id) ? pqBadge(o.st) : pqPreBadge(pqAssess(i.id).st)), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
       openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) })));
   }
 
@@ -575,6 +580,7 @@ function pPQ(m) {
     const nn = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
     m.appendChild(el('div', 'card', `<h2>${esc(t('Самооценка'))} <span class="dim small">${nn} из ${all.length} (${pct(nn, all.length)}%)</span></h2>${prog(cnt, all.length)}`
       + `<div class="small dim mt">Удовлетворительно ${cnt.sat} · в работе ${cnt.wip} · не соответствует ${cnt.unsat} · не применимо ${cnt.na} · не оценено ${all.length - nn}</div>`));
+    const ac = assessCard(d, all, st); if (ac) m.appendChild(ac);
     m.appendChild(ceEI(d, all, st));
     const ar = el('div', 'card');
     ar.innerHTML = `<h2>${esc(t('Области проверки'))} <span class="dim small">${d.meta.areas.length} областей · аудиторы по плану v1.0, две подгруппы с ротацией</span></h2>`;
@@ -606,7 +612,7 @@ function pPQ(m) {
   }
 
   if (tab === 'todo') {
-    const block = (title, n, href, note) => `<div class="subgrp"><div class="subhd">${esc(title)} <span class="dim small">${n}</span></div><div class="small dim">${esc(note)}</div>${n ? `<div class="row mt"><a class="btn sm ghost" href="${href}">Открыть →</a></div>` : ''}</div>`;
+    const block = (title, n, href, note) => `<div class="subgrp"><div class="subhd">${esc(t(title))} <span class="dim small">${n}</span></div><div class="small dim">${esc(t(note))}</div>${n ? `<div class="row mt"><a class="btn sm ghost" href="${href}">${esc(t('Открыть →'))}</a></div>` : ''}</div>`;
     const cap = all.filter(i => capHas(i.id)).length;
     const c = el('div', 'card');
     c.innerHTML = `<h2>${esc(t('К работе'))}</h2><p class="small dim">Списки открываются во вкладке «Список» с уже выставленным фильтром.</p>`
@@ -616,6 +622,7 @@ function pPQ(m) {
       + block('Просрочен срок', over, '#pq?over=1', 'Срок в самооценке прошёл, а статус не «удовлетворительно»')
       + block('Есть вывод аудита 2019', cap, '#pq?cap=1', 'По этим ВП были выводы ИКАО — проверьте, закрыты ли рекомендации')
       + (D('pq_hints') ? block('Есть подсказки, нет доказательств', all.filter(pqHintOpen).length, '#pq?hint=1', 'Абзацы НПАБГА, Правил КК, Программы КК и Порядка по упрощению формальностей подобраны по тексту ВП — проверьте и перенесите в доказательства') : '')
+      + (D('pq_assess') ? block('Предварительная оценка не принята', all.filter(i => pqPreOpen(i, st)).length, '#pq?pre=1', 'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите') : '')
       + `</div>`;
     m.appendChild(c);
   }
@@ -739,6 +746,57 @@ function hintsBlock(i) {
   const hs = pqHints(i.id); if (!hs.length) return '';
   return `<details class="mt hints"><summary><b>${esc(t('Подсказки доказательств'))}</b> <span class="dim small">${hs.length} · ${esc(t('абзацы национальных документов по тексту ВП — ориентиры, не доказательства; сверьте по первоисточнику'))}</span></summary><ul class="list small">${hs.map((h, k) => `<li><span class="badge b-info">${esc(hintDoc(h.doc))}</span> <b>${esc(h.ref || '')}</b> <span class="dim">${esc(h.ctx || '')}</span><div>${esc(h.text)}</div><button type="button" class="btn sm ghost" data-evhint="${k}">${esc(t('в доказательства'))}</button></li>`).join('')}</ul></details>`;
 }
+/* ---------- предварительная оценка (pq_assess.json): подготовлена сессией по текстам документов, принимает NCMC ----------
+   Самооценка живёт на устройстве (pqState), поэтому «принять» = перенести оценку в запись устройства по правилу assessMerge. */
+const pqAssess = id => { const A = D('pq_assess'); return (A && A.items && A.items[id]) || null; };
+// оценка есть, а статуса в самооценке устройства нет — «не принята»; st — уже прочитанный pqState (не читать localStorage на каждую строку)
+const pqPreOpen = (i, st = pqState()) => !!pqAssess(i.id) && !(st[i.id] || {}).st;
+// список ВП: статус из предварительной оценки — бледный пунктирный бейдж, пока человек его не принял
+const pqPreBadge = st => pqBadge(st).replace('<span class="badge ', `<span title="${esc(t('предварительная оценка, не принята'))}" class="badge pre `);
+// слияние с записью устройства: статус — из оценки; доказательства — добавляются строки, которых ещё нет (по doc+ref);
+// примечание и перевод устройства приоритетнее. Перезаписывать ли существующий статус — решает вызывающий.
+function assessMerge(o, a) {
+  const key = e => norm(e.doc) + '|' + norm(e.ref);
+  const evl = (Array.isArray(o.evl) ? o.evl : []).slice(), seen = new Set(evl.map(key));
+  (a.evl || []).forEach(e => { if (e && !seen.has(key(e))) { seen.add(key(e)); evl.push({ doc: e.doc || '', ref: e.ref || '', date: e.date || '' }); } });
+  return { ...o, st: a.st, evl, note: o.note || a.note || '', en: o.en || a.en || '', at: today() };
+}
+function assessBlock(i) {
+  const a = pqAssess(i.id); if (!a) return '';
+  const M = D('pq_assess').meta || {}, o = pqOf(i.id);
+  const basis = String(M.basis || ''), b60 = basis.length > 60 ? basis.slice(0, 60).replace(/\s+\S*$/, '').trim() + '…' : basis;
+  const ev = (a.evl || []).filter(e => e && (e.doc || e.ref));
+  return `<div class="card callout assess mt"><h4>${esc(t('Предварительная оценка'))} ${pqBadge(a.st)}${a.conf ? ` <span class="badge b-info" title="${esc(t('Уверенность'))}: ${esc(a.conf)}">${esc((M.conf || {})[a.conf] || a.conf)}</span>` : ''}</h4>
+    <div class="small dim">${esc(t('по'))} ${esc(b60)} · ${esc(fmtDate(M.updated))} · ${esc(t('проверяет NCMC'))}</div>
+    ${ev.length ? `<ul class="list small">${ev.map(e => `<li>${esc([e.doc, e.ref].filter(Boolean).join(' · '))}${e.date ? ` <span class="dim">${esc(fmtDate(e.date))}</span>` : ''}</li>`).join('')}</ul>` : ''}
+    ${a.note ? `<p class="small">${esc(a.note)}</p>` : ''}${a.en ? `<p class="small dim">EN: ${esc(a.en)}</p>` : ''}
+    ${a.gap ? `<p class="small warn">⚠ ${esc(t('Что нужно'))}: ${esc(a.gap)}</p>` : ''}
+    <div class="row mt"><button type="button" class="btn sm" data-assessapply="1">${esc(t(o.st ? 'Обновить из предварительной оценки' : 'Принять в самооценку'))}</button>${o.st ? `<span class="dim small">${esc(t('в самооценке'))}: ${pqBadge(o.st)}</span>` : ''}</div></div>`;
+}
+// «Сводка» ВП: сколько подготовлено, принято и не принято; массовое принятие — только ВП без статуса на устройстве
+function assessCard(d, all, st) {
+  const A = D('pq_assess'); if (!A) return null;
+  const M = A.meta || {}, items = all.filter(i => pqAssess(i.id)), open = items.filter(i => !(st[i.id] || {}).st);
+  const areas = d.meta.areas.map(x => x.code).filter(c => items.some(i => i.area === c));
+  const c = el('div', 'card');
+  c.innerHTML = `<h2>${esc(t('Предварительная оценка'))} <span class="dim small">${esc(fmtDate(M.updated))} · ${esc(t('проверяет NCMC'))}</span></h2>`
+    + `<div>${esc(t('Подготовлено'))}: <b>${items.length}</b> ВП (${esc(t('области'))}: ${esc(areas.join(', ') || '—')}) · ${esc(t('принято'))}: <b>${items.length - open.length}</b> · ${esc(t('не принято'))}: <b class="${open.length ? 'warn' : ''}">${open.length}</b></div>`
+    + (M.by ? `<div class="small dim mt">${esc(M.by)}</div>` : '');
+  if (open.length) {
+    const r = el('div', 'row mt');
+    const b = el('button', 'btn sm', `${esc(t('Принять все непринятые'))} (${open.length})`);
+    b.onclick = () => {
+      if (!confirm(`${t('Принять все непринятые')} (${open.length})?\n${t('Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.')}`)) return;
+      const cur = pqState(); let n = 0;
+      open.forEach(i => { const o = cur[i.id] || {}, a = pqAssess(i.id); if (o.st || !a) return;   // существующий статус устройства не трогаем
+        const rec = assessMerge(o, a); logChange('pq', i.id, o, rec, PQLOGF); cur[i.id] = rec; n++; });
+      LS.set(K.pq, cur); toast(`${t('Принято ВП')}: ${n}`, 'ok'); render();
+    };
+    const lk = el('a', 'btn sm ghost', `${esc(t('Открыть непринятые'))} →`); lk.href = '#pq?pre=1';
+    r.append(b, lk); c.appendChild(r);
+  }
+  return c;
+}
 function openPQ(i) {
   const d = D('pq'); const o = pqOf(i.id); const R = refsForPQ(i); const evl = Array.isArray(o.evl) ? o.evl : [];
   openSheet(`<h3><span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''} <span class="badge b-area">${i.area}</span> <span class="badge b-ce" title="${esc(d.meta.ce[i.ce] || '')}">${esc(i.ce)}</span> ${pqBadge(o.st)}</h3>
@@ -746,7 +804,7 @@ function openPQ(i) {
     <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
     ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
     ${traceBlock(i)}
-    ${refsBlock(R)}${hintsBlock(i)}
+    ${refsBlock(R)}${hintsBlock(i)}${assessBlock(i)}
     <h4>Самооценка</h4>
     <form class="form" id="pqForm">
       <div class="two">
@@ -773,6 +831,14 @@ function openPQ(i) {
   $$('#sheet [data-evhint]').forEach(b => { b.onclick = () => { const h = pqHints(i.id)[Number(b.dataset.evhint)]; if (!h) return;
     const empty = $$('.evrow', evBox).find(r => !r.querySelector('[data-k="doc"]').value && !r.querySelector('[data-k="ref"]').value); if (empty) empty.remove();
     evBox.appendChild(evRow({ doc: hintDoc(h.doc), ref: [h.ref, h.ctx].filter(Boolean).join(' · ') })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте по первоисточнику и сохраните'), 'ok'); }; });
+  const ab = $('#sheet [data-assessapply]'); if (ab) ab.onclick = () => {
+    const a = pqAssess(i.id), cur = pqOf(i.id); if (!a) return;
+    if (cur.st && !confirm(`${t('Обновить из предварительной оценки')}: ВП ${i.id} — «${t(PQST[cur.st] || cur.st)}» → «${t(PQST[a.st] || a.st)}».\n${t('Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.')}`)) return;
+    const all = pqState(), rec = assessMerge(cur, a);
+    logChange('pq', i.id, cur, rec, PQLOGF);
+    all[i.id] = rec; LS.set(K.pq, all); toast(t('Принято: ВП') + ' ' + i.id, 'ok');
+    const sc = $('.sheet-card').scrollTop; openPQ(i); $('.sheet-card').scrollTop = sc; render();
+  };
   $('#pqForm').onsubmit = e => {
     e.preventDefault(); const f = new FormData(e.target); const all = pqState();
     const rows = $$('.evrow', evBox).map(r => { const g = k => (r.querySelector(`[data-k="${k}"]`).value || '').trim(); return { doc: g('doc'), ref: g('ref'), date: g('date') }; }).filter(x => x.doc || x.ref || x.date);
@@ -1645,7 +1711,7 @@ function tgInit() {
   try {
     tg.ready(); tg.expand();
     if (/^#tgWebApp/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);   // параметры Telegram в хеше — иначе роутер не найдёт раздел
-    document.documentElement.dataset.tg = '1';
+    document.documentElement.dataset.tg = '1'; document.documentElement.dataset.tgp = String(tg.platform || '');
     if (tg.colorScheme && !LS.get(K.theme, '')) { document.documentElement.dataset.theme = tg.colorScheme; }
     tg.onEvent && tg.onEvent('themeChanged', () => { if (!LS.get(K.theme, '')) applyTheme(); });
     // кнопка «Назад» Telegram: закрыть шторку, иначе — на обзор
