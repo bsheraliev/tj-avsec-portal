@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '42';
+const APP_VERSION = '43';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -368,8 +368,8 @@ const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== un
 const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
-const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1 };
+const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
+const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
   if (k === 'b') return BUCKET[v] || v;
@@ -555,7 +555,7 @@ function pPQ(m) {
     const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => exportPQ(list); tb.appendChild(ex);
     const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
     m.appendChild(tb);
-    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star)
+    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star) && (!S.f.hint || pqHintOpen(i))
       && (!S.f.st || (S.f.st === 'none' ? !(st[i.id] || {}).st : (st[i.id] || {}).st === S.f.st))
       && (!S.f.resp || (S.f.resp === 'none' ? !respOfPQ(i) : (respOfPQ(i) || {}).id === S.f.resp))
       && (!S.f.over || (o => o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0)(st[i.id] || {}))
@@ -615,6 +615,7 @@ function pPQ(m) {
       + block('Не соответствует', unsat, '#pq?st=unsat', 'Требуют корректирующего действия и доказательства до начала аудита')
       + block('Просрочен срок', over, '#pq?over=1', 'Срок в самооценке прошёл, а статус не «удовлетворительно»')
       + block('Есть вывод аудита 2019', cap, '#pq?cap=1', 'По этим ВП были выводы ИКАО — проверьте, закрыты ли рекомендации')
+      + (D('pq_hints') ? block('Есть подсказки, нет доказательств', all.filter(pqHintOpen).length, '#pq?hint=1', 'Абзацы НПАБГА, Правил КК, Программы КК и Порядка по упрощению формальностей подобраны по тексту ВП — проверьте и перенесите в доказательства') : '')
       + `</div>`;
     m.appendChild(c);
   }
@@ -728,6 +729,16 @@ function ceEI(d, list, st) {
     + `<p class="small dim">Неоценённые ВП считаются неудовлетворительными — как в USAP до подтверждения доказательствами.</p>`;
   return c;
 }
+/* ---------- подсказки доказательств (pq_hints.json, tools/hints.py): абзацы национальных документов по тексту ВП ---------- */
+const HINTDOC = { R02: 'НПАБГА', R05: 'Правила КК', QCP: 'Программа КК', R03: 'Порядок по упрощению формальностей', R04: 'Программа подготовки', R01: 'Воздушный кодекс' };
+const hintDoc = code => { const r = D('registry') && D('registry').docs.find(d => d.id === code); return HINTDOC[code] || (r ? r.ru : code); };
+const pqHints = id => (D('pq_hints') && D('pq_hints').hints[id]) || [];
+// есть подсказки, а доказательств в самооценке ещё нет — очередь для NCMC
+const pqHintOpen = i => pqHints(i.id).length > 0 && !(((pqOf(i.id).evl) || []).length) && !pqOf(i.id).ev;
+function hintsBlock(i) {
+  const hs = pqHints(i.id); if (!hs.length) return '';
+  return `<details class="mt hints"><summary><b>${esc(t('Подсказки доказательств'))}</b> <span class="dim small">${hs.length} · ${esc(t('абзацы национальных документов по тексту ВП — ориентиры, не доказательства; сверьте по первоисточнику'))}</span></summary><ul class="list small">${hs.map((h, k) => `<li><span class="badge b-info">${esc(hintDoc(h.doc))}</span> <b>${esc(h.ref || '')}</b> <span class="dim">${esc(h.ctx || '')}</span><div>${esc(h.text)}</div><button type="button" class="btn sm ghost" data-evhint="${k}">${esc(t('в доказательства'))}</button></li>`).join('')}</ul></details>`;
+}
 function openPQ(i) {
   const d = D('pq'); const o = pqOf(i.id); const R = refsForPQ(i); const evl = Array.isArray(o.evl) ? o.evl : [];
   openSheet(`<h3><span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''} <span class="badge b-area">${i.area}</span> <span class="badge b-ce" title="${esc(d.meta.ce[i.ce] || '')}">${esc(i.ce)}</span> ${pqBadge(o.st)}</h3>
@@ -735,7 +746,7 @@ function openPQ(i) {
     <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
     ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
     ${traceBlock(i)}
-    ${refsBlock(R)}
+    ${refsBlock(R)}${hintsBlock(i)}
     <h4>Самооценка</h4>
     <form class="form" id="pqForm">
       <div class="two">
@@ -759,6 +770,9 @@ function openPQ(i) {
     r.querySelector('.evdel').onclick = () => r.remove(); return r; };
   (evl.length ? evl : [{}]).forEach(v => evBox.appendChild(evRow(v)));
   $('#evAdd').onclick = () => evBox.appendChild(evRow());
+  $$('#sheet [data-evhint]').forEach(b => { b.onclick = () => { const h = pqHints(i.id)[Number(b.dataset.evhint)]; if (!h) return;
+    const empty = $$('.evrow', evBox).find(r => !r.querySelector('[data-k="doc"]').value && !r.querySelector('[data-k="ref"]').value); if (empty) empty.remove();
+    evBox.appendChild(evRow({ doc: hintDoc(h.doc), ref: [h.ref, h.ctx].filter(Boolean).join(' · ') })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте по первоисточнику и сохраните'), 'ok'); }; });
   $('#pqForm').onsubmit = e => {
     e.preventDefault(); const f = new FormData(e.target); const all = pqState();
     const rows = $$('.evrow', evBox).map(r => { const g = k => (r.querySelector(`[data-k="${k}"]`).value || '').trim(); return { doc: g('doc'), ref: g('ref'), date: g('date') }; }).filter(x => x.doc || x.ref || x.date);
