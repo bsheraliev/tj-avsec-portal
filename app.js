@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '45';
+const APP_VERSION = '46';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -12,8 +12,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
-const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log' };
-const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.audit, K.capi, K.log];
+const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev' };
+const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.audit, K.capi, K.log, K.journal];
 
 const S = { cfg: null, key: null, D: {}, page: 'dash', q: '', f: {}, lang: LS.get(K.lang, 'ru'), pqSel: new Set() };
 
@@ -66,7 +66,7 @@ const TR = { en: {
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
-  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
+  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'Журнал аудита': 'Audit journal', 'Журнал': 'Journal', 'Журнал: открытых': 'Journal: open', 'ответить сегодня': 'answer today', 'Журнал: открытых записей': 'Journal: open entries', 'Новая запись журнала': 'New journal entry', 'Запись журнала': 'Journal entry', 'Дата': 'Date', 'Время': 'Time', 'Аудитор ИКАО': 'ICAO auditor', 'Группа ИКАО': 'ICAO team', 'Общее': 'General', 'Вид': 'Type', 'Текст': 'Text', 'Что спросил или запросил аудитор, что наблюдали': 'What the auditor asked or requested, what was observed', 'Связи': 'Links', 'номера ВП, пункты A17:3.1.1, коды субъектов (DYU) — через запятую': 'PQ numbers, A17:3.1.1 provisions, entity codes (DYU), comma-separated', 'Ответить до': 'Answer by', 'Ответ / что передали': 'Answer / what was provided', 'Удалить': 'Delete', 'Закрыть': 'Close', 'устройство': 'device', 'Запись сохранена': 'Entry saved', 'Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.': 'Delete the journal entry? The deletion will carry over to other devices when merged.', 'Вопросы, запросы документов и наблюдения группы ИКАО': 'Questions, document requests and observations of the ICAO team', 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».': 'Entries are stored on this device; journals from several phones are combined with “Merge journal”.', 'открытых запросов': 'open requests', 'ответить сегодня или просрочено': 'due today or overdue', 'предварительных выводов': 'preliminary findings', 'записей всего': 'entries in total', 'Запись': 'Entry', 'Все виды': 'All types', 'Открыт или отвечено': 'Open or answered', 'Ответить сегодня / просрочено': 'Due today / overdue', 'Все аудиторы': 'All auditors', 'Поиск по журналу': 'Search the journal', 'Записей пока нет — нажмите «＋ Запись»': 'No entries yet — tap “＋ Entry”', 'Несколько устройств и выгрузка': 'Several devices and export', 'Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.': 'Everyone keeps the journal on their own phone. In the evening one person collects the journal files and taps “Merge journal” for each: new entries are added, edited ones updated, deleted ones removed. The merged journal can then be shared back.', 'Выгрузить журнал (JSON)': 'Export journal (JSON)', 'Объединить журнал…': 'Merge journal…', 'Файл журнала — служебный: передавайте его между устройствами группы напрямую или служебной почтой, не в общие чаты. Метка этого устройства': 'The journal file is internal: pass it between team devices directly or by official e-mail, not in group chats. This device tag', 'Это не файл журнала AvSec Portal': 'This is not an AvSec Portal journal file', 'Объединено': 'Merged', 'обновлено': 'updated', 'Запрос документа': 'Document request', 'Наблюдение': 'Observation', 'Предварительный вывод': 'Preliminary finding', 'Открыт': 'Open', 'Отвечено': 'Answered', 'Закрыт': 'Closed', 'Обл.': 'Area', 'Аудитор': 'Auditor', 'В ВП — п.': 'In the PQ — para.', 'по Поправке': 'per Amendment', 'в CC — п.': 'in the CC — para.', 'сопоставлено по содержанию': 'matched by content', 'Выбрать': 'Select', 'Закончить выбор': 'Finish selecting', 'Отметить несколько ВП и изменить их одним действием': 'Select several PQs and change them in one action', 'Самооценка — сверка с OLF (CSV)': 'Self-assessment — OLF reconciliation (CSV)', 'Выбрано': 'Selected', 'Выбрать все в списке': 'Select all in list', 'Снять выбор': 'Clear selection', 'не менять': 'no change', 'снять назначение (по области)': 'clear (use area owner)', 'Применить к выбранным': 'Apply to selected', 'Принять предварительную оценку': 'Accept preliminary assessment', 'Отменить последнее': 'Undo last', 'Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.': 'Only the chosen fields change; evidence and notes stay. Every change goes to the PQ history. The preliminary assessment is applied only to PQs without a status.', 'Выберите статус, ответственного или срок': 'Choose a status, owner or due date', 'Изменить': 'Change', 'Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.': 'You can undo with “Undo last” until the page is reloaded.', 'Изменено': 'Changed', 'ВП уже со статусом — пропускаются.': 'PQs already have a status and are skipped.', 'предварительная оценка': 'preliminary assessment', 'Отменено': 'Undone', 'статус': 'status', 'срок': 'due', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
   'Подготовлено': 'Prepared', 'области': 'areas', 'принято': 'accepted', 'не принято': 'not accepted', 'Принять все непринятые': 'Accept all not accepted', 'Открыть непринятые': 'Open not accepted', 'Принято: ВП': 'Accepted: PQ', 'Принято ВП': 'PQs accepted', 'Открыть →': 'Open →',
   'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите': 'Prepared by a session from the texts of the NCASP and the QC Regulations — open the PQ, check and accept',
   'Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.': 'Evidence from the assessment will be added to the existing rows; the note and translation stay as they are.',
@@ -79,6 +79,7 @@ const ROUTES = [
   { g: 'Обзор', items: [{ id: 'dash', ic: '◎', t: 'Обзор', short: 'Обзор' }] },
   { g: 'USAP-CMA', items: [
     { id: 'audit', ic: '🛡', t: 'Аудит USAP-CMA 2026', short: 'Аудит' },
+    { id: 'journal', ic: '📝', t: 'Журнал аудита', short: 'Журнал', cnt: () => jOpen().length || '' },
     { id: 'pq', ic: '❔', t: 'Протокольные вопросы', short: 'ВП', cnt: () => D('pq') ? D('pq').items.length : '' },
     { id: 'cc', ic: '☑', t: 'Контрольный перечень (CC)', short: 'CC', cnt: () => D('cc') ? D('cc').items.filter(i => i.kind === 'std' || i.kind === 'rp').length : '' },
     { id: 'sasaq', ic: '▤', t: 'SASAQ', cnt: () => D('sasaq') ? D('sasaq').items.length : '' },
@@ -100,6 +101,8 @@ const ROUTES = [
   { g: 'Сервис', items: [{ id: 'data', ic: '⇅', t: 'Данные и резервная копия' }, { id: 'about', ic: 'ⓘ', t: 'О портале' }] },
 ];
 const BOTTOM = ['dash', 'audit', 'pq', 'cc', 'plan'];
+// на время аудита (за 2 дня до начала и до дня после окончания) вместо дорожной карты внизу — журнал
+const bottomIds = () => auditWindow() ? ['dash', 'audit', 'pq', 'journal', 'cc'] : BOTTOM;
 const D = name => S.D[name];
 const U = () => S.D.usap;
 
@@ -190,7 +193,7 @@ function buildNav() {
   });
   side.appendChild(el('div', 'navfoot', `AvSec Portal v${APP_VERSION} · <span class="dim">${esc(S.cfg.built || '')}</span>`));
   const bb = $('#bottombar'); bb.innerHTML = '';
-  BOTTOM.forEach(id => { const it = ROUTES.flatMap(g => g.items).find(x => x.id === id); const a = el('a', '', `<span>${it.ic}</span>${esc(it.short || t(it.t))}`); a.href = '#' + id; a.dataset.p = id; bb.appendChild(a); });
+  bottomIds().forEach(id => { const it = ROUTES.flatMap(g => g.items).find(x => x.id === id); const a = el('a', '', `<span>${it.ic}</span>${esc(it.short || t(it.t))}`); a.href = '#' + id; a.dataset.p = id; bb.appendChild(a); });
   markNav();
 }
 function markNav() {
@@ -370,7 +373,7 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
 const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
@@ -492,6 +495,8 @@ function dash(m) {
     tiles.appendChild(tile(bad.length ? 'draft' : 'ok', bad.length, `CC: расхождения / частично (из ${sarps.length})`, () => go('cc', { st: 'bad' })));
   }
   if (sq) { const f = sq.items.filter(i => i.filled).length; tiles.appendChild(tile(f === sq.items.length ? 'ok' : 'draft', `${f}/${sq.items.length}`, 'SASAQ: вопросов заполнено', () => go('sasaq'))); }
+  // журнал — на период аудита или когда в нём есть открытые записи
+  { const o = jOpen(), due = jDueToday(); if (auditWindow() || o.length) tiles.appendChild(tile(due.length ? 'miss' : o.length ? 'draft' : 'ok', o.length, due.length ? `${t('Журнал: открытых')} · ${t('ответить сегодня')} ${due.length}` : t('Журнал: открытых записей'), () => go('journal', { st: 'active' }))); }
   m.appendChild(tiles);
 
   const g = el('div', 'grid2');
@@ -557,7 +562,10 @@ function pPQ(m) {
     tb.appendChild(toggle('Только со звёздочкой', 'star'));
     tb.appendChild(selector('Все ответственные', 'resp', team().map(x => x.id).concat(['none']), c => c === 'none' ? t('Не назначен') : nameOf(c)));
     tb.appendChild(inputFilter('Поиск по тексту ВП'));
+    const sb = el('button', 'btn sm' + (S.pqSelMode ? '' : ' ghost'), esc(t(S.pqSelMode ? 'Закончить выбор' : 'Выбрать'))); sb.title = t('Отметить несколько ВП и изменить их одним действием');
+    sb.onclick = () => { S.pqSelMode = !S.pqSelMode; S.pqSel = new Set(); render(); }; tb.appendChild(sb);
     const ex = el('button', 'btn ghost sm', esc(t('Экспорт CSV'))); ex.onclick = () => exportPQ(list); tb.appendChild(ex);
+    const exo = el('button', 'btn ghost sm', esc(t('Самооценка — сверка с OLF (CSV)'))); exo.onclick = () => exportPQOLF(list); tb.appendChild(exo);
     const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
     m.appendChild(tb);
     var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star) && (!S.f.hint || pqHintOpen(i)) && (!S.f.pre || pqPreOpen(i, st))
@@ -569,10 +577,14 @@ function pPQ(m) {
     const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; list.forEach(i => { const o = (st[i.id] || {}).st; if (o) cnt[o]++; });
     const nn = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
     m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${nn} (${pct(nn, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
-    paged(m, list, part => m.appendChild(table(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок'], part,
-      i => { const o = st[i.id] || {}; return [`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
-        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, (o.st || !pqAssess(i.id) ? pqBadge(o.st) : pqPreBadge(pqAssess(i.id).st)), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']; },
-      openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) })));
+    const selOn = !!S.pqSelMode;
+    if (selOn) { const ids = new Set(list.map(i => i.id)); S.pqSel = new Set([...S.pqSel].filter(id => ids.has(id))); m.appendChild(pqBulkBar(list)); }
+    const onSel = e => { const x = e.target.closest('[data-pqsel]'); if (!x) return; if (x.checked) S.pqSel.add(x.dataset.pqsel); else S.pqSel.delete(x.dataset.pqsel); pqBulkCount(list); };
+    paged(m, list, part => { const tw = table((selOn ? [''] : []).concat(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок']), part,
+      i => { const o = st[i.id] || {}; return (selOn ? [`<input type="checkbox" data-pqsel="${esc(i.id)}"${S.pqSel.has(i.id) ? ' checked' : ''} aria-label="${esc(t('Выбрать'))} ${esc(i.id)}">`] : []).concat([`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
+        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, (o.st || !pqAssess(i.id) ? pqBadge(o.st) : pqPreBadge(pqAssess(i.id).st)), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']); },
+      openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) });
+      tw.addEventListener('change', onSel); m.appendChild(tw); });
   }
 
   if (tab === 'sum') {
@@ -604,7 +616,8 @@ function pPQ(m) {
       tr.innerHTML = `<h2>${esc(t('Трассировка'))} <span class="dim small">ключи ${idChip('PQ:1.035')} → ${idChip('A17:3.1.1')} → ${idChip('R02')} → ${idChip('MX:А-2')}</span></h2>`
         + kv([['ВП → пункт CC', `<b>${all.length - miss.length}</b> из ${all.length}`],
           ['ВП → документ нормбазы по самому пункту', `<b>${withDoc}</b> из ${all.length} <span class="dim small">(остальные — через документы на всё приложение или по КЭ)</span>`],
-          ['Пункт CC без национальной нормы', noNat ? `<b class="warn">${noNat}</b> ВП` : '0']])
+          ['Пункт CC без национальной нормы', noNat ? `<b class="warn">${noNat}</b> ВП` : '0'],
+          ...(a9Map() ? [['Прил. 9: разные поправки', `ВП по Поправке ${esc(a9Ed().pq || '?')}, CC по Поправке ${esc(a9Ed().cc || '?')} — ${Object.keys(a9Map()).length} пунктов сопоставлены по содержанию <span class="dim small">(${all.filter(i => i.area === 'FAL' && pqDoc(i) !== pqSarp(i).slice(3)).length} ВП FAL ведут на другой номер CC)</span>`]] : [])])
         + (miss.length ? `<details class="mt"><summary class="small"><b>${miss.length} ВП не находят пункт CC</b> — для Прил. 9 ВП составлены по Поправке ${esc((D('pq').meta.title.match(/Поправка (\d+) к Приложению 9/) || [])[1] || '?')}, а CC — по Поправке ${esc((D('cc').meta.title.match(/Annex 9 Amendment (\d+)/) || [])[1] || '?')}</summary><div class="row mt">`
           + miss.map(i => `<button class="idc clk" type="button" data-openpq="${esc(i.id)}">PQ:${esc(i.id)} → ${esc(pqSarp(i))}</button>`).join(' ') + '</div></details>' : '');
       m.appendChild(tr);
@@ -637,7 +650,17 @@ function pPQ(m) {
    их не раскрывал: у 234 из 493 ВП терялись 345 привязок к документам нормбазы. */
 const sarpKey = (an, id) => `A${an}:${id}`;
 const pqDoc = i => String(i.doc || '').trim().replace(/^[АA]9\s+/, '').replace(/\.$/, '');   // «А9 8.13», «2.4.1.» → пункт
-const pqSarp = i => sarpKey(i.area === 'FAL' ? 9 : 17, pqDoc(i));
+// Нумерация Прил. 9 в ВП (Поправка 30) и в CC (Поправка 29) различается — пункты сдвинуты (ВП 9.021 «SLTD» = А9 3.8 по Поправке 30
+// = CC 3.10 по Поправке 29). crosswalk.json сопоставляет их по содержанию; применяется, только пока редакции в meta совпадают с теми,
+// для которых таблица составлена: после пересборки CC по Поправке 30 ключи снова берутся из ВП напрямую.
+const a9Ed = () => ({ cc: ((D('cc') || { meta: {} }).meta.title || '').match(/Annex 9 Amendment (\d+)/)?.[1], pq: ((D('pq') || { meta: {} }).meta.title || '').match(/Поправка (\d+) к Приложению 9/)?.[1] });
+function a9Map() {
+  const W = D('crosswalk'); if (!W || !W.a9) return null;
+  const e = a9Ed(); return W.meta.cc === e.cc && W.meta.pq === e.pq ? W.a9.map : null;
+}
+// pqfix: опечатка в номере стандарта у отдельного ВП (5.200: «4.7.15» = 4.7.5) — действует, пока в ВП стоит прежний номер
+const pqFix = i => { const f = ((D('crosswalk') || {}).pqfix || {})[i.id]; return f && f.from === pqDoc(i) ? f : null; };
+const pqSarp = i => { const p = pqDoc(i), f = pqFix(i); if (f) return sarpKey(f.annex, f.to); if (i.area !== 'FAL') return sarpKey(17, p); const m = a9Map(); return sarpKey(9, (m && m[p]) || p); };
 const numCmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number);
   for (let k = 0; k < Math.max(x.length, y.length); k++) { const d = (x[k] ?? -1) - (y[k] ?? -1); if (d) return d; } return 0; };
 const underPara = (id, p) => id === p || id.startsWith(p + '.');
@@ -681,7 +704,7 @@ function traceBlock(i) {
   const c = n.cc; const st = c ? ccOf(c).st : '';
   const others = n.pqs.filter(x => x.id !== i.id);
   const rows = [
-    ['Стандарт ИКАО', c ? `${idChip(k)} ${badge(c.kind === 'std' ? 'info' : 'none', c.kind === 'std' ? 'Стандарт' : 'Рекомендуемая практика')} <span class="dim small">Поправка ${esc(edCC || '?')}</span> <button class="btn sm ghost" type="button" data-opencc="${esc(c.annex + ':' + c.id)}">Пункт CC →</button>`
+    ['Стандарт ИКАО', c ? `${idChip(k)} ${badge(c.kind === 'std' ? 'info' : 'none', c.kind === 'std' ? 'Стандарт' : 'Рекомендуемая практика')} <span class="dim small">Поправка ${esc(edCC || '?')}</span> <button class="btn sm ghost" type="button" data-opencc="${esc(c.annex + ':' + c.id)}">Пункт CC →</button>${pqFix(i) ? `<div class="small dim">${esc(t('В ВП — п.'))} ${esc(pqDoc(i))}: ${esc(pqFix(i).why)}</div>` : an === 'A9' && pqDoc(i) !== c.id ? `<div class="small dim">${esc(t('В ВП — п.'))} ${esc(pqDoc(i))} ${esc(t('по Поправке'))} ${esc(edPQ || '?')}; ${esc(t('в CC — п.'))} ${esc(c.id)} ${esc(t('по Поправке'))} ${esc(edCC || '?')} (${esc(t('сопоставлено по содержанию'))}: ${esc(((D('crosswalk') || {}).a9 || { why: {} }).why[pqDoc(i)] || '')})</div>` : ''}`
       : `${idChip(k)} <span class="warn small">нет в контрольном перечне${edCC && edPQ && edCC !== edPQ ? ` — CC по Поправке ${esc(edCC)}, ВП по Поправке ${esc(edPQ)}` : ''}</span>`],
     ['Национальная норма (CC)', c ? `${esc(c.ref || '—')} ${st ? badge(st, CCST[st] || st) : ''}${c.diff ? `<div class="small dim">Различие: ${esc(c.diff)}</div>` : ''}` : ''],
     ['Нормбаза', n.docs.length ? n.docs.map(d => `${idChip(d.id)} ${esc(d.ru.length > 70 ? d.ru.slice(0, 70) + '…' : d.ru)}`).join('<br>') + (whole.length ? `<div class="small dim">и всё приложение: ${whole.map(d => esc(d.id)).join(', ')}</div>` : '')
@@ -805,6 +828,7 @@ function openPQ(i) {
     <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
     ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
     ${traceBlock(i)}
+    ${jLinked('PQ:' + i.id)}
     ${refsBlock(R)}${hintsBlock(i)}${assessBlock(i)}
     <h4>Самооценка</h4>
     <form class="form" id="pqForm">
@@ -849,6 +873,79 @@ function openPQ(i) {
     LS.set(K.pq, all); toast('Сохранено: ВП ' + i.id, 'ok'); closeSheet(); render();
   };
   $('#pqClear').onclick = () => { const all = pqState(); delete all[i.id]; LS.set(K.pq, all); closeSheet(); render(); };
+}
+/* ---------- массовая самооценка (список ВП → «Выбрать»): одно действие на отмеченные ВП ----------
+   Меняются только выбранные поля; каждое изменение пишется в историю ВП (logChange), как при ручном сохранении.
+   Последнее массовое действие можно отменить до перезагрузки страницы (S.pqUndo — снимок записей до изменения). */
+const pqPreable = id => !!pqAssess(id) && !(pqOf(id).st);
+function pqBulkCount(list) {
+  const n = S.pqSel.size, k = [...S.pqSel].filter(pqPreable).length, b = $('#pqBulk'); if (!b) return;
+  $('#pqSelN', b).textContent = n;
+  b.querySelector('[data-b="apply"]').disabled = !n;
+  const pre = b.querySelector('[data-b="pre"]'); if (pre) { pre.disabled = !k; pre.textContent = `${t('Принять предварительную оценку')} (${k})`; }
+}
+function pqBulkSave(ids, fn, label) {
+  const all = pqState(), before = {}; let n = 0;
+  ids.forEach(id => { const cur = all[id] || {}; const rec = fn(cur, id); if (!rec) return;
+    before[id] = all[id] ? JSON.parse(JSON.stringify(all[id])) : null; logChange('pq', id, cur, rec, PQLOGF); all[id] = rec; n++; });
+  if (!n) return 0;
+  LS.set(K.pq, all); S.pqUndo = { label, n, before }; return n;
+}
+function pqBulkBar(list) {
+  const c = el('div', 'card bulk'); c.id = 'pqBulk';
+  const opt = (v, l, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(l)}</option>`;
+  c.innerHTML = `<div class="row"><b>${esc(t('Выбрано'))}: <span id="pqSelN">0</span></b> <span class="dim small">${esc(t('из'))} ${list.length}</span>
+      <button class="btn sm ghost" type="button" data-b="all">${esc(t('Выбрать все в списке'))} (${list.length})</button>
+      <button class="btn sm ghost" type="button" data-b="none">${esc(t('Снять выбор'))}</button></div>
+    <div class="row mt">
+      <label>${esc(t('Статус'))} <select data-b="st">${opt('', '— ' + t('не менять') + ' —')}${['wip', 'sat', 'unsat', 'na'].map(k => opt(k, t(PQST[k]))).join('')}</select></label>
+      <label>${esc(t('Ответственный'))} <select data-b="resp">${opt('', '— ' + t('не менять') + ' —')}${team().map(x => opt(x.id, x.name)).join('')}${opt('__none', t('снять назначение (по области)'))}</select></label>
+      <label>${esc(t('Срок'))} <input type="date" data-b="due"></label>
+      <button class="btn sm" type="button" data-b="apply" disabled>${esc(t('Применить к выбранным'))}</button>
+      ${D('pq_assess') ? `<button class="btn sm ghost" type="button" data-b="pre" disabled>${esc(t('Принять предварительную оценку'))} (0)</button>` : ''}
+      ${S.pqUndo ? `<button class="btn sm ghost" type="button" data-b="undo">${esc(t('Отменить последнее'))}: ${esc(S.pqUndo.label)} (${S.pqUndo.n})</button>` : ''}
+    </div>
+    <p class="small dim">${esc(t('Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.'))}</p>`;
+  c.onclick = e => {
+    const b = e.target.closest('[data-b]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
+    const ids = [...S.pqSel], v = k => c.querySelector(`[data-b="${k}"]`).value;
+    if (b.dataset.b === 'all') { S.pqSel = new Set(list.map(i => i.id)); render(); return; }
+    if (b.dataset.b === 'none') { S.pqSel = new Set(); render(); return; }
+    if (b.dataset.b === 'apply') {
+      const stv = v('st'), rv = v('resp'), dv = v('due');
+      if (!stv && !rv && !dv) { toast(t('Выберите статус, ответственного или срок'), 'warn'); return; }
+      const what = [stv && `${t('статус')} → «${t(PQST[stv])}»`, rv && `${t('ответственный')} → «${rv === '__none' ? t('по области') : nameOf(rv)}»`, dv && `${t('срок')} → ${fmtDate(dv)}`].filter(Boolean).join('; ');
+      if (!confirm(`${t('Изменить')} ${ids.length} ВП: ${what}?\n${t('Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.')}`)) return;
+      const n = pqBulkSave(ids, cur => { const rec = { ...cur, at: today() }; if (stv) rec.st = stv; if (rv) rec.resp = rv === '__none' ? '' : rv; if (dv) rec.due = dv; return rec; }, what);
+      toast(`${t('Изменено')}: ${n} ВП`, 'ok'); S.pqSel = new Set(); render(); return;
+    }
+    if (b.dataset.b === 'pre') {
+      const ok = ids.filter(pqPreable); if (!ok.length) return;
+      if (!confirm(`${t('Принять предварительную оценку')}: ${ok.length} ВП?${ids.length > ok.length ? `\n${ids.length - ok.length} ${t('ВП уже со статусом — пропускаются.')}` : ''}`)) return;
+      const n = pqBulkSave(ok, (cur, id) => assessMerge(cur, pqAssess(id)), t('предварительная оценка'));
+      toast(`${t('Принято')}: ${n} ВП`, 'ok'); S.pqSel = new Set(); render(); return;
+    }
+    if (b.dataset.b === 'undo' && S.pqUndo) {
+      const u = S.pqUndo; if (!confirm(`${t('Отменить последнее')}: ${u.label} (${u.n} ВП)?`)) return;
+      const all = pqState();
+      Object.entries(u.before).forEach(([id, rec]) => { const cur = all[id] || {}; logChange('pq', id, cur, rec || {}, PQLOGF); if (rec) all[id] = rec; else delete all[id]; });
+      LS.set(K.pq, all); S.pqUndo = null; toast(`${t('Отменено')}: ${u.n} ВП`, 'ok'); render();
+    }
+  };
+  setTimeout(() => pqBulkCount(list), 0);
+  return c;
+}
+// Самооценка в колонках листа «Self Assessment» выгрузки OLF (Export Self-Assessment Checklist) — для сверки, не для импорта:
+// OLF принимает обратно только выданный им .docx. Текст ВП — русский (английского текста ВП в портале нет).
+function exportPQOLF(list) {
+  const st = pqState(), OLFST = { sat: 'Satisfactory', unsat: 'Not Satisfactory', na: 'Not Applicable', wip: '' };
+  const dmy = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
+  const who = id => (logState().find(x => x.kind === 'pq' && x.id === id) || {}).who || String(settings().ncmc || '').split(',')[0].trim();
+  const rows = [['Audit Area', 'PQ  Number', 'CE Code', 'Is PPQ', 'PQ Question', 'Reference', 'Review Evidence', 'Self-Assessment Status of Implementation', 'Remarks', 'Evidence', 'Evidence (Attachments)', 'Latest Modified', 'Latest Modified By']];
+  list.forEach(i => { const o = st[i.id] || {};
+    rows.push([i.area, i.id, String(i.ce || '').replace(/^КЭ/, 'CE'), i.star ? 'True' : 'False', i.q, i.doc, i.g.join('\n'), OLFST[o.st || ''] || '',
+      [o.st === 'wip' ? 'In progress' : '', o.en || o.note || ''].filter(Boolean).join(' — '), evText(o), '', dmy(o.at), o.at ? who(i.id) : '']); });
+  download(csv(rows), `AvSec_SelfAssessment_OLF_${S.f.area || 'all'}_${today()}.csv`, 'text/csv;charset=utf-8');
 }
 function exportPQ(list) {
   const st = pqState();
@@ -1639,6 +1736,128 @@ function pGlossary(m) {
 }
 
 /* ---------- Данные и резервная копия ---------- */
+/* ---------- Журнал аудита (v48): запросы, вопросы и наблюдения группы ИКАО с телефона ----------
+   Хранится на устройстве (avsec-journal) и входит в резервную копию. id записи = J-<метка устройства>-<время>,
+   поэтому журналы нескольких телефонов сводятся без конфликтов: побеждает запись с более поздней правкой (upd),
+   удаление переносится как отметка del. Связи — ключи портала: PQ:1.035, A17:3.1.1, S:DYU. */
+const JKIND = { q: 'Вопрос', req: 'Запрос документа', obs: 'Наблюдение', pf: 'Предварительный вывод', rem: 'Замечание' };
+const JST = { open: 'Открыт', ans: 'Отвечено', closed: 'Закрыт' };
+const JSTB = { open: 'miss', ans: 'draft', closed: 'ok' };
+const jAll = () => { const a = LS.get(K.journal, []); return Array.isArray(a) ? a : []; };
+const jLive = () => jAll().filter(x => !x.del);
+const jOpen = () => jLive().filter(x => x.st !== 'closed');
+const jDueToday = () => jLive().filter(x => x.st === 'open' && x.due && x.due <= today());
+const devTag = () => { let d = LS.get(K.dev, ''); if (!d) { d = Math.random().toString(36).slice(2, 6); LS.set(K.dev, d); } return d; };
+function auditWindow() { const a = (U() || {}).audit || {}; if (!a.start || !a.end) return false; return daysTo(a.start) <= 2 && daysTo(a.end) >= -1; }
+// аудиторы — из состава группы ИКАО в usap.json (без «(г-жа)»), области — из подписи «LEG · QCF · FAL»
+const jAuditors = () => (((U() || {}).audit || {}).team || []).map(x => ({ name: String(x.name || '').replace(/\s*\(.*?\)\s*/g, '').trim(), areas: String(x.areas || '').split(/[·,\s]+/).filter(Boolean) })).filter(x => x.name);
+function jLinks(str) {
+  const pq = D('pq'), orgs = subjOrgs();
+  const key = tok => { let m; const org = orgs.find(o => o.code.toLowerCase() === tok.replace(/^S:/i, '').toLowerCase());
+    if ((m = tok.match(/^(?:PQ:|ВП)?(\d\.\d{3})$/i)) && pq && pq.items.some(i => i.id === m[1])) return 'PQ:' + m[1];
+    if ((m = tok.match(/^[AА](17|9):?([\d.]+\d)$/i))) return `A${m[1]}:${m[2]}`;
+    return org ? 'S:' + org.code : null; };
+  // через запятую/точку с запятой; внутри части — ключи через пробел («3.020 DYU») или свободный текст («НПАБГА п. 90»)
+  const out = [];
+  String(str || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean).forEach(part => {
+    const ks = part.split(/\s+/).map(key);
+    if (ks.every(Boolean)) out.push(...ks); else out.push(key(part) || part);
+  });
+  return [...new Set(out)];
+}
+const jChip = k => k.startsWith('PQ:') ? `<button class="idc clk" type="button" data-openpq="${esc(k.slice(3))}">${esc(k)}</button>`
+  : /^A(17|9):/.test(k) ? `<button class="idc clk" type="button" data-opencc="${esc(k.slice(1))}">${esc(k)}</button>`
+  : k.startsWith('S:') ? `<button class="idc clk" type="button" data-openorg="${esc(k.slice(2))}">${esc(k)}</button>` : idChip(k);
+// записи журнала по ключу (в карточке ВП)
+function jLinked(key) {
+  const rows = jLive().filter(x => (x.links || []).includes(key)); if (!rows.length) return '';
+  return `<h4>${esc(t('Журнал аудита'))} <span class="dim small">${rows.length}</span></h4><ul class="list small">` + rows.map(x => `<li>${badge(JSTB[x.st], JST[x.st])} <span class="dim">${fmtDate(x.date)} ${esc(x.time || '')} · ${esc(t(JKIND[x.kind] || x.kind))}${x.auditor ? ' · ' + esc(x.auditor) : ''}</span><div>${esc(x.text)}</div>${x.answer ? `<div class="dim">↳ ${esc(x.answer)}</div>` : ''}</li>`).join('') + '</ul>';
+}
+function jSave(rec) {
+  const all = jAll(), k = all.findIndex(x => x.id === rec.id);
+  rec.upd = Date.now(); rec.who = rec.who || String(settings().ncmc || '').split(',')[0].trim();
+  if (k >= 0) all[k] = rec; else all.unshift(rec);
+  LS.set(K.journal, all);
+}
+function openJournal(x) {
+  const isNew = !x; const now = new Date();
+  x = x || { id: `J-${devTag()}-${Date.now().toString(36)}`, ts: Date.now(), dev: devTag(), date: today(), time: now.toTimeString().slice(0, 5), st: 'open', kind: 'req', links: [] };
+  const pq = D('pq'), aud = jAuditors(), opt = (v, l, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(l)}</option>`;
+  const areas = (pq ? pq.meta.areas.map(a => a.code) : []).concat(['GEN']);
+  openSheet(`<h3>${esc(t(isNew ? 'Новая запись журнала' : 'Запись журнала'))} <span class="dim small">${esc(x.id)}</span></h3>
+    <form id="jForm" class="form">
+      <div class="grid2"><label>${esc(t('Дата'))}<input type="date" name="date" value="${esc(x.date)}" required></label><label>${esc(t('Время'))}<input type="time" name="time" value="${esc(x.time || '')}"></label></div>
+      <div class="grid2"><label>${esc(t('Аудитор ИКАО'))}<select name="auditor">${opt('', '—')}${aud.map(a => opt(a.name, `${a.name}${a.areas.length ? ' · ' + a.areas.join(', ') : ''}`, x.auditor === a.name)).join('')}${opt('Группа ИКАО', t('Группа ИКАО'), x.auditor === 'Группа ИКАО')}</select></label>
+        <label>${esc(t('Область'))}<select name="area">${opt('', '—')}${areas.map(a => opt(a, a === 'GEN' ? t('Общее') : a, x.area === a)).join('')}</select></label></div>
+      <label>${esc(t('Вид'))}<select name="kind">${Object.entries(JKIND).map(([k, v]) => opt(k, t(v), x.kind === k)).join('')}</select></label>
+      <label>${esc(t('Текст'))}<textarea name="text" rows="4" required placeholder="${esc(t('Что спросил или запросил аудитор, что наблюдали'))}">${esc(x.text || '')}</textarea></label>
+      <label>${esc(t('Связи'))} <span class="dim small">${esc(t('номера ВП, пункты A17:3.1.1, коды субъектов (DYU) — через запятую'))}</span><input name="links" value="${esc((x.links || []).join(', '))}"></label>
+      <div class="grid2"><label>${esc(t('Ответственный'))}${respSelect('resp', x.resp || '', true)}</label><label>${esc(t('Ответить до'))}<input type="date" name="due" value="${esc(x.due || '')}"></label></div>
+      <label>${esc(t('Статус'))}<select name="st">${Object.entries(JST).map(([k, v]) => opt(k, t(v), x.st === k)).join('')}</select></label>
+      <label>${esc(t('Ответ / что передали'))}<textarea name="answer" rows="3">${esc(x.answer || '')}</textarea></label>
+      <div class="row mt"><button class="btn" type="submit">${esc(t('Сохранить'))}</button>${isNew ? '' : `<button class="btn ghost" type="button" id="jDel">${esc(t('Удалить'))}</button>`}<button class="btn ghost" type="button" data-close>${esc(t('Закрыть'))}</button></div>
+      ${isNew ? '' : `<p class="small dim">${esc(t('Изменено'))}: ${esc(new Date(x.upd || x.ts).toLocaleString('ru-RU'))}${x.who ? ' · ' + esc(x.who) : ''} · ${esc(t('устройство'))} ${esc(x.dev || '')}</p>`}
+    </form>`);
+  const f = $('#jForm');
+  f.auditor.onchange = () => { const a = aud.find(y => y.name === f.auditor.value); if (a && a.areas.length === 1 && !f.area.value) f.area.value = a.areas[0]; };
+  f.onsubmit = e => { e.preventDefault(); const g = k => (f[k].value || '').trim();
+    const rec = { ...x, date: g('date'), time: g('time'), auditor: g('auditor'), area: g('area'), kind: g('kind'), text: g('text'), links: jLinks(g('links')), resp: g('resp'), due: g('due'), st: g('st'), answer: g('answer') };
+    if (rec.st === 'open' && rec.answer && x.st !== 'ans' && !x.answer) rec.st = 'ans';   // записали ответ — запрос отвечен
+    jSave(rec); toast(t('Запись сохранена'), 'ok'); closeSheet(); render(); };
+  const del = $('#jDel'); if (del) del.onclick = () => { if (!confirm(t('Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.'))) return; jSave({ ...x, del: true }); closeSheet(); render(); };
+}
+function jMerge(items) {
+  const all = jAll(), byId = new Map(all.map(x => [x.id, x])); let add = 0, upd = 0;
+  (items || []).forEach(x => { if (!x || !x.id) return; const cur = byId.get(x.id);
+    if (!cur) { byId.set(x.id, x); add++; } else if ((x.upd || 0) > (cur.upd || 0)) { byId.set(x.id, x); upd++; } });
+  LS.set(K.journal, [...byId.values()].sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')) || (b.ts || 0) - (a.ts || 0)));
+  return { add, upd };
+}
+function pJournal(m) {
+  const u = U() || {}, a = u.audit || {};
+  head(m, 'Журнал аудита', `${esc(t('Вопросы, запросы документов и наблюдения группы ИКАО'))}${a.start ? ` · ${fmtDate(a.start)}–${fmtDate(a.end)}` : ''}. ${esc(t('Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».'))}`);
+  const live = jLive(), open = live.filter(x => x.st === 'open'), due = jDueToday();
+  const tiles = el('div', 'tiles');
+  tiles.appendChild(tile(open.length ? 'miss' : 'ok', open.length, 'открытых запросов', () => go('journal', { st: 'open' })));
+  tiles.appendChild(tile(due.length ? 'miss' : 'ok', due.length, 'ответить сегодня или просрочено', () => go('journal', { st: 'due' })));
+  tiles.appendChild(tile('info', live.filter(x => x.kind === 'pf').length, 'предварительных выводов', () => go('journal', { kind: 'pf' })));
+  tiles.appendChild(tile('info', live.length, 'записей всего', () => go('journal')));
+  m.appendChild(tiles);
+  const tb = el('div', 'toolbar');
+  const nb = el('button', 'btn sm', '＋ ' + esc(t('Запись'))); nb.onclick = () => openJournal(null); tb.appendChild(nb);
+  const pq = D('pq');
+  tb.appendChild(selector('Все области', 'area', (pq ? pq.meta.areas.map(x => x.code) : []).concat(['GEN']), c => c === 'GEN' ? t('Общее') : c));
+  tb.appendChild(selector('Все виды', 'kind', Object.keys(JKIND), c => t(JKIND[c])));
+  tb.appendChild(selector('Все статусы', 'st', ['active', 'open', 'due', 'ans', 'closed'], c => c === 'active' ? t('Открыт или отвечено') : c === 'due' ? t('Ответить сегодня / просрочено') : t(JST[c])));
+  tb.appendChild(selector('Все аудиторы', 'aud', jAuditors().map(x => x.name).concat(['Группа ИКАО'])));
+  tb.appendChild(inputFilter('Поиск по журналу'));
+  m.appendChild(tb);
+  const list = live.filter(x => (!S.f.area || x.area === S.f.area) && (!S.f.kind || x.kind === S.f.kind) && (!S.f.aud || x.auditor === S.f.aud)
+    && (!S.f.st || (S.f.st === 'active' ? x.st !== 'closed' : S.f.st === 'due' ? (x.st === 'open' && x.due && x.due <= today()) : x.st === S.f.st))
+    && has(S.f.s, x.text, x.answer, x.auditor, (x.links || []).join(' '), nameOf(x.resp)))
+    .sort((p, q) => (q.date + (q.time || '')).localeCompare(p.date + (p.time || '')));
+  paged(m, list, part => m.appendChild(table(['Время', 'Вид', 'Обл.', 'Аудитор', 'Запись', 'Связи', 'Статус', 'Ответственный', 'Ответить до'], part,
+    x => [`<span class="small">${esc(x.time || '')}</span>`, `<span class="small">${esc(t(JKIND[x.kind] || x.kind))}</span>`, x.area ? `<span class="badge b-area">${esc(x.area)}</span>` : '—', `<span class="small">${esc(x.auditor || '—')}</span>`,
+      `<div class="td-wrap clamp">${esc(x.text)}</div>${x.answer ? `<div class="small dim clamp">↳ ${esc(x.answer)}</div>` : ''}`, (x.links || []).map(jChip).join(' ') || '—', badge(JSTB[x.st], JST[x.st]), esc(nameOf(x.resp) || '—'),
+      x.due ? `<span class="${x.st === 'open' && x.due <= today() ? 'warn' : ''}">${fmtDate(x.due)}</span>` : '—'],
+    openJournal, { groupKey: x => fmtDate(x.date), empty: live.length ? 'Ничего не найдено' : 'Записей пока нет — нажмите «＋ Запись»' })));
+  // обмен между устройствами и выгрузка
+  const c = el('div', 'card');
+  c.innerHTML = `<h2>${esc(t('Несколько устройств и выгрузка'))}</h2>
+    <p class="small">${esc(t('Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.'))}</p>
+    <div class="row"><button class="btn sm" type="button" id="jExp">${esc(t('Выгрузить журнал (JSON)'))}</button>
+      <label class="btn sm ghost">${esc(t('Объединить журнал…'))}<input type="file" id="jImp" accept=".json,application/json" hidden></label>
+      <button class="btn sm ghost" type="button" id="jCsv">${esc(t('Экспорт CSV'))}</button></div>
+    <p class="small dim">${esc(t('Файл журнала — служебный: передавайте его между устройствами группы напрямую или служебной почтой, не в общие чаты. Метка этого устройства'))}: <b>${esc(devTag())}</b>.</p>`;
+  m.appendChild(c);
+  $('#jExp').onclick = () => download(JSON.stringify({ app: 'avsec-journal', dev: devTag(), at: new Date().toISOString(), items: jAll() }, null, 1), `AvSec_journal_${devTag()}_${today()}.json`, 'application/json');
+  $('#jImp').onchange = async e => { const f = e.target.files[0]; if (!f) return;
+    try { const j = JSON.parse(await f.text()); const items = j.app === 'avsec-journal' ? j.items : j.app === 'avsec-portal' ? j[K.journal] : null;
+      if (!Array.isArray(items)) throw new Error(t('Это не файл журнала AvSec Portal'));
+      const r = jMerge(items); toast(`${t('Объединено')}: +${r.add} · ${t('обновлено')} ${r.upd}`, 'ok'); render(); } catch (ex) { toast(ex.message, 'err'); } };
+  $('#jCsv').onclick = () => download(csv([['Дата', 'Время', 'Аудитор', 'Область', 'Вид', 'Запись', 'Связи', 'Статус', 'Ответственный', 'Ответить до', 'Ответ', 'Автор', 'Устройство', 'ID']]
+    .concat(list.map(x => [x.date, x.time || '', x.auditor || '', x.area || '', JKIND[x.kind] || x.kind, x.text, (x.links || []).join(', '), JST[x.st], nameOf(x.resp) || '', x.due || '', x.answer || '', x.who || '', x.dev || '', x.id]))), `AvSec_journal_${today()}.csv`, 'text/csv;charset=utf-8');
+}
 function pData(m) {
   head(m, 'Данные и резервная копия', 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
   // в полях — только сохранённые переопределения: иначе «Сохранить» без правок заморозило бы текущие данные портала

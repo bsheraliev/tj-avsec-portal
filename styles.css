@@ -82,6 +82,9 @@ h3{font-size:14px;margin:14px 0 6px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .grow{flex:1}
 .mt{margin-top:14px}
+.bulk{border-color:var(--accent,#3b82f6)}
+.bulk label{display:inline-flex;gap:6px;align-items:center;font-size:13px}
+.bulk select,.bulk input[type=date]{height:30px}
 
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:12px;margin-bottom:18px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit}

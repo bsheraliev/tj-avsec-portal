@@ -9,6 +9,7 @@
  "files": [
   "cap2019.json",
   "cc.json",
+  "crosswalk.json",
   "drive.json",
   "glossary.json",
   "gm.json",
@@ -25,7 +26,7 @@
   "team.json",
   "usap.json"
  ],
- "built": "2026-10-03",
+ "built": "2026-10-04",
  "site": "https://bsheraliev.github.io/tj-avsec-portal/",
  "tg": "https://t.me/TJ_AVSEC_bot"
 }
