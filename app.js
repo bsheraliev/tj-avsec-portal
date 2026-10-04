@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '54';
+const APP_VERSION = '55';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -26,7 +26,7 @@ const uniq = a => [...new Set(a.filter(Boolean))].sort((x, y) => String(x).local
 const pct = (a, b) => b ? Math.round(a * 100 / b) : 0;
 const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
 const fmtDate = iso => { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return d && m ? `${d}.${m}.${y}` : iso; };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };   // местная дата, не UTC (Душанбе +5)
 const daysTo = iso => Math.ceil((new Date(iso) - new Date(today())) / 86400000);
 
 function toast(msg, type) {
@@ -1266,8 +1266,10 @@ function auditState() { const a = LS.get(K.audit, {}); const docs = { ...(a.docs
   return { docs, log: a.log || {}, hos: a.hos || {} }; }
 const saveAudit = a => LS.set(K.audit, { ...a, docs: Object.fromEntries(Object.entries(a.docs).filter(([, v]) => !v.data)) });   // факт из данных не дублируем в localStorage
 // Подпункты и агрегат по строке: строка с parts считается «отправленной», только когда отправлены все её документы
-function subStats(r, docs) { let s = 0, tot = 0; (r.parts || []).forEach(g => g.items.forEach(it => { tot++; if ((docs[it.id] || {}).st === 'sent') s++; })); return { s, tot }; }
-function docSent(r, docs) { if (r.parts && r.parts.length) { const { s, tot } = subStats(r, docs); return tot > 0 && s === tot; } return (docs[r.id] || {}).st === 'sent'; }
+// «не применимо» закрывает позицию так же, как отправка — иначе одна такая строка держит «просрочено» навсегда
+const docDone = d => d.st === 'sent' || d.st === 'na';
+function subStats(r, docs) { let s = 0, tot = 0; (r.parts || []).forEach(g => g.items.forEach(it => { tot++; if (docDone(docs[it.id] || {})) s++; })); return { s, tot }; }
+function docSent(r, docs) { if (r.parts && r.parts.length) { const { s, tot } = subStats(r, docs); return tot > 0 && s === tot; } return docDone(docs[r.id] || {}); }
 const ADOC = { '': 'Не начато', wip: 'В работе', ready: 'Готово', sent: 'Отправлено в ИКАО', na: 'Не применимо' };
 const ADOCB = { '': 'none', wip: 'wip', ready: 'draft', sent: 'ok', na: 'na' };
 function auditBrief() {
@@ -2219,7 +2221,7 @@ function pAbout(m) {
     ['Код доступа', 'один и тот же для веба и Telegram, вводится один раз на устройстве; выдаёт NCMC'],
   ])));
   m.appendChild(el('div', 'card', `<h2>Назначение</h2><p>Рабочий портал отдела авиационной безопасности АГА при ПРТ: единое место для нормативной базы АБ (реестр, соответствие Приложению 17 и Doc 8973, инструктивные материалы) и для подготовки к аудиту ИКАО USAP-CMA (протокольные вопросы, контрольный перечень соответствия, SASAQ, дорожная карта). Построен по образцу «Портала сертификации и надзора» и «Библиотеки Shohin Airlines».</p>
-    <h2>Источники данных</h2><ul class="list"><li>Реестр доков АБ 20260619.docx; Необходимые документы АБ — матрица ИКАО.docx (27.06.2026); Соответствие ИМ — НПАБГА РТ.docx (16.07.2026).</li><li>RU — USAP-CMA Protocol Questions, Amendment 18 to Annex 17 / Amendment 30 to Annex 9 (ИКАО, 11.07.2025).</li><li>USAP_CMA_CC_01_07_2026 в3.docx; USAP-CMA SASAQ 1.xlsx (19.06.2026).</li><li>Авиасловарь_Рус-Тадж_20260622.docx; Глоссарий АБ RU-EN (ИМ, 2026-08-13).md.</li><li>Папка проекта Avsec в Google Drive (карта папок и файлов).</li><li>Аудит 2026: письмо ИКАО AS 8/16.18.196 от 01.05.2026; переписка с руководителем группы ИКАО (15.06.2026); «Давид аудит план.docx»; NC Welcome Package V2024.</li><li>Аудит 2019: USAP-CMA Tajikistan On-site Audit Report.FINAL.pdf (06.02.2020); Корр. План устр.ИКАО 2020.docx; Tajikistan 2024 EN.pdf.</li><li>Проверка USAP-CMA CC (12.09.2026).md — сверка контрольного перечня перед подачей.</li><li>ICAO Corrective Action Plan — CAA Tajikistan — EN.docx (приказ директора АГА при ПРТ № 133 от 10.08.2026) — статусы выполнения ПКД; проверка ПКД перед подачей (17.09.2026).</li></ul>
+    <h2>Источники данных</h2><ul class="list"><li>Реестр доков АБ 20260619.docx; Необходимые документы АБ — матрица ИКАО.docx (27.06.2026); Соответствие ИМ — НПАБГА РТ.docx (16.07.2026).</li><li>RU — USAP-CMA Protocol Questions, Amendment 18 to Annex 17 / Amendment 30 to Annex 9 (ИКАО, 11.07.2025).</li><li>USAP_CMA_CC_01_07_2026 в3.docx; USAP-CMA SASAQ 1.xlsx (19.06.2026).</li><li>Авиасловарь_Рус-Тадж_20260622.docx; Глоссарий АБ RU-EN (ИМ, 2026-08-13).md.</li><li>Папка проекта Avsec в Google Drive (карта папок и файлов).</li><li>Аудит 2026: письмо ИКАО от 01.05.2026; переписка с руководителем группы ИКАО (15.06.2026); «Давид аудит план.docx»; NC Welcome Package V2024.</li><li>Аудит 2019: USAP-CMA Tajikistan On-site Audit Report.FINAL.pdf (06.02.2020); Корр. План устр.ИКАО 2020.docx; Tajikistan 2024 EN.pdf.</li><li>Проверка USAP-CMA CC (12.09.2026).md — сверка контрольного перечня перед подачей.</li><li>ICAO Corrective Action Plan — CAA Tajikistan — EN.docx (приказ директора АГА при ПРТ № 133 от 10.08.2026) — статусы выполнения ПКД; проверка ПКД перед подачей (17.09.2026).</li></ul>
     <h2>Как устроено</h2><ul class="list"><li>Vanilla JS, PWA, без бэкенда. Данные зашифрованы (AES-256-GCM); ключ выводится из кода доступа в браузере, поэтому портал можно размещать на обычном статическом хостинге.</li><li>Самооценка хранится в браузере устройства; раздел «Данные» — резервная копия и перенос.</li><li>Обновление данных: править <span class="mono">data/*.json</span> → <span class="mono">node tools/build.mjs --code …</span> → поднять версию в <span class="mono">sw.js</span>, <span class="mono">app.js</span>, <span class="mono">index.html</span> → опубликовать.</li></ul>
     <h2>Нормативная основа</h2><p class="small">Приложение 17 (12-е изд., Попр. 18), Приложение 9 (17-е изд., Попр. 29/30), Doc 8973 (13-е изд.), Doc 10047 (2-е изд.), Doc 9807 (3-е изд.), Doc 10118 GASeP (2-е изд.), Воздушный кодекс РТ (13.11.2023 № 1999, ред. 17.12.2025 № 2211), НПБГА 2025–2030 (ППРТ № 480), проект НПАБГА 2026–2031, ППРТ № 554 от 31.10.2025. Нормы сверять с первоисточником.</p>
     <h2>${esc(t('Сокращения'))}</h2>${kv(Object.entries(ABBR).map(([k, v]) => [k, esc(v)]))}`));
