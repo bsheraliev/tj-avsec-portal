@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '46';
+const APP_VERSION = '47';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -66,7 +66,7 @@ const TR = { en: {
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
-  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'Журнал аудита': 'Audit journal', 'Журнал': 'Journal', 'Журнал: открытых': 'Journal: open', 'ответить сегодня': 'answer today', 'Журнал: открытых записей': 'Journal: open entries', 'Новая запись журнала': 'New journal entry', 'Запись журнала': 'Journal entry', 'Дата': 'Date', 'Время': 'Time', 'Аудитор ИКАО': 'ICAO auditor', 'Группа ИКАО': 'ICAO team', 'Общее': 'General', 'Вид': 'Type', 'Текст': 'Text', 'Что спросил или запросил аудитор, что наблюдали': 'What the auditor asked or requested, what was observed', 'Связи': 'Links', 'номера ВП, пункты A17:3.1.1, коды субъектов (DYU) — через запятую': 'PQ numbers, A17:3.1.1 provisions, entity codes (DYU), comma-separated', 'Ответить до': 'Answer by', 'Ответ / что передали': 'Answer / what was provided', 'Удалить': 'Delete', 'Закрыть': 'Close', 'устройство': 'device', 'Запись сохранена': 'Entry saved', 'Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.': 'Delete the journal entry? The deletion will carry over to other devices when merged.', 'Вопросы, запросы документов и наблюдения группы ИКАО': 'Questions, document requests and observations of the ICAO team', 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».': 'Entries are stored on this device; journals from several phones are combined with “Merge journal”.', 'открытых запросов': 'open requests', 'ответить сегодня или просрочено': 'due today or overdue', 'предварительных выводов': 'preliminary findings', 'записей всего': 'entries in total', 'Запись': 'Entry', 'Все виды': 'All types', 'Открыт или отвечено': 'Open or answered', 'Ответить сегодня / просрочено': 'Due today / overdue', 'Все аудиторы': 'All auditors', 'Поиск по журналу': 'Search the journal', 'Записей пока нет — нажмите «＋ Запись»': 'No entries yet — tap “＋ Entry”', 'Несколько устройств и выгрузка': 'Several devices and export', 'Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.': 'Everyone keeps the journal on their own phone. In the evening one person collects the journal files and taps “Merge journal” for each: new entries are added, edited ones updated, deleted ones removed. The merged journal can then be shared back.', 'Выгрузить журнал (JSON)': 'Export journal (JSON)', 'Объединить журнал…': 'Merge journal…', 'Файл журнала — служебный: передавайте его между устройствами группы напрямую или служебной почтой, не в общие чаты. Метка этого устройства': 'The journal file is internal: pass it between team devices directly or by official e-mail, not in group chats. This device tag', 'Это не файл журнала AvSec Portal': 'This is not an AvSec Portal journal file', 'Объединено': 'Merged', 'обновлено': 'updated', 'Запрос документа': 'Document request', 'Наблюдение': 'Observation', 'Предварительный вывод': 'Preliminary finding', 'Открыт': 'Open', 'Отвечено': 'Answered', 'Закрыт': 'Closed', 'Обл.': 'Area', 'Аудитор': 'Auditor', 'В ВП — п.': 'In the PQ — para.', 'по Поправке': 'per Amendment', 'в CC — п.': 'in the CC — para.', 'сопоставлено по содержанию': 'matched by content', 'Выбрать': 'Select', 'Закончить выбор': 'Finish selecting', 'Отметить несколько ВП и изменить их одним действием': 'Select several PQs and change them in one action', 'Самооценка — сверка с OLF (CSV)': 'Self-assessment — OLF reconciliation (CSV)', 'Выбрано': 'Selected', 'Выбрать все в списке': 'Select all in list', 'Снять выбор': 'Clear selection', 'не менять': 'no change', 'снять назначение (по области)': 'clear (use area owner)', 'Применить к выбранным': 'Apply to selected', 'Принять предварительную оценку': 'Accept preliminary assessment', 'Отменить последнее': 'Undo last', 'Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.': 'Only the chosen fields change; evidence and notes stay. Every change goes to the PQ history. The preliminary assessment is applied only to PQs without a status.', 'Выберите статус, ответственного или срок': 'Choose a status, owner or due date', 'Изменить': 'Change', 'Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.': 'You can undo with “Undo last” until the page is reloaded.', 'Изменено': 'Changed', 'ВП уже со статусом — пропускаются.': 'PQs already have a status and are skipped.', 'предварительная оценка': 'preliminary assessment', 'Отменено': 'Undone', 'статус': 'status', 'срок': 'due', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
+  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'Для директора': 'For the Director', 'Директору': 'Director', 'Памятка к аудиту ИКАО USAP-CMA': 'Briefing note for the ICAO USAP-CMA audit', 'до начала': 'to start', 'дн.': 'days', 'Скачать для Word': 'Download for Word', 'Ключевые даты': 'Key dates', 'Группа ИКАО': 'ICAO team', 'Готовность по областям': 'Readiness by area', 'самооценка, где её нет — предварительная оценка': 'self-assessment, otherwise preliminary assessment', 'не оценено': 'not assessed', 'Что решить и подписать до 07.11': 'To decide and sign by 07.11', 'Главные риски': 'Main risks', 'данные': 'data', 'Что ждут от директора': 'What is expected from the Director', 'ПКД 2019': 'CAP 2019', 'не закрыто': 'open', 'мер из': 'actions of', 'срок прошёл': 'overdue', 'отправлено': 'sent', 'Не оценены области': 'Areas not assessed', 'нужны ПАБ DYU, программы эксплуатантов, акты КК': 'DYU ASP, operator programmes and QC reports needed', 'Сегодня по плану': 'Today per plan', 'В подневном плане ИКАО на сегодня записей нет.': 'No entries in the ICAO daily plan for today.', 'Приём группы': 'Team hospitality', 'Крайний срок представления документов, требующих утверждения (встреча с NCMC в гостинице)': 'Deadline for documents requiring approval (meeting with NCMC at the hotel)', 'Национальный брифинг в АГА — выступает директор': 'National briefing at the CAA — the Director speaks', 'Начало наблюдений в аэропорту DYU, встреча с заинтересованными сторонами аэропорта': 'Start of observations at DYU airport, meeting with airport stakeholders', 'Заключительный разбор с NCMC (09:00–11:00) и итоговый разбор с директором (11:00–12:00)': 'Final briefing with NCMC (09:00–11:00) and closing debriefing with the Director (11:00–12:00)', 'Файлы доказательств': 'Evidence files', 'из группы Telegram «USAP 2026»': 'from the Telegram group “USAP 2026”', 'Файлы доказательств из Telegram': 'Evidence files from Telegram', 'новых': 'new', 'без ВП': 'without PQ', 'Добавлено в доказательства — проверьте и сохраните': 'Added to evidence — check and save', 'Файлы из группы «USAP 2026»: бот кладёт их в Drive, сессия по команде «забери доказательства» раскладывает по ВП. Файл без ВП — подпись без номера ВП; номер можно дописать к сообщению в Telegram или сообщить сессии.': 'Files from the “USAP 2026” group: the bot puts them in Drive, the session files them by PQ on request. A file without a PQ had no PQ number in its caption; add it to the Telegram message or tell the session.', 'Журнал аудита': 'Audit journal', 'Журнал': 'Journal', 'Журнал: открытых': 'Journal: open', 'ответить сегодня': 'answer today', 'Журнал: открытых записей': 'Journal: open entries', 'Новая запись журнала': 'New journal entry', 'Запись журнала': 'Journal entry', 'Дата': 'Date', 'Время': 'Time', 'Аудитор ИКАО': 'ICAO auditor', 'Общее': 'General', 'Вид': 'Type', 'Текст': 'Text', 'Что спросил или запросил аудитор, что наблюдали': 'What the auditor asked or requested, what was observed', 'Связи': 'Links', 'номера ВП, пункты A17:3.1.1, коды субъектов (DYU) — через запятую': 'PQ numbers, A17:3.1.1 provisions, entity codes (DYU), comma-separated', 'Ответить до': 'Answer by', 'Ответ / что передали': 'Answer / what was provided', 'Удалить': 'Delete', 'Закрыть': 'Close', 'устройство': 'device', 'Запись сохранена': 'Entry saved', 'Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.': 'Delete the journal entry? The deletion will carry over to other devices when merged.', 'Вопросы, запросы документов и наблюдения группы ИКАО': 'Questions, document requests and observations of the ICAO team', 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».': 'Entries are stored on this device; journals from several phones are combined with “Merge journal”.', 'открытых запросов': 'open requests', 'ответить сегодня или просрочено': 'due today or overdue', 'предварительных выводов': 'preliminary findings', 'записей всего': 'entries in total', 'Запись': 'Entry', 'Все виды': 'All types', 'Открыт или отвечено': 'Open or answered', 'Ответить сегодня / просрочено': 'Due today / overdue', 'Все аудиторы': 'All auditors', 'Поиск по журналу': 'Search the journal', 'Записей пока нет — нажмите «＋ Запись»': 'No entries yet — tap “＋ Entry”', 'Несколько устройств и выгрузка': 'Several devices and export', 'Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.': 'Everyone keeps the journal on their own phone. In the evening one person collects the journal files and taps “Merge journal” for each: new entries are added, edited ones updated, deleted ones removed. The merged journal can then be shared back.', 'Выгрузить журнал (JSON)': 'Export journal (JSON)', 'Объединить журнал…': 'Merge journal…', 'Файл журнала — служебный: передавайте его между устройствами группы напрямую или служебной почтой, не в общие чаты. Метка этого устройства': 'The journal file is internal: pass it between team devices directly or by official e-mail, not in group chats. This device tag', 'Это не файл журнала AvSec Portal': 'This is not an AvSec Portal journal file', 'Объединено': 'Merged', 'обновлено': 'updated', 'Запрос документа': 'Document request', 'Наблюдение': 'Observation', 'Предварительный вывод': 'Preliminary finding', 'Открыт': 'Open', 'Отвечено': 'Answered', 'Закрыт': 'Closed', 'Обл.': 'Area', 'Аудитор': 'Auditor', 'В ВП — п.': 'In the PQ — para.', 'по Поправке': 'per Amendment', 'в CC — п.': 'in the CC — para.', 'сопоставлено по содержанию': 'matched by content', 'Выбрать': 'Select', 'Закончить выбор': 'Finish selecting', 'Отметить несколько ВП и изменить их одним действием': 'Select several PQs and change them in one action', 'Самооценка — сверка с OLF (CSV)': 'Self-assessment — OLF reconciliation (CSV)', 'Выбрано': 'Selected', 'Выбрать все в списке': 'Select all in list', 'Снять выбор': 'Clear selection', 'не менять': 'no change', 'снять назначение (по области)': 'clear (use area owner)', 'Применить к выбранным': 'Apply to selected', 'Принять предварительную оценку': 'Accept preliminary assessment', 'Отменить последнее': 'Undo last', 'Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.': 'Only the chosen fields change; evidence and notes stay. Every change goes to the PQ history. The preliminary assessment is applied only to PQs without a status.', 'Выберите статус, ответственного или срок': 'Choose a status, owner or due date', 'Изменить': 'Change', 'Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.': 'You can undo with “Undo last” until the page is reloaded.', 'Изменено': 'Changed', 'ВП уже со статусом — пропускаются.': 'PQs already have a status and are skipped.', 'предварительная оценка': 'preliminary assessment', 'Отменено': 'Undone', 'статус': 'status', 'срок': 'due', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
   'Подготовлено': 'Prepared', 'области': 'areas', 'принято': 'accepted', 'не принято': 'not accepted', 'Принять все непринятые': 'Accept all not accepted', 'Открыть непринятые': 'Open not accepted', 'Принято: ВП': 'Accepted: PQ', 'Принято ВП': 'PQs accepted', 'Открыть →': 'Open →',
   'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите': 'Prepared by a session from the texts of the NCASP and the QC Regulations — open the PQ, check and accept',
   'Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.': 'Evidence from the assessment will be added to the existing rows; the note and translation stay as they are.',
@@ -80,6 +80,7 @@ const ROUTES = [
   { g: 'USAP-CMA', items: [
     { id: 'audit', ic: '🛡', t: 'Аудит USAP-CMA 2026', short: 'Аудит' },
     { id: 'journal', ic: '📝', t: 'Журнал аудита', short: 'Журнал', cnt: () => jOpen().length || '' },
+    { id: 'director', ic: '🎖', t: 'Для директора', short: 'Директору' },
     { id: 'pq', ic: '❔', t: 'Протокольные вопросы', short: 'ВП', cnt: () => D('pq') ? D('pq').items.length : '' },
     { id: 'cc', ic: '☑', t: 'Контрольный перечень (CC)', short: 'CC', cnt: () => D('cc') ? D('cc').items.filter(i => i.kind === 'std' || i.kind === 'rp').length : '' },
     { id: 'sasaq', ic: '▤', t: 'SASAQ', cnt: () => D('sasaq') ? D('sasaq').items.length : '' },
@@ -373,7 +374,7 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, journal: pJournal, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
 const FILTER_LABELS = { area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
@@ -473,6 +474,7 @@ function suggest(text, href, label) {
 /* ---------- Обзор ---------- */
 function dash(m) {
   head(m, 'Обзор', 'Состояние подготовки к USAP-CMA и нормативной базы АБ · Агентство гражданской авиации при Правительстве Республики Таджикистан');
+  if (auditWindow()) todayCard(m);
   todoCard(m);
   const pq = D('pq'), cc = D('cc'), sq = D('sasaq'), reg = D('registry'), mx = D('matrix'), cap = D('cap2019'), u = U();
   const st = pqState();
@@ -638,6 +640,15 @@ function pPQ(m) {
       + (D('pq_assess') ? block('Предварительная оценка не принята', all.filter(i => pqPreOpen(i, st)).length, '#pq?pre=1', 'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите') : '')
       + `</div>`;
     m.appendChild(c);
+    const ef = evFiles();
+    if (ef.length) {
+      const nop = ef.filter(x => !(x.pqs || []).length), nw = ef.filter(x => x.st === 'new');
+      const e = el('div', 'card');
+      e.innerHTML = `<h2>${esc(t('Файлы доказательств из Telegram'))} <span class="dim small">${ef.length} · ${esc(t('новых'))} ${nw.length} · ${esc(t('без ВП'))} ${nop.length}</span></h2>`
+        + `<p class="small dim">${esc(t('Файлы из группы «USAP 2026»: бот кладёт их в Drive, сессия по команде «забери доказательства» раскладывает по ВП. Файл без ВП — подпись без номера ВП; номер можно дописать к сообщению в Telegram или сообщить сессии.'))}</p>`;
+      if (nop.length) e.appendChild(table(['Файл', 'Подпись', 'Область'], nop.slice(0, 50), x => [evLine(x), esc(x.caption || '—'), (x.areas || []).map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' ') || '—'], null, { empty: 'Нет' }));
+      m.appendChild(e);
+    }
   }
 }
 /* ---------- Сквозные идентификаторы (трассировка) ----------
@@ -769,6 +780,18 @@ function hintsBlock(i) {
   const hs = pqHints(i.id); if (!hs.length) return '';
   return `<details class="mt hints"><summary><b>${esc(t('Подсказки доказательств'))}</b> <span class="dim small">${hs.length} · ${esc(t('абзацы национальных документов по тексту ВП — ориентиры, не доказательства; сверьте по первоисточнику'))}</span></summary><ul class="list small">${hs.map((h, k) => `<li><span class="badge b-info">${esc(hintDoc(h.doc))}</span> <b>${esc(h.ref || '')}</b> <span class="dim">${esc(h.ctx || '')}</span><div>${esc(h.text)}</div><button type="button" class="btn sm ghost" data-evhint="${k}">${esc(t('в доказательства'))}</button></li>`).join('')}</ul></details>`;
 }
+/* ---------- файлы доказательств из Telegram (evidence.json, tools/evidence_import.py) ----------
+   Файл попадает в Drive через бота, в портал — импортом таблицы приёма. «В доказательства» переносит его в самооценку ВП
+   строкой «имя файла · E-номер · отправитель»; принять или отклонить файл в данных (st) решает NCMC через сессию. */
+const EVST = { new: 'Новое', ok: 'Принято', rej: 'Отклонено' }, EVSTB = { new: 'draft', ok: 'ok', rej: 'none' };
+const evFiles = () => ((D('evidence') || {}).items || []).filter(x => x.st !== 'rej');
+const evFor = id => evFiles().filter(x => (x.pqs || []).includes(id));
+const evLine = x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b></a> <span class="dim small">${esc(x.id)} · ${fmtDate((x.at || '').slice(0, 10))} · ${esc(x.from || '')}</span> ${badge(EVSTB[x.st] || 'none', EVST[x.st] || x.st)}${x.caption ? `<div class="small">${esc(x.caption)}</div>` : ''}`;
+function evFilesBlock(i) {
+  const fs = evFor(i.id); if (!fs.length) return '';
+  return `<details class="mt" open><summary><b>${esc(t('Файлы доказательств'))}</b> <span class="dim small">${fs.length} · ${esc(t('из группы Telegram «USAP 2026»'))}</span></summary><ul class="list small">`
+    + fs.map(x => `<li>${evLine(x)} <button type="button" class="btn sm ghost" data-evfile="${esc(x.id)}">${esc(t('в доказательства'))}</button></li>`).join('') + '</ul></details>';
+}
 /* ---------- предварительная оценка (pq_assess.json): подготовлена сессией по текстам документов, принимает NCMC ----------
    Самооценка живёт на устройстве (pqState), поэтому «принять» = перенести оценку в запись устройства по правилу assessMerge. */
 const pqAssess = id => { const A = D('pq_assess'); return (A && A.items && A.items[id]) || null; };
@@ -829,7 +852,7 @@ function openPQ(i) {
     ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
     ${traceBlock(i)}
     ${jLinked('PQ:' + i.id)}
-    ${refsBlock(R)}${hintsBlock(i)}${assessBlock(i)}
+    ${refsBlock(R)}${evFilesBlock(i)}${hintsBlock(i)}${assessBlock(i)}
     <h4>Самооценка</h4>
     <form class="form" id="pqForm">
       <div class="two">
@@ -856,6 +879,9 @@ function openPQ(i) {
   $$('#sheet [data-evhint]').forEach(b => { b.onclick = () => { const h = pqHints(i.id)[Number(b.dataset.evhint)]; if (!h) return;
     const empty = $$('.evrow', evBox).find(r => !r.querySelector('[data-k="doc"]').value && !r.querySelector('[data-k="ref"]').value); if (empty) empty.remove();
     evBox.appendChild(evRow({ doc: hintDoc(h.doc), ref: [h.ref, h.ctx].filter(Boolean).join(' · ') })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте по первоисточнику и сохраните'), 'ok'); }; });
+  $$('#sheet [data-evfile]').forEach(b => { b.onclick = () => { const x = evFiles().find(y => y.id === b.dataset.evfile); if (!x) return;
+    const empty = $$('.evrow', evBox).find(r => !r.querySelector('[data-k="doc"]').value && !r.querySelector('[data-k="ref"]').value); if (empty) empty.remove();
+    evBox.appendChild(evRow({ doc: x.name, ref: [x.id, x.from, x.caption].filter(Boolean).join(' · '), date: (x.at || '').slice(0, 10) })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте и сохраните'), 'ok'); }; });
   const ab = $('#sheet [data-assessapply]'); if (ab) ab.onclick = () => {
     const a = pqAssess(i.id), cur = pqOf(i.id); if (!a) return;
     if (cur.st && !confirm(`${t('Обновить из предварительной оценки')}: ВП ${i.id} — «${t(PQST[cur.st] || cur.st)}» → «${t(PQST[a.st] || a.st)}».\n${t('Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.')}`)) return;
@@ -1857,6 +1883,77 @@ function pJournal(m) {
       const r = jMerge(items); toast(`${t('Объединено')}: +${r.add} · ${t('обновлено')} ${r.upd}`, 'ok'); render(); } catch (ex) { toast(ex.message, 'err'); } };
   $('#jCsv').onclick = () => download(csv([['Дата', 'Время', 'Аудитор', 'Область', 'Вид', 'Запись', 'Связи', 'Статус', 'Ответственный', 'Ответить до', 'Ответ', 'Автор', 'Устройство', 'ID']]
     .concat(list.map(x => [x.date, x.time || '', x.auditor || '', x.area || '', JKIND[x.kind] || x.kind, x.text, (x.links || []).join(', '), JST[x.st], nameOf(x.resp) || '', x.due || '', x.answer || '', x.who || '', x.dev || '', x.id]))), `AvSec_journal_${today()}.csv`, 'text/csv;charset=utf-8');
+}
+/* ---------- Для директора (v50): одна страница — даты, группа, готовность, что решить, риски, что спросят ----------
+   Содержательная часть (asks, sign, risks) — usap.director (проект, согласуется с директором); цифры считаются из данных. */
+function dirData() {
+  const u = U() || {}, a = u.audit || {}, pq = D('pq'), A = D('pq_assess'), st = pqState(), cap = D('cap2019');
+  const areas = pq ? pq.meta.areas.map(x => {
+    const its = pq.items.filter(i => i.area === x.code), c = { sat: 0, wip: 0, unsat: 0, na: 0 }; let pre = 0, dev = 0;
+    its.forEach(i => { const d = (st[i.id] || {}).st, p = A && A.items[i.id] ? A.items[i.id].st : ''; if (d) dev++; if (p) pre++; const k = d || p; if (k) c[k]++; });
+    const appl = its.length - c.na; return { code: x.code, name: x.name, n: its.length, dev, pre, c, ei: pre || dev ? Math.round(c.sat * 100 / (appl || 1)) : null, aud: areaAuditor(x.code) };
+  }) : [];
+  const capOpen = cap ? cap.findings.flatMap(f => f.items.map(it => ({ f, it }))).filter(({ it }) => !['done', 'na'].includes((it.status || {}).st)) : [];
+  const capLate = capOpen.filter(({ it }) => (it.status || {}).due && daysTo(it.status.due) < 0);
+  const req = u.requested || [], aSt = auditState(), sent = req.filter(r => docSent(r, aSt.docs)).length;
+  const dates = [
+    [a.docsApprovedDeadline, '14:00–15:00', 'Крайний срок представления документов, требующих утверждения (встреча с NCMC в гостинице)'],
+    [a.start, '09:00', 'Национальный брифинг в АГА — выступает директор'],
+    ['2026-11-12', '09:30', 'Начало наблюдений в аэропорту DYU, встреча с заинтересованными сторонами аэропорта'],
+    [a.end, '09:00–12:00', 'Заключительный разбор с NCMC (09:00–11:00) и итоговый разбор с директором (11:00–12:00)']].filter(x => x[0]);
+  return { u, a, d: u.director || {}, areas, capOpen, capLate, req, sent, dates, team: a.team || [] };
+}
+function pDirector(m) {
+  const X = dirData(), ad = X.a.start;
+  head(m, 'Для директора', `${esc(t('Памятка к аудиту ИКАО USAP-CMA'))} ${fmtDate(X.a.start)}–${fmtDate(X.a.end)}${ad && daysTo(ad) >= 0 ? ` · ${esc(t('до начала'))} ${daysTo(ad)} ${esc(t('дн.'))}` : ''}${X.d.status ? ` · <span class="warn">${esc(X.d.status)}</span>` : ''}`);
+  const tb = el('div', 'toolbar');
+  const wd = el('button', 'btn sm', esc(t('Скачать для Word'))); wd.onclick = () => download(dirDoc(X), `AvSec_Director_brief_USAP-CMA_${today()}.doc`, 'application/msword'); tb.appendChild(wd);
+  const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
+  m.appendChild(tb);
+  const g = el('div', 'grid2');
+  g.appendChild(el('div', 'card', `<h2>${esc(t('Ключевые даты'))}</h2><ul class="list">${X.dates.map(([d, tm, txt]) => `<li><b>${fmtDate(d)}</b> ${esc(tm)} — ${esc(t(txt))}${daysTo(d) >= 0 ? ` <span class="dim small">(${daysTo(d)} ${esc(t('дн.'))})</span>` : ''}</li>`).join('')}</ul>`
+    + `<h4>${esc(t('Группа ИКАО'))}</h4><ul class="list small">${X.team.map(x => `<li><b>${esc(String(x.name).replace(/\s*\(.*?\)/, ''))}</b> — ${esc(x.role || '')}${x.org ? ', ' + esc(x.org) : ''} · <span class="badge b-area">${esc(x.areas || '')}</span></li>`).join('')}</ul>`));
+  const ar = el('div', 'card'); ar.innerHTML = `<h2>${esc(t('Готовность по областям'))} <span class="dim small">${esc(t('самооценка, где её нет — предварительная оценка'))}</span></h2>`;
+  ar.appendChild(table(['Обл.', 'Аудитор', 'ВП', 'Удовл.', 'В работе', 'Неудовл.', 'EI'], X.areas, x => [`<span class="badge b-area">${esc(x.code)}</span>`, `<span class="small">${esc(x.aud || '—')}</span>`, x.n, x.c.sat || '—', x.c.wip || '—', x.c.unsat ? `<b class="warn">${x.c.unsat}</b>` : '—', x.ei == null ? `<span class="warn small">${esc(t('не оценено'))}</span>` : `<b class="${x.ei < 60 ? 'warn' : ''}">${x.ei}%</b>`], x => go('pq', { area: x.code })));
+  g.appendChild(ar);
+  m.appendChild(g);
+  const notAssessed = X.areas.filter(x => x.ei == null);
+  const autoRisks = [
+    X.capOpen.length ? `${t('ПКД 2019')}: ${t('не закрыто')} ${X.capOpen.length} ${t('мер из')} ${D('cap2019').findings.flatMap(f => f.items).length}${X.capLate.length ? `; ${t('срок прошёл')}: ${X.capLate.map(({ it }) => 'ВП ' + it.pq + ' (' + fmtDate(it.status.due) + ')').join(', ')}` : ''}` : '',
+    X.req.length && X.sent < X.req.length ? `${t('Документы ИКАО')}: ${t('отправлено')} ${X.sent} ${t('из')} ${X.req.length}` : '',
+    notAssessed.length ? `${t('Не оценены области')} ${notAssessed.map(x => x.code).join(', ')} (${notAssessed.reduce((a, x) => a + x.n, 0)} ВП) — ${t('нужны ПАБ DYU, программы эксплуатантов, акты КК')}` : ''].filter(Boolean);
+  m.appendChild(el('div', 'card', `<h2>${esc(t('Что решить и подписать до 07.11'))}</h2><ol class="list">${(X.d.sign || []).map(x => `<li>${esc(x)}</li>`).join('')}</ol>`));
+  m.appendChild(el('div', 'card', `<h2>${esc(t('Главные риски'))}</h2><ul class="list">${(X.d.risks || []).map(r => `<li><span class="badge b-area">${esc(r.area)}</span> ${esc(r.t)}</li>`).join('')}${autoRisks.map(x => `<li><span class="badge b-miss">${esc(t('данные'))}</span> ${esc(x)}</li>`).join('')}</ul>`));
+  m.appendChild(el('div', 'card', `<h2>${esc(t('Что ждут от директора'))}</h2><ul class="list">${(X.d.asks || []).map(x => `<li>${x.when ? `<b>${fmtDate(x.when)}</b> ` : ''}${esc(x.t)}</li>`).join('')}</ul>`));
+}
+// Word открывает HTML с расширением .doc — без библиотек, со стилями и таблицей; документ — для печати и правки директором
+function dirDoc(X) {
+  const e = esc, li = a => a.map(x => `<li>${x}</li>`).join('');
+  const notAssessed = X.areas.filter(x => x.ei == null).map(x => x.code);
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Памятка директору</title>
+<style>body{font-family:'Times New Roman',serif;font-size:12pt}h1{font-size:15pt}h2{font-size:13pt;margin-top:14pt}table{border-collapse:collapse}td,th{border:1px solid #777;padding:3pt 6pt;font-size:11pt}</style></head><body>
+<h1>Памятка директору АГА при ПРТ — аудит ИКАО USAP-CMA ${fmtDate(X.a.start)}–${fmtDate(X.a.end)}</h1>
+<p><i>${e(X.d.status || '')}. Подготовлено ${fmtDate(today())}, NCMC ${e((X.u.ncmc || {}).name || '')}.</i></p>
+<h2>Ключевые даты</h2><ul>${li(X.dates.map(([d, tm, txt]) => `<b>${fmtDate(d)}</b> ${e(tm)} — ${e(txt)}`))}</ul>
+<h2>Группа ИКАО</h2><ul>${li(X.team.map(x => `${e(String(x.name).replace(/\s*\(.*?\)/, ''))} — ${e(x.role || '')}${x.org ? ', ' + e(x.org) : ''}; области ${e(x.areas || '')}`))}</ul>
+<h2>Готовность по областям</h2><table><tr><th>Область</th><th>Аудитор</th><th>ВП</th><th>Удовл.</th><th>В работе</th><th>Неудовл.</th><th>EI</th></tr>${X.areas.map(x => `<tr><td>${e(x.code)}</td><td>${e(x.aud || '')}</td><td>${x.n}</td><td>${x.c.sat}</td><td>${x.c.wip}</td><td>${x.c.unsat}</td><td>${x.ei == null ? 'не оценено' : x.ei + '%'}</td></tr>`).join('')}</table>
+<p><i>Самооценка государства, где её нет — предварительная оценка по текстам документов (подтверждает NCMC).${notAssessed.length ? ' Не оценены: ' + e(notAssessed.join(', ')) + '.' : ''}</i></p>
+<h2>Что решить и подписать до 07.11.2026</h2><ol>${li((X.d.sign || []).map(e))}</ol>
+<h2>Главные риски</h2><ul>${li((X.d.risks || []).map(r => `<b>${e(r.area)}.</b> ${e(r.t)}`))}${X.capOpen.length ? `<li><b>ПКД 2019.</b> Не закрыто ${X.capOpen.length} мер${X.capLate.length ? '; срок прошёл: ' + e(X.capLate.map(({ it }) => 'ВП ' + it.pq + ' (' + fmtDate(it.status.due) + ')').join(', ')) : ''}.</li>` : ''}</ul>
+<h2>Что ждут от директора</h2><ul>${li((X.d.asks || []).map(x => `${x.when ? '<b>' + fmtDate(x.when) + '</b> ' : ''}${e(x.t)}`))}</ul>
+</body></html>`;
+}
+// Обзор в дни аудита: что сегодня по подневному плану ИКАО и программе приёма, быстрые переходы
+function todayCard(m) {
+  const u = U(); if (!u) return;
+  const d = today(), day = (u.schedule || []).find(x => x.date === d), hos = ((u.hospitality || {}).days || []).find(x => x.date === d);
+  const daily = (u.schedule || []).find(x => !x.date);
+  const o = jOpen().length, due = jDueToday().length;
+  m.appendChild(el('div', 'card today', `<h2>${esc(t('Сегодня по плану'))} <span class="dim small">${fmtDate(d)}${day ? ' · ' + esc(day.dow) : ''}</span></h2>`
+    + (day ? `<p>${esc(day.text)}</p>` : `<p class="dim">${esc(t('В подневном плане ИКАО на сегодня записей нет.'))}</p>`)
+    + (daily && day && u.audit && d >= u.audit.start && d <= u.audit.end ? `<p class="small dim">${esc(daily.text)}</p>` : '')
+    + (hos ? `<h4>${esc(t('Приём группы'))}</h4><ul class="list small">${hos.items.map(i => `<li>${esc((HOSK[i.kind] || ['•'])[0])} ${esc(i.text)}</li>`).join('')}</ul>${hos.note ? `<p class="small dim">${esc(hos.note)}</p>` : ''}` : '')
+    + `<div class="row mt"><a class="btn sm" href="#journal">${esc(t('Журнал аудита'))}${o ? ` · ${o}` : ''}${due ? ` · ${esc(t('ответить сегодня'))} ${due}` : ''}</a><a class="btn sm ghost" href="#audit?t=docs">${esc(t('Документы'))}</a><a class="btn sm ghost" href="#director">${esc(t('Для директора'))}</a><a class="btn sm ghost" href="#audit?t=plan">${esc(t('План и приём'))}</a></div>`));
 }
 function pData(m) {
   head(m, 'Данные и резервная копия', 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
