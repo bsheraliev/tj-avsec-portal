@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '53';
+const APP_VERSION = '54';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -70,7 +70,7 @@ const TR = { en: {
   'Подготовлено': 'Prepared', 'области': 'areas', 'принято': 'accepted', 'не принято': 'not accepted', 'Принять все непринятые': 'Accept all not accepted', 'Открыть непринятые': 'Open not accepted', 'Принято: ВП': 'Accepted: PQ', 'Принято ВП': 'PQs accepted', 'Открыть →': 'Open →',
   'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите': 'Prepared by a session from the texts of the NCASP and the QC Regulations — open the PQ, check and accept',
   'Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.': 'Evidence from the assessment will be added to the existing rows; the note and translation stay as they are.',
-  'Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.': 'Status and evidence will be copied into the self-assessment on this device; PQs that already have a status are not changed.',
+  'Статус и доказательства перейдут в общую самооценку — её сразу увидят все; ВП, у которых статус уже есть, не изменятся.': 'Status and evidence will go into the shared self-assessment, visible to everyone at once; PQs that already have a status are not changed.', 'Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.': 'Status and evidence will be copied into the self-assessment on this device; PQs that already have a status are not changed.',
 } };
 const t = s => (S.lang === 'en' && TR.en[s]) || s;
 
@@ -684,7 +684,7 @@ const QTABS = [{ id: 'list', t: 'Список' }, { id: 'sum', t: 'Сводка'
 const areaAuditor = code => { const u = U(); const x = u && (u.audit.areaAuditors || []).find(y => y.code === code); return x ? x.auditor : ''; };
 function pPQ(m) {
   const d = D('pq'); if (!d) return m.appendChild(el('div', 'empty', 'Данные ВП не загружены'));
-  head(m, 'Протокольные вопросы', `${esc(d.meta.title)} · опубликовано ${fmtDate(d.meta.published)} · ${d.items.length} ВП. Статус, ответственный, срок и доказательства — самооценка государства, хранится на этом устройстве.`);
+  head(m, 'Протокольные вопросы', `${esc(d.meta.title)} · опубликовано ${fmtDate(d.meta.published)} · ${d.items.length} ВП. Статус, ответственный, срок и доказательства — самооценка государства, ${D('sync') ? 'общая для всех устройств группы' : 'хранится на этом устройстве'}.`);
   const st = pqState();
   const tab = QTABS.some(x => x.id === S.f.t) ? S.f.t : 'list';
   const goTab = id => go('pq', { ...S.f, t: id === 'list' ? '' : id }, S.q);
@@ -992,7 +992,7 @@ function assessCard(d, all, st) {
     const r = el('div', 'row mt');
     const b = el('button', 'btn sm', `${esc(t('Принять все непринятые'))} (${open.length})`);
     b.onclick = () => {
-      if (!confirm(`${t('Принять все непринятые')} (${open.length})?\n${t('Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.')}`)) return;
+      if (!confirm(`${t('Принять все непринятые')} (${open.length})?\n${t(D('sync') ? 'Статус и доказательства перейдут в общую самооценку — её сразу увидят все; ВП, у которых статус уже есть, не изменятся.' : 'Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.')}`)) return;
       const cur = pqState(), ch = {}; let n = 0;
       open.forEach(i => { const o = cur[i.id] || {}, a = pqAssess(i.id); if (o.st || !a) return;   // существующий статус не трогаем
         const rec = assessMerge(o, a); logChange('pq', i.id, o, rec, PQLOGF); ch[i.id] = rec; n++; });
@@ -2191,7 +2191,7 @@ function todayCard(m) {
     + `<div class="row mt"><a class="btn sm" href="#journal">${esc(t('Журнал аудита'))}${o ? ` · ${o}` : ''}${due ? ` · ${esc(t('ответить сегодня'))} ${due}` : ''}</a><a class="btn sm ghost" href="#audit?t=docs">${esc(t('Документы'))}</a><a class="btn sm ghost" href="#director">${esc(t('Для директора'))}</a><a class="btn sm ghost" href="#audit?t=plan">${esc(t('План и приём'))}</a></div>`));
 }
 function pData(m) {
-  head(m, 'Данные и резервная копия', 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
+  head(m, 'Данные и резервная копия', D('sync') ? 'Самооценка ВП, ответственные по областям и журнал аудита — общие для всех устройств (синхронизация). CC, SASAQ, дорожная карта и настройки хранятся в браузере этого устройства: перед сменой устройства или чисткой браузера выгрузите копию.' : 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
   // в полях — только сохранённые переопределения: иначе «Сохранить» без правок заморозило бы текущие данные портала
   const s = settings(); const so = LS.get(K.set, {});
   const c = el('div', 'card', `<h2>${esc(t('Настройки'))}</h2><p class="small dim">Дата аудита и NCMC берутся из данных портала; здесь их можно переопределить на этом устройстве — пустое поле возвращает значение из данных.</p><form class="form" id="setForm"><div class="two"><label>Дата аудита на месте<input type="date" name="auditDate" value="${esc(so.auditDate || '')}"><span class="small dim">Из данных: ${s.auditDate ? fmtDate(s.auditDate) : '—'}</span></label><label>Национальный координатор (NCMC)<input name="ncmc" value="${esc(so.ncmc || '')}" placeholder="${esc(s.ncmc || 'Ф.И.О., должность')}"><span class="small dim">Из данных: ${esc(s.ncmc || '—')}</span></label></div><div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>`);
