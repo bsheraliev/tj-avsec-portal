@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '51';
+const APP_VERSION = '52';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -12,8 +12,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
-const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev' };
-const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.audit, K.capi, K.log, K.journal];
+const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev', sync: 'avsec-sync', areats: 'avsec-arearesp-ts', pnote: 'avsec-pnote' };
+const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.areats, K.audit, K.capi, K.log, K.journal, K.pnote];
 
 const S = { cfg: null, key: null, D: {}, page: 'dash', q: '', f: {}, lang: LS.get(K.lang, 'ru'), pqSel: new Set() };
 
@@ -66,7 +66,7 @@ const TR = { en: {
   'Список': 'List', 'Сводка': 'Summary', 'К работе': 'To do', 'Области проверки': 'Audit areas', 'Самооценка': 'Self-assessment', 'Не соответствует': 'Not satisfactory', 'Просрочен срок': 'Overdue', 'Есть вывод аудита 2019': 'Has a 2019 finding', 'С выводом 2019': 'With a 2019 finding',
   'Об аудите': 'About the audit', 'Сроки и доступ': 'Deadlines and access', 'План и приём': 'Plan and hospitality', 'Обзор': 'Overview', 'Документы': 'Documents', 'Проживание, въезд, транспорт': 'Accommodation, entry, transport', 'Суточные и лимит': 'DSA and limit', 'Переводчики': 'Interpreters',
   'Сбросить всё': 'Clear all', 'Убрать фильтр': 'Remove filter', 'Сокращения': 'Abbreviations', 'Что делать сейчас': 'Do next', 'Только ★': 'Starred only', 'Подраздел': 'Subsection', 'Приложение': 'Annex', 'Глава': 'Chapter', 'Определения и заголовки': 'Definitions and headings', 'Язык': 'Language', 'Приоритет': 'Priority', 'Раздел': 'Section', 'Только с EN': 'With English only',
-  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'Для директора': 'For the Director', 'Директору': 'Director', 'Памятка к аудиту ИКАО USAP-CMA': 'Briefing note for the ICAO USAP-CMA audit', 'до начала': 'to start', 'дн.': 'days', 'Скачать для Word': 'Download for Word', 'Ключевые даты': 'Key dates', 'Группа ИКАО': 'ICAO team', 'Готовность по областям': 'Readiness by area', 'самооценка, где её нет — предварительная оценка': 'self-assessment, otherwise preliminary assessment', 'не оценено': 'not assessed', 'Что решить и подписать до 07.11': 'To decide and sign by 07.11', 'Главные риски': 'Main risks', 'данные': 'data', 'Что ждут от директора': 'What is expected from the Director', 'ПКД 2019': 'CAP 2019', 'не закрыто': 'open', 'мер из': 'actions of', 'срок прошёл': 'overdue', 'отправлено': 'sent', 'Не оценены области': 'Areas not assessed', 'нужны ПАБ DYU, программы эксплуатантов, акты КК': 'DYU ASP, operator programmes and QC reports needed', 'Сегодня по плану': 'Today per plan', 'В подневном плане ИКАО на сегодня записей нет.': 'No entries in the ICAO daily plan for today.', 'Приём группы': 'Team hospitality', 'Крайний срок представления документов, требующих утверждения (встреча с NCMC в гостинице)': 'Deadline for documents requiring approval (meeting with NCMC at the hotel)', 'Национальный брифинг в АГА — выступает директор': 'National briefing at the CAA — the Director speaks', 'Начало наблюдений в аэропорту DYU, встреча с заинтересованными сторонами аэропорта': 'Start of observations at DYU airport, meeting with airport stakeholders', 'Заключительный разбор с NCMC (09:00–11:00) и итоговый разбор с директором (11:00–12:00)': 'Final briefing with NCMC (09:00–11:00) and closing debriefing with the Director (11:00–12:00)', 'Файлы доказательств': 'Evidence files', 'из группы Telegram «USAP 2026»': 'from the Telegram group “USAP 2026”', 'Файлы доказательств из Telegram': 'Evidence files from Telegram', 'новых': 'new', 'без ВП': 'without PQ', 'Добавлено в доказательства — проверьте и сохраните': 'Added to evidence — check and save', 'Файлы из группы «USAP 2026»: бот кладёт их в Drive и сам определяет ВП — по номеру в подписи, а без него по типу документа и тексту. Сессия по команде «забери доказательства» переносит их в портал. Автоматически найденные ВП помечены «авто — проверить»: примите файл кнопкой «в доказательства» в карточке ВП или исправьте номер в подписи к сообщению.': 'Files from the “USAP 2026” group: the bot puts them in Drive and finds the PQs itself — from the number in the caption, otherwise from the document type and text. The session brings them into the portal on request. PQs found automatically are marked “auto — check”: accept the file with “to evidence” in the PQ card or correct the number in the message caption.', 'ВП определены автоматически': 'PQs found automatically', 'ВП (авто)': 'PQ (auto)', 'Как определено': 'How found', 'авто — проверить': 'auto — check', 'возможно': 'possible', 'ДСП': 'Restricted', 'до': 'by', 'План доказательств': 'Evidence plan', 'Принято': 'Accepted', 'Получено': 'Received', 'Проверить': 'To check', 'Ждём': 'Awaited', 'получено': 'received', 'проверить': 'to check', 'ждём': 'awaited', 'просрочено': 'overdue', 'Сроки и каналы': 'Deadlines and channels', 'Подписи': 'Signatures', 'Все держатели': 'All holders', 'Все сроки': 'All deadlines', 'Все каналы': 'All channels', 'Поиск по плану': 'Search the plan', 'Ожидается по плану доказательств': 'Expected under the evidence plan', 'План ещё не загружен.': 'The plan is not loaded yet.', 'редакция': 'version', 'от': 'of', '«Получено» — файл из группы или из папки ДСП привязан к позиции по ВП и держателю; «проверить» — есть подходящий файл, привязку подтверждает NCMC.': '“Received” — a file from the group or the restricted folder is linked to the item by PQ and holder; “to check” — a matching file exists, the NCMC confirms the link.', 'Что представить': 'What to provide', 'Канал': 'Channel', 'Решения и подписи руководства': 'Management decisions and signatures', 'Решение или документ': 'Decision or document', 'Кто': 'Who', 'Контроль исполнения': 'Follow-up', 'Общая самооценка': 'Shared self-assessment', 'опубликована': 'published', 'видна на всех устройствах': 'visible on all devices', 'Общей самооценки пока нет: принятое видно только на этом устройстве.': 'No shared self-assessment yet: accepted items are visible only on this device.', 'На этом устройстве не опубликовано': 'Not yet published from this device', 'Выгрузить JSON': 'Export JSON', 'файл NCMC (секретный чат или лично)': 'send the file to the NCMC (secret chat or in person)', 'Журнал аудита': 'Audit journal', 'Журнал': 'Journal', 'Журнал: открытых': 'Journal: open', 'ответить сегодня': 'answer today', 'Журнал: открытых записей': 'Journal: open entries', 'Новая запись журнала': 'New journal entry', 'Запись журнала': 'Journal entry', 'Дата': 'Date', 'Время': 'Time', 'Аудитор ИКАО': 'ICAO auditor', 'Общее': 'General', 'Вид': 'Type', 'Текст': 'Text', 'Что спросил или запросил аудитор, что наблюдали': 'What the auditor asked or requested, what was observed', 'Связи': 'Links', 'номера ВП, пункты A17:3.1.1, коды субъектов (DYU) — через запятую': 'PQ numbers, A17:3.1.1 provisions, entity codes (DYU), comma-separated', 'Ответить до': 'Answer by', 'Ответ / что передали': 'Answer / what was provided', 'Удалить': 'Delete', 'Закрыть': 'Close', 'устройство': 'device', 'Запись сохранена': 'Entry saved', 'Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.': 'Delete the journal entry? The deletion will carry over to other devices when merged.', 'Вопросы, запросы документов и наблюдения группы ИКАО': 'Questions, document requests and observations of the ICAO team', 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».': 'Entries are stored on this device; journals from several phones are combined with “Merge journal”.', 'открытых запросов': 'open requests', 'ответить сегодня или просрочено': 'due today or overdue', 'предварительных выводов': 'preliminary findings', 'записей всего': 'entries in total', 'Запись': 'Entry', 'Все виды': 'All types', 'Открыт или отвечено': 'Open or answered', 'Ответить сегодня / просрочено': 'Due today / overdue', 'Все аудиторы': 'All auditors', 'Поиск по журналу': 'Search the journal', 'Записей пока нет — нажмите «＋ Запись»': 'No entries yet — tap “＋ Entry”', 'Несколько устройств и выгрузка': 'Several devices and export', 'Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.': 'Everyone keeps the journal on their own phone. In the evening one person collects the journal files and taps “Merge journal” for each: new entries are added, edited ones updated, deleted ones removed. The merged journal can then be shared back.', 'Выгрузить журнал (JSON)': 'Export journal (JSON)', 'Объединить журнал…': 'Merge journal…', 'Файл журнала — служебный: передавайте его между устройствами группы напрямую или служебной почтой, не в общие чаты. Метка этого устройства': 'The journal file is internal: pass it between team devices directly or by official e-mail, not in group chats. This device tag', 'Это не файл журнала AvSec Portal': 'This is not an AvSec Portal journal file', 'Объединено': 'Merged', 'обновлено': 'updated', 'Запрос документа': 'Document request', 'Наблюдение': 'Observation', 'Предварительный вывод': 'Preliminary finding', 'Открыт': 'Open', 'Отвечено': 'Answered', 'Закрыт': 'Closed', 'Обл.': 'Area', 'Аудитор': 'Auditor', 'В ВП — п.': 'In the PQ — para.', 'по Поправке': 'per Amendment', 'в CC — п.': 'in the CC — para.', 'сопоставлено по содержанию': 'matched by content', 'Выбрать': 'Select', 'Закончить выбор': 'Finish selecting', 'Отметить несколько ВП и изменить их одним действием': 'Select several PQs and change them in one action', 'Самооценка — сверка с OLF (CSV)': 'Self-assessment — OLF reconciliation (CSV)', 'Выбрано': 'Selected', 'Выбрать все в списке': 'Select all in list', 'Снять выбор': 'Clear selection', 'не менять': 'no change', 'снять назначение (по области)': 'clear (use area owner)', 'Применить к выбранным': 'Apply to selected', 'Принять предварительную оценку': 'Accept preliminary assessment', 'Отменить последнее': 'Undo last', 'Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.': 'Only the chosen fields change; evidence and notes stay. Every change goes to the PQ history. The preliminary assessment is applied only to PQs without a status.', 'Выберите статус, ответственного или срок': 'Choose a status, owner or due date', 'Изменить': 'Change', 'Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.': 'You can undo with “Undo last” until the page is reloaded.', 'Изменено': 'Changed', 'ВП уже со статусом — пропускаются.': 'PQs already have a status and are skipped.', 'предварительная оценка': 'preliminary assessment', 'Отменено': 'Undone', 'статус': 'status', 'срок': 'due', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
+  'Предварительная оценка': 'Preliminary assessment', 'Предварительная оценка не принята': 'Preliminary assessment not accepted', 'Принять в самооценку': 'Accept into self-assessment', 'Обновить из предварительной оценки': 'Update from preliminary assessment', 'Что нужно': 'What is needed', 'Запросить у коллег': 'Request from colleagues', 'Для директора': 'For the Director', 'Директору': 'Director', 'Памятка к аудиту ИКАО USAP-CMA': 'Briefing note for the ICAO USAP-CMA audit', 'до начала': 'to start', 'дн.': 'days', 'Скачать для Word': 'Download for Word', 'Ключевые даты': 'Key dates', 'Группа ИКАО': 'ICAO team', 'Готовность по областям': 'Readiness by area', 'самооценка, где её нет — предварительная оценка': 'self-assessment, otherwise preliminary assessment', 'не оценено': 'not assessed', 'Что решить и подписать до 07.11': 'To decide and sign by 07.11', 'Главные риски': 'Main risks', 'данные': 'data', 'Что ждут от директора': 'What is expected from the Director', 'ПКД 2019': 'CAP 2019', 'не закрыто': 'open', 'мер из': 'actions of', 'срок прошёл': 'overdue', 'отправлено': 'sent', 'Не оценены области': 'Areas not assessed', 'нужны ПАБ DYU, программы эксплуатантов, акты КК': 'DYU ASP, operator programmes and QC reports needed', 'Сегодня по плану': 'Today per plan', 'В подневном плане ИКАО на сегодня записей нет.': 'No entries in the ICAO daily plan for today.', 'Приём группы': 'Team hospitality', 'Крайний срок представления документов, требующих утверждения (встреча с NCMC в гостинице)': 'Deadline for documents requiring approval (meeting with NCMC at the hotel)', 'Национальный брифинг в АГА — выступает директор': 'National briefing at the CAA — the Director speaks', 'Начало наблюдений в аэропорту DYU, встреча с заинтересованными сторонами аэропорта': 'Start of observations at DYU airport, meeting with airport stakeholders', 'Заключительный разбор с NCMC (09:00–11:00) и итоговый разбор с директором (11:00–12:00)': 'Final briefing with NCMC (09:00–11:00) and closing debriefing with the Director (11:00–12:00)', 'Файлы доказательств': 'Evidence files', 'из группы Telegram «USAP 2026»': 'from the Telegram group “USAP 2026”', 'Файлы доказательств из Telegram': 'Evidence files from Telegram', 'новых': 'new', 'без ВП': 'without PQ', 'Добавлено в доказательства — проверьте и сохраните': 'Added to evidence — check and save', 'Файлы из группы «USAP 2026»: бот кладёт их в Drive и сам определяет ВП — по номеру в подписи, а без него по типу документа и тексту. Сессия по команде «забери доказательства» переносит их в портал. Автоматически найденные ВП помечены «авто — проверить»: примите файл кнопкой «в доказательства» в карточке ВП или исправьте номер в подписи к сообщению.': 'Files from the “USAP 2026” group: the bot puts them in Drive and finds the PQs itself — from the number in the caption, otherwise from the document type and text. The session brings them into the portal on request. PQs found automatically are marked “auto — check”: accept the file with “to evidence” in the PQ card or correct the number in the message caption.', 'ВП определены автоматически': 'PQs found automatically', 'ВП (авто)': 'PQ (auto)', 'Как определено': 'How found', 'авто — проверить': 'auto — check', 'возможно': 'possible', 'ДСП': 'Restricted', 'до': 'by', 'нет доступа: код портала не совпадает с настройкой синхронизации': 'no access: the portal code does not match the sync setup', 'Синхронизация': 'Sync', 'идёт…': 'in progress…', 'выполнена': 'done', 'ожидание': 'waiting', 'ждут отправки': 'pending', 'Самооценка, ответственные по областям и журнал аудита — общие для всех устройств: правки уходят и приходят сами.': 'Self-assessment, area owners and the audit journal are shared across devices: changes are sent and received automatically.', 'Синхронизировать сейчас': 'Sync now', 'Синхронизировано': 'Synced', 'Журнал общий для всех устройств: записи уходят и приходят сами. Выгрузка — для резервной копии и CSV.': 'The journal is shared across devices: entries are sent and received automatically. Export is for backup and CSV.', 'Журнал общий: записи с телефонов группы сводятся сами.': 'Shared journal: entries from the team phones are combined automatically.', 'План доказательств': 'Evidence plan', 'Принято': 'Accepted', 'Получено': 'Received', 'Проверить': 'To check', 'Ждём': 'Awaited', 'получено': 'received', 'проверить': 'to check', 'ждём': 'awaited', 'просрочено': 'overdue', 'Сроки и каналы': 'Deadlines and channels', 'Подписи': 'Signatures', 'Все держатели': 'All holders', 'Все сроки': 'All deadlines', 'Все каналы': 'All channels', 'Поиск по плану': 'Search the plan', 'Ожидается по плану доказательств': 'Expected under the evidence plan', 'План ещё не загружен.': 'The plan is not loaded yet.', 'редакция': 'version', 'от': 'of', '«Получено» — файл из группы или из папки ДСП привязан к позиции по ВП и держателю; «проверить» — есть подходящий файл, привязку подтверждает NCMC.': '“Received” — a file from the group or the restricted folder is linked to the item by PQ and holder; “to check” — a matching file exists, the NCMC confirms the link.', 'Что представить': 'What to provide', 'Канал': 'Channel', 'Решения и подписи руководства': 'Management decisions and signatures', 'Решение или документ': 'Decision or document', 'Кто': 'Who', 'Контроль исполнения': 'Follow-up', 'Общая самооценка': 'Shared self-assessment', 'опубликована': 'published', 'видна на всех устройствах': 'visible on all devices', 'Общей самооценки пока нет: принятое видно только на этом устройстве.': 'No shared self-assessment yet: accepted items are visible only on this device.', 'На этом устройстве не опубликовано': 'Not yet published from this device', 'Выгрузить JSON': 'Export JSON', 'файл NCMC (секретный чат или лично)': 'send the file to the NCMC (secret chat or in person)', 'Журнал аудита': 'Audit journal', 'Журнал': 'Journal', 'Журнал: открытых': 'Journal: open', 'ответить сегодня': 'answer today', 'Журнал: открытых записей': 'Journal: open entries', 'Новая запись журнала': 'New journal entry', 'Запись журнала': 'Journal entry', 'Дата': 'Date', 'Время': 'Time', 'Аудитор ИКАО': 'ICAO auditor', 'Общее': 'General', 'Вид': 'Type', 'Текст': 'Text', 'Что спросил или запросил аудитор, что наблюдали': 'What the auditor asked or requested, what was observed', 'Связи': 'Links', 'номера ВП, пункты A17:3.1.1, коды субъектов (DYU) — через запятую': 'PQ numbers, A17:3.1.1 provisions, entity codes (DYU), comma-separated', 'Ответить до': 'Answer by', 'Ответ / что передали': 'Answer / what was provided', 'Удалить': 'Delete', 'Закрыть': 'Close', 'устройство': 'device', 'Запись сохранена': 'Entry saved', 'Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.': 'Delete the journal entry? The deletion will carry over to other devices when merged.', 'Вопросы, запросы документов и наблюдения группы ИКАО': 'Questions, document requests and observations of the ICAO team', 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».': 'Entries are stored on this device; journals from several phones are combined with “Merge journal”.', 'открытых запросов': 'open requests', 'ответить сегодня или просрочено': 'due today or overdue', 'предварительных выводов': 'preliminary findings', 'записей всего': 'entries in total', 'Запись': 'Entry', 'Все виды': 'All types', 'Открыт или отвечено': 'Open or answered', 'Ответить сегодня / просрочено': 'Due today / overdue', 'Все аудиторы': 'All auditors', 'Поиск по журналу': 'Search the journal', 'Записей пока нет — нажмите «＋ Запись»': 'No entries yet — tap “＋ Entry”', 'Несколько устройств и выгрузка': 'Several devices and export', 'Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.': 'Everyone keeps the journal on their own phone. In the evening one person collects the journal files and taps “Merge journal” for each: new entries are added, edited ones updated, deleted ones removed. The merged journal can then be shared back.', 'Выгрузить журнал (JSON)': 'Export journal (JSON)', 'Объединить журнал…': 'Merge journal…', 'Файл журнала — служебный: передавайте его между устройствами группы напрямую или служебной почтой, не в общие чаты. Метка этого устройства': 'The journal file is internal: pass it between team devices directly or by official e-mail, not in group chats. This device tag', 'Это не файл журнала AvSec Portal': 'This is not an AvSec Portal journal file', 'Объединено': 'Merged', 'обновлено': 'updated', 'Запрос документа': 'Document request', 'Наблюдение': 'Observation', 'Предварительный вывод': 'Preliminary finding', 'Открыт': 'Open', 'Отвечено': 'Answered', 'Закрыт': 'Closed', 'Обл.': 'Area', 'Аудитор': 'Auditor', 'В ВП — п.': 'In the PQ — para.', 'по Поправке': 'per Amendment', 'в CC — п.': 'in the CC — para.', 'сопоставлено по содержанию': 'matched by content', 'Выбрать': 'Select', 'Закончить выбор': 'Finish selecting', 'Отметить несколько ВП и изменить их одним действием': 'Select several PQs and change them in one action', 'Самооценка — сверка с OLF (CSV)': 'Self-assessment — OLF reconciliation (CSV)', 'Выбрано': 'Selected', 'Выбрать все в списке': 'Select all in list', 'Снять выбор': 'Clear selection', 'не менять': 'no change', 'снять назначение (по области)': 'clear (use area owner)', 'Применить к выбранным': 'Apply to selected', 'Принять предварительную оценку': 'Accept preliminary assessment', 'Отменить последнее': 'Undo last', 'Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.': 'Only the chosen fields change; evidence and notes stay. Every change goes to the PQ history. The preliminary assessment is applied only to PQs without a status.', 'Выберите статус, ответственного или срок': 'Choose a status, owner or due date', 'Изменить': 'Change', 'Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.': 'You can undo with “Undo last” until the page is reloaded.', 'Изменено': 'Changed', 'ВП уже со статусом — пропускаются.': 'PQs already have a status and are skipped.', 'предварительная оценка': 'preliminary assessment', 'Отменено': 'Undone', 'статус': 'status', 'срок': 'due', 'по': 'based on', 'проверяет NCMC': 'reviewed by NCMC', 'Уверенность': 'Confidence', 'в самооценке': 'in self-assessment', 'предварительная оценка, не принята': 'preliminary assessment, not accepted',
   'Подготовлено': 'Prepared', 'области': 'areas', 'принято': 'accepted', 'не принято': 'not accepted', 'Принять все непринятые': 'Accept all not accepted', 'Открыть непринятые': 'Open not accepted', 'Принято: ВП': 'Accepted: PQ', 'Принято ВП': 'PQs accepted', 'Открыть →': 'Open →',
   'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите': 'Prepared by a session from the texts of the NCASP and the QC Regulations — open the PQ, check and accept',
   'Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.': 'Evidence from the assessment will be added to the existing rows; the note and translation stay as they are.',
@@ -151,6 +151,7 @@ function showGate(show) { $('#gate').hidden = !show; if (show) setTimeout(() => 
 async function enter() {
   $('#main').innerHTML = '<div class="loading">Расшифровываю данные…</div>';
   await loadAll();
+  pnoteMigrate();
   if (!D('pq') && !D('registry')) {
     const missing = S.loadErrors.filter(e => /HTTP 404/.test(e)).length, total = (S.cfg.files || []).length;
     const hint = missing === total && total
@@ -161,7 +162,7 @@ async function enter() {
     return;
   }
   $('#who').hidden = !!S.cfg.plain;
-  buildNav(); route();
+  buildNav(); route(); syncInit();
 }
 function initGate() {
   $('#gateForm').onsubmit = async e => {
@@ -263,7 +264,7 @@ function table(cols, rows, rowFn, onClick, opts = {}) {
   tb.appendChild(body); w.appendChild(tb); return w;
 }
 function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; $('.sheet-card').focus(); document.body.style.overflow = 'hidden'; tgSync(); }
-function closeSheet() { $('#sheet').hidden = true; document.body.style.overflow = ''; tgSync(); }
+function closeSheet() { $('#sheet').hidden = true; document.body.style.overflow = ''; tgSync(); if (SY.rerender) { SY.rerender = false; render(); } }
 const kv = pairs => `<div class="kv">${pairs.filter(p => p[1]).map(([k, v]) => `<div>${esc(t(k))}</div><div>${v}</div>`).join('')}</div>`;
 const links = arr => (arr || []).length ? `<ul class="list">${arr.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>${l.date ? ` <span class="dim small">${esc(l.date)}</span>` : ''}</li>`).join('')}</ul>` : '<span class="dim">—</span>';
 function selector(label, key, values, labelFn) {
@@ -329,18 +330,31 @@ const CAPLOGF = () => [{ k: 'progress', n: 'Progress Status', map: CAPPR }, { k:
    Самооценка = опубликованная (data/pq_self.json: принята руководителем АБ, выложена сессией — видна на всех устройствах)
    + правки этого устройства (avsec-pq). По каждому ВП побеждает более поздняя правка (ts; у старых записей — at).
    Пишем только в слой устройства (pqWrite): копии опубликованного на устройстве не оседают, следующая публикация их обновит.
-   Снятие ВП, который есть в опубликованном, — запись-«надгробие» { cleared, ts }. */
+   Снятие ВП, который есть в опубликованном, — запись-«надгробие» { cleared, ts }.
+   Личная заметка (pnote) хранится отдельно (avsec-pnote) и только на этом устройстве: не публикуется и не синхронизируется. */
 const stampOf = r => (r && (r.ts || r.at)) || '';
 const pqPub = () => ((D('pq_self') || {}).items) || {};
 const pqDev = () => LS.get(K.pq, {});
+const pnotes = () => LS.get(K.pnote, {});
+const pqEmpty = r => !r.st && !r.draft && !r.due && !r.resp && !(r.evl || []).length && !r.ev && !r.note && !r.en;
+// старые записи устройства с pnote внутри: заметку — в avsec-pnote (один раз при входе)
+function pnoteMigrate() {
+  const d = pqDev(), pn = pnotes(); let n = 0;
+  Object.keys(d).forEach(id => { const r = d[id]; if (!r || !('pnote' in r)) return; if (r.pnote) pn[id] = r.pnote; const { pnote, ...rest } = r; d[id] = rest; n++; });
+  if (n) { LS.set(K.pnote, pn); LS.set(K.pq, d); }
+}
+// общий слой — то, что пришло через синхронизацию (avsec-sync → pq); вместе с опубликованным это «удалённое» состояние
+const pqRemote = () => { const p = pqPub(), sh = (LS.get(K.sync, null) || {}).pq || {}, out = { ...p };
+  Object.keys(sh).forEach(id => { if (!p[id] || stampOf(sh[id]) >= stampOf(p[id])) out[id] = sh[id]; }); return out; };
 let pqMemo = null;
 const pqState = () => {
-  let raw = null; try { raw = localStorage.getItem(K.pq); } catch (e) { /* без хранилища — только опубликованное */ }
+  let raw = null; try { raw = [K.pq, K.sync, K.pnote].map(k => localStorage.getItem(k)).join('\u0000'); } catch (e) { /* без хранилища — только опубликованное */ }
   const p = pqPub();
   if (!pqMemo || pqMemo.raw !== raw || pqMemo.p !== p) {
-    const d = pqDev(), v = { ...p };
-    Object.keys(d).forEach(id => { if (!p[id] || stampOf(d[id]) >= stampOf(p[id])) v[id] = d[id]; });
+    const d = pqDev(), v = pqRemote();
+    Object.keys(d).forEach(id => { if (!v[id] || stampOf(d[id]) >= stampOf(v[id])) v[id] = d[id]; });
     Object.keys(v).forEach(id => { if (!v[id] || v[id].cleared) delete v[id]; });
+    const pn = pnotes(); Object.keys(pn).forEach(id => { if (pn[id]) v[id] = { ...(v[id] || {}), pnote: pn[id] }; });
     pqMemo = { raw, p, v };
   }
   return { ...pqMemo.v };
@@ -348,12 +362,106 @@ const pqState = () => {
 const pqOf = id => pqState()[id] || {};
 // changes: { id: запись | null }; null — снять (у опубликованного ВП — «надгробие»)
 function pqWrite(changes) {
-  const d = pqDev(), p = pqPub(), ts = new Date().toISOString();
-  Object.entries(changes).forEach(([id, rec]) => { if (rec) d[id] = { ...rec, ts }; else if (p[id]) d[id] = { cleared: true, ts }; else delete d[id]; });
-  LS.set(K.pq, d);
+  const d = pqDev(), p = pqRemote(), pn = pnotes(), ts = new Date().toISOString();
+  Object.entries(changes).forEach(([id, rec]) => {
+    if (rec && 'pnote' in rec) { if (rec.pnote) pn[id] = rec.pnote; else delete pn[id]; const { pnote, ...rest } = rec; rec = rest; }
+    else if (!rec) delete pn[id];
+    if (rec && pqEmpty(rec) && !rec.cleared) rec = null;                   // осталась только личная заметка — общей записи нет
+    if (rec) d[id] = { ...rec, ts }; else if (p[id] && !p[id].cleared) d[id] = { cleared: true, ts }; else delete d[id];
+  });
+  LS.set(K.pnote, pn); LS.set(K.pq, d); syncSoon();
+}
+/* ---------- Синхронизация через Apps Script (data/sync.json → url; tools/tg-intake/Sync.gs) ----------
+   Самооценка ВП, ответственные по областям и журнал аудита — общие для всех устройств. Каждая запись шифруется здесь же
+   (AES-GCM, ключ = SHA-256(ключ данных ‖ «avsec-sync-enc»)): у Google — только шифр. Доступ — по токену
+   SHA-256(ключ данных ‖ «avsec-sync-token»), сервер хранит лишь его хеш. Конфликты — по времени правки (ВП — ts, журнал — upd).
+   Без связи правки копятся на устройстве и уходят при следующей попытке; avsec-sync — кэш общего слоя { seq, pq, area, j }. */
+const SY = { on: false, url: '', token: '', key: null, busy: false, again: false, t: 0, last: null, err: '', rerender: false };
+const syCache = () => { const c = LS.get(K.sync, null) || {}; return { seq: c.seq || 0, pq: c.pq || {}, area: (c.area && !c.area.map && c.area) || {}, j: c.j || {} }; };
+const syB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const syUnb64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+async function syKeys(raw) {
+  const tag = s => { const b = new TextEncoder().encode(s), o = new Uint8Array(raw.length + b.length); o.set(raw); o.set(b, raw.length); return o; };
+  const tok = await crypto.subtle.digest('SHA-256', tag('avsec-sync-token')), ek = await crypto.subtle.digest('SHA-256', tag('avsec-sync-enc'));
+  return { token: hex(tok), key: await crypto.subtle.importKey('raw', ek, 'AES-GCM', false, ['encrypt', 'decrypt']) };
+}
+async function syEnc(obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, SY.key, new TextEncoder().encode(JSON.stringify(obj))));
+  const all = new Uint8Array(12 + ct.length); all.set(iv); all.set(ct, 12); return 'v1:' + syB64(all);
+}
+async function syDec(c) { const b = syUnb64(String(c).slice(3)); return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, SY.key, b.slice(12)))); }
+async function syCall(body) {
+  const r = await fetch(SY.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ ...body, token: SY.token }), redirect: 'follow' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error === 'auth' ? t('нет доступа: код портала не совпадает с настройкой синхронизации') : (j.error || 'ошибка'));
+  return j;
+}
+// правки устройства, уже совпавшие с общими или устаревшие, убираются из слоя устройства
+function syPrune(c) {
+  const d = pqDev(), r = pqRemote(); let n = 0;
+  Object.keys(d).forEach(id => { const x = c.pq[id] || r[id]; if (x && (JSON.stringify(x) === JSON.stringify(d[id]) || stampOf(x) > stampOf(d[id]))) { delete d[id]; n++; } });
+  if (n) LS.set(K.pq, d);
+  const ad = LS.get(K.arearesp, {}), at = LS.get(K.areats, {}), sh = areaShared(); let m = 0;
+  Object.keys(ad).forEach(a => { const x = c.area[a]; if ((ad[a] || '') === (sh[a] || '') || (x && (x.ts || '') > (at[a] || ''))) { delete ad[a]; delete at[a]; m++; } });
+  if (m) { LS.set(K.arearesp, ad); LS.set(K.areats, at); }
+}
+async function syPush() {
+  const c = syCache(), r = pqRemote(), d = pqDev(), out = [];
+  Object.keys(d).forEach(id => { const { pnote, ...rec } = d[id];                                   // личная заметка не уходит никогда
+    if (stampOf(d[id]) >= stampOf(r[id]) && JSON.stringify(d[id]) !== JSON.stringify(r[id] || null)) out.push({ k: 'pq', id, rec, ts: stampOf(d[id]) }); });
+  const ad = LS.get(K.arearesp, {}), at = LS.get(K.areats, {}), sh = areaShared();
+  Object.keys(ad).forEach(a => { const ts = at[a] || new Date().toISOString(), x = c.area[a];
+    if ((!x || ts >= (x.ts || '')) && (ad[a] || '') !== (sh[a] || '')) out.push({ k: 'area', id: a, rec: { v: ad[a] || '', ts }, ts }); });
+  jAll().forEach(x => { const u = x.upd || x.ts || 0; if (u > (c.j[x.id] || 0)) out.push({ k: 'j', id: x.id, rec: x, ts: new Date(u).toISOString() }); });
+  for (let i = 0; i < out.length; i += 150) {
+    const part = out.slice(i, i + 150), rows = [];
+    for (const m of part) rows.push({ k: m.k, id: m.id, ts: m.ts, c: await syEnc(m.rec) });
+    const res = await syCall({ op: 'push', rows });
+    (res.applied || []).forEach((ok, j) => { const m = part[j]; if (!ok) return;
+      if (m.k === 'pq') c.pq[m.id] = m.rec; else if (m.k === 'area') c.area[m.id] = m.rec; else c.j[m.id] = m.rec.upd || m.rec.ts || 0; });
+    LS.set(K.sync, { ...syCache(), pq: c.pq, area: c.area, j: c.j });
+  }
+  syPrune(syCache());
+}
+async function syPull() {
+  const c = syCache(), res = await syCall({ op: 'pull', since: c.seq });
+  let changed = false; const jIn = [];
+  for (const r of res.rows || []) {
+    let rec; try { rec = await syDec(r.c); } catch (e) { continue; }          // запись не нашим ключом — пропуск
+    if (r.k === 'pq') { const cur = c.pq[r.id]; if (!cur || stampOf(rec) >= stampOf(cur)) { changed = changed || JSON.stringify(cur) !== JSON.stringify(rec); c.pq[r.id] = rec; } }
+    else if (r.k === 'area' && rec && typeof rec.v === 'string') { const cur = c.area[r.id]; if (!cur || (rec.ts || '') >= (cur.ts || '')) { changed = changed || JSON.stringify(cur) !== JSON.stringify(rec); c.area[r.id] = rec; } }
+    else if (r.k === 'j' && rec && rec.id) jIn.push(rec);
+  }
+  if (jIn.length) { const m = jMerge(jIn, true); if (m.add || m.upd) changed = true; jIn.forEach(x => { c.j[x.id] = Math.max(c.j[x.id] || 0, x.upd || x.ts || 0); }); }
+  LS.set(K.sync, { seq: res.seq || c.seq, pq: c.pq, area: c.area, j: c.j });
+  syPrune(syCache());
+  return changed;
+}
+async function syncNow() {
+  if (!SY.on) return;
+  if (SY.busy) { SY.again = true; return; }
+  SY.busy = true; let changed = false;
+  try { await syPush(); changed = await syPull(); SY.err = ''; SY.last = new Date(); }
+  catch (e) { SY.err = String(e && e.message || e); }
+  finally { SY.busy = false; syStatus(); if (changed) syRerender(); if (SY.again) { SY.again = false; syncSoon(); } }
+}
+function syncSoon() { if (!SY.on) return; clearTimeout(SY.t); SY.t = setTimeout(syncNow, 1500); }
+// пришли чужие правки: перерисовать, но не посреди заполнения формы
+function syRerender() { const busy = !$('#sheet').hidden || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || ''); if (busy) SY.rerender = true; else render(); }
+function syStatus() { $$('[data-sync-status]').forEach(e => { e.innerHTML = syText(); }); }
+const syText = () => !SY.on ? '' : SY.err ? `<span class="warn">⚠ ${esc(t('Синхронизация'))}: ${esc(SY.err)}</span>`
+  : `${esc(t('Синхронизация'))}: ${SY.busy ? esc(t('идёт…')) : SY.last ? esc(t('выполнена')) + ' ' + esc(SY.last.toTimeString().slice(0, 5)) : esc(t('ожидание'))}${pqUnpub().length ? ' · ' + esc(t('ждут отправки')) + ': ' + pqUnpub().length : ''}`;
+async function syncInit() {
+  const cfg = D('sync'); if (!cfg || !cfg.url || !S.key || !(window.crypto && crypto.subtle) || SY.on) return;
+  try { const k = await syKeys(S.key); Object.assign(SY, { url: cfg.url, token: k.token, key: k.key, on: true }); } catch (e) { SY.err = String(e); return; }
+  syncNow();
+  setInterval(() => { if (document.visibilityState === 'visible') syncNow(); }, (cfg.every || 90) * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
+  addEventListener('online', () => syncNow());
 }
 // правки устройства, которых нет в опубликованной самооценке (выгрузить JSON и прислать NCMC)
-const pqUnpub = () => { const p = pqPub(), d = pqDev();
+const pqUnpub = () => { const p = pqRemote(), d = pqDev();
   return Object.keys(d).filter(id => (!p[id] || stampOf(d[id]) >= stampOf(p[id])) && JSON.stringify(d[id]) !== JSON.stringify(p[id] || null) && !(d[id].cleared && !p[id])); };
 const ccState = () => LS.get(K.cc, {});
 const sasaqState = () => LS.get(K.sasaq, {});
@@ -368,8 +476,11 @@ const settings = () => { const u = U() || {}; const d = {};
 const team = () => { const o = LS.get(K.team, null); if (o) return o; const d = D('team'); return d ? d.members : []; };
 const member = id => team().find(m => m.id === id);
 const nameOf = id => (member(id) || {}).name || id || '';
-// ответственные по областям: опубликованное (pq_self.json → arearesp) + устройство; '' на устройстве снимает опубликованное
-const areaResp = () => { const o = { ...(((D('pq_self') || {}).arearesp) || {}), ...LS.get(K.arearesp, {}) }; Object.keys(o).forEach(k => { if (!o[k]) delete o[k]; }); return o; };
+// ответственные по областям: опубликованное (pq_self.json → arearesp), поверх общее (синхронизация, по области { v, ts }),
+// поверх устройство; '' снимает назначение
+const areaShared = () => { const o = { ...(((D('pq_self') || {}).arearesp) || {}) }, sh = syCache().area;
+  Object.keys(sh).forEach(a => { if (sh[a] && typeof sh[a].v === 'string') o[a] = sh[a].v; }); return o; };
+const areaResp = () => { const o = { ...areaShared(), ...LS.get(K.arearesp, {}) }; Object.keys(o).forEach(k => { if (!o[k]) delete o[k]; }); return o; };
 /* ответственный за ВП: назначенный лично, иначе — по области */
 const respOfPQ = i => { const o = pqOf(i.id); if (o.resp) return { id: o.resp, name: nameOf(o.resp) || o.resp, byArea: false }; const a = areaResp()[i.area]; return a ? { id: a, name: nameOf(a), byArea: true } : null; };
 function respSelect(name, value, allowFree) {
@@ -862,6 +973,7 @@ function assessBlock(i) {
 // общая самооценка: когда и кем опубликована, сколько правок этого устройства ещё не опубликовано
 function pubNote() {
   const P = D('pq_self'), u = pqUnpub().length, M = (P && P.meta) || {};
+  if (SY.on || D('sync')) return `<p class="small mt">${esc(t('Самооценка, ответственные по областям и журнал аудита — общие для всех устройств: правки уходят и приходят сами.'))} <span data-sync-status>${syText()}</span></p>`;
   const a = P ? `${esc(t('Общая самооценка'))}: ${esc(t('опубликована'))} ${esc(fmtDate(M.updated))}${M.by ? ' · ' + esc(M.by) : ''} · ${Object.keys(P.items || {}).length} ВП — ${esc(t('видна на всех устройствах'))}.`
     : esc(t('Общей самооценки пока нет: принятое видно только на этом устройстве.'));
   const b = u ? ` <span class="warn">${esc(t('На этом устройстве не опубликовано'))}: ${u} ВП — «${esc(t('Данные и резервная копия'))}» → «⬇ ${esc(t('Выгрузить JSON'))}» → ${esc(t('файл NCMC (секретный чат или лично)'))}.</span>` : '';
@@ -915,7 +1027,7 @@ function openPQ(i) {
       ${o.ev ? `<label class="mt">${esc(t('Ранее внесённый текст доказательств'))} <span class="dim small">(перенесите в список выше и очистите поле)</span><textarea name="ev">${esc(o.ev)}</textarea></label>` : ''}
       <label>${esc(t('Примечание'))}<textarea name="note">${esc(o.note || '')}</textarea></label>
       <label>English translation <span class="dim small">перевод примечания и доказательств — аудиторы читают EN</span><textarea name="en">${esc(o.en || '')}</textarea></label>
-      <label>${esc(t('Личная заметка'))} <span class="dim small">(Personal note — не попадает в экспорт)</span><textarea name="pnote">${esc(o.pnote || '')}</textarea></label>
+      <label>${esc(t('Личная заметка'))} <span class="dim small">(Personal note — только на этом устройстве)</span><textarea name="pnote">${esc(o.pnote || '')}</textarea></label>
       <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="pqClear">Очистить</button><span class="dim small grow">${o.at ? 'изменено ' + esc(o.at) : ''}</span></div>
     </form>${changeLog('pq', i.id)}`);
   const evBox = $('#evList');
@@ -1677,8 +1789,8 @@ function pTeam(m) {
     const ar = areaResp(); const st = pqState();
     c.appendChild(table(['Область', 'Название', 'ВП', 'Оценено', 'Ответственный'], pq.meta.areas, a => { const its = pq.items.filter(i => i.area === a.code); const n = its.filter(i => (st[i.id] || {}).st).length;
       return [`<a href="#pq?area=${a.code}"><span class="badge b-area">${a.code}</span></a>`, esc(a.name), its.length, `${n} (${pct(n, its.length)}%)`, `<select class="sel" data-area="${a.code}" style="height:30px"><option value="">— ${esc(t('Не назначен'))} —</option>${team().map(x => `<option value="${x.id}"${ar[a.code] === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`]; }));
-    c.onchange = e => { const x = e.target; if (!x.dataset.area) return; const all = LS.get(K.arearesp, {}), pub = ((D('pq_self') || {}).arearesp) || {};
-      if (x.value) all[x.dataset.area] = x.value; else if (pub[x.dataset.area]) all[x.dataset.area] = ''; else delete all[x.dataset.area]; LS.set(K.arearesp, all); toast('Ответственный по области ' + x.dataset.area + ' сохранён', 'ok'); render(); };
+    c.onchange = e => { const x = e.target, a = x.dataset.area; if (!a) return; const all = LS.get(K.arearesp, {}), at = LS.get(K.areats, {});
+      if (x.value || areaShared()[a]) all[a] = x.value; else delete all[a]; at[a] = new Date().toISOString(); LS.set(K.arearesp, all); LS.set(K.areats, at); syncSoon(); toast('Ответственный по области ' + x.dataset.area + ' сохранён', 'ok'); render(); };
     m.appendChild(c);
   }
   // этапы дорожной карты
@@ -1852,7 +1964,7 @@ function jSave(rec) {
   const all = jAll(), k = all.findIndex(x => x.id === rec.id);
   rec.upd = Date.now(); rec.who = rec.who || String(settings().ncmc || '').split(',')[0].trim();
   if (k >= 0) all[k] = rec; else all.unshift(rec);
-  LS.set(K.journal, all);
+  LS.set(K.journal, all); syncSoon();
 }
 function openJournal(x) {
   const isNew = !x; const now = new Date();
@@ -1881,11 +1993,12 @@ function openJournal(x) {
     jSave(rec); toast(t('Запись сохранена'), 'ok'); closeSheet(); render(); };
   const del = $('#jDel'); if (del) del.onclick = () => { if (!confirm(t('Удалить запись журнала? Удаление перенесётся и на другие устройства при объединении.'))) return; jSave({ ...x, del: true }); closeSheet(); render(); };
 }
-function jMerge(items) {
+function jMerge(items, fromSync) {
   const all = jAll(), byId = new Map(all.map(x => [x.id, x])); let add = 0, upd = 0;
   (items || []).forEach(x => { if (!x || !x.id) return; const cur = byId.get(x.id);
     if (!cur) { byId.set(x.id, x); add++; } else if ((x.upd || 0) > (cur.upd || 0)) { byId.set(x.id, x); upd++; } });
   LS.set(K.journal, [...byId.values()].sort((a, b) => (b.date + (b.time || '')).localeCompare(a.date + (a.time || '')) || (b.ts || 0) - (a.ts || 0)));
+  if (!fromSync && (add || upd)) syncSoon();
   return { add, upd };
 }
 /* ---------- План доказательств (data/evidence_plan.json ← tools/evidence_plan.mjs) ----------
@@ -1963,7 +2076,7 @@ function pEvPlan(m) {
 }
 function pJournal(m) {
   const u = U() || {}, a = u.audit || {};
-  head(m, 'Журнал аудита', `${esc(t('Вопросы, запросы документов и наблюдения группы ИКАО'))}${a.start ? ` · ${fmtDate(a.start)}–${fmtDate(a.end)}` : ''}. ${esc(t('Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».'))}`);
+  head(m, 'Журнал аудита', `${esc(t('Вопросы, запросы документов и наблюдения группы ИКАО'))}${a.start ? ` · ${fmtDate(a.start)}–${fmtDate(a.end)}` : ''}. ${esc(t(D('sync') ? 'Журнал общий: записи с телефонов группы сводятся сами.' : 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».'))}`);
   const live = jLive(), open = live.filter(x => x.st === 'open'), due = jDueToday();
   const tiles = el('div', 'tiles');
   tiles.appendChild(tile(open.length ? 'miss' : 'ok', open.length, 'открытых запросов', () => go('journal', { st: 'open' })));
@@ -1992,7 +2105,7 @@ function pJournal(m) {
   // обмен между устройствами и выгрузка
   const c = el('div', 'card');
   c.innerHTML = `<h2>${esc(t('Несколько устройств и выгрузка'))}</h2>
-    <p class="small">${esc(t('Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.'))}</p>
+    <p class="small">${D('sync') ? esc(t('Журнал общий для всех устройств: записи уходят и приходят сами. Выгрузка — для резервной копии и CSV.')) : esc(t('Каждый ведёт журнал на своём телефоне. Вечером один человек собирает файлы журналов и нажимает «Объединить журнал» для каждого файла: новые записи добавятся, изменённые обновятся, удалённые удалятся. Затем свой журнал можно раздать обратно.'))}</p>
     <div class="row"><button class="btn sm" type="button" id="jExp">${esc(t('Выгрузить журнал (JSON)'))}</button>
       <label class="btn sm ghost">${esc(t('Объединить журнал…'))}<input type="file" id="jImp" accept=".json,application/json" hidden></label>
       <button class="btn sm ghost" type="button" id="jCsv">${esc(t('Экспорт CSV'))}</button></div>
@@ -2087,11 +2200,12 @@ function pData(m) {
   const st = pqState(), cs = ccState(), ss = sasaqState(), ps = planState();
   const b = el('div', 'card', `<h2>Резервная копия</h2><div class="kv"><div>ВП с самооценкой</div><div>${Object.keys(st).length}</div><div>CC — ручные статусы</div><div>${Object.keys(cs).length}</div><div>SASAQ — отметки</div><div>${Object.keys(ss).length}</div><div>Дорожная карта</div><div>${Object.keys(ps).length}</div><div>Ответственные по областям</div><div>${Object.keys(areaResp()).length}</div><div>Аудит 2026 — чек-листы</div><div>${Object.keys(auditState().docs).length + Object.keys(auditState().log).length}</div></div>
     <div class="row mt"><button class="btn" id="bkExp">⬇ Выгрузить JSON</button><label class="btn ghost" style="cursor:pointer">⬆ Загрузить JSON<input type="file" id="bkImp" accept="application/json" hidden></label><button class="btn danger" id="bkClear">Очистить самооценку</button></div>
-    ${pubNote()}<p class="small dim mt">Чтобы самооценку этого устройства увидели все, выгрузите JSON и передайте NCMC (секретный чат или лично): сессия опубликует её в данных портала, и она появится на всех устройствах. «Загрузить JSON» заменяет самооценку этого устройства содержимым файла. Личные заметки не публикуются.</p>`);
+    ${pubNote()}${D('sync') ? `<div class="row mt"><button class="btn sm" type="button" id="syNow">⟳ ${esc(t('Синхронизировать сейчас'))}</button></div>` : ''}<p class="small dim mt">${D('sync') ? 'Синхронизация включена: выгружать и пересылать файлы не нужно. Резервная копия — на случай потери устройства; «Загрузить JSON» заменяет самооценку этого устройства содержимым файла.' : 'Чтобы самооценку этого устройства увидели все, выгрузите JSON и передайте NCMC (секретный чат или лично): сессия опубликует её в данных портала, и она появится на всех устройствах. «Загрузить JSON» заменяет самооценку этого устройства содержимым файла. Личные заметки не публикуются.'}</p>`);
   m.appendChild(b);
+  const syb = $('#syNow'); if (syb) syb.onclick = async () => { syb.disabled = true; await syncNow(); syb.disabled = false; toast(SY.err ? SY.err : t('Синхронизировано'), SY.err ? 'err' : 'ok'); };
   $('#bkExp').onclick = () => { const out = { app: 'avsec-portal', version: APP_VERSION, at: new Date().toISOString() }; STATE_KEYS.forEach(k => { out[k] = LS.get(k, null); }); download(JSON.stringify(out, null, 1), `AvSec_backup_${today()}.json`, 'application/json'); };
   $('#bkImp').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const j = JSON.parse(await f.text()); if (j.app !== 'avsec-portal') throw new Error('Это не резервная копия AvSec Portal'); if (!confirm('Заменить самооценку на этом устройстве данными из файла?')) return; STATE_KEYS.forEach(k => { if (j[k]) LS.set(k, j[k]); }); toast('Копия загружена', 'ok'); render(); } catch (ex) { toast(ex.message, 'err'); } };
-  $('#bkClear').onclick = () => { if (confirm('Удалить всю самооценку на этом устройстве? Данные портала (ВП, CC, реестр) не пострадают.')) { [K.pq, K.cc, K.sasaq, K.plan, K.arearesp, K.audit, K.capi, K.log].forEach(k => LS.del(k)); toast('Очищено'); render(); } };
+  $('#bkClear').onclick = () => { if (confirm('Удалить всю самооценку на этом устройстве? Данные портала (ВП, CC, реестр) не пострадают.')) { [K.pq, K.cc, K.sasaq, K.plan, K.arearesp, K.areats, K.audit, K.capi, K.log, K.pnote].forEach(k => LS.del(k)); toast('Очищено'); render(); } };
   m.appendChild(el('div', 'card', `<h2>Источник данных</h2><div class="kv"><div>Сборка данных</div><div>${esc(S.cfg.built || '—')}</div><div>Файлы</div><div class="small">${(S.cfg.files || []).map(esc).join(', ')}</div><div>Режим</div><div>${S.cfg.plain ? 'открытые data/*.json (локальная разработка)' : 'шифрованные data-enc/*.enc, ключ из кода доступа'}</div></div>`));
 }
 
