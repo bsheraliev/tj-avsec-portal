@@ -145,6 +145,7 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 td.empty{color:var(--dim);text-align:center;padding:28px}
 
 /* --- прогресс --- */
+.listsum{margin:0 0 10px}.listsum .prog{margin-top:6px;height:6px}
 .prog{height:9px;background:var(--na-bg);border-radius:6px;overflow:hidden;border:1px solid var(--line);display:flex}
 .prog span{display:block;height:100%}
 .prog .p-sat{background:var(--ok)} .prog .p-wip{background:var(--draft)} .prog .p-unsat{background:var(--miss)} .prog .p-na{background:var(--na)}

@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '57';
+const APP_VERSION = '58';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -247,8 +247,10 @@ function render() {
         fresh.remove();
       } else keepTb.remove();   // в новой отрисовке панели нет (другая вкладка)
     }
+    if (keepTb && keepTb.parentNode === m && matchMedia('(max-width:900px)').matches) S.scrollTo = keepInp;   // на телефоне поле поиска — к верху, результаты сразу под ним
     injectActiveFilters(m); markAbbr(m); } catch (e) { console.error(e); m.innerHTML = `<div class="card"><b>Ошибка отображения раздела.</b><div class="mono mt">${esc(e.message)}</div></div>`; }
-  window.scrollTo(0, y);
+  if (S.scrollTo) { const top = getComputedStyle(document.documentElement).getPropertyValue('--top'); window.scrollTo(0, S.scrollTo.getBoundingClientRect().top + window.scrollY - (parseInt(top) || 56) - 8); S.scrollTo = null; }
+  else window.scrollTo(0, y);
   if (sel) { const n = m.querySelector(sel); if (n) n.focus({ preventScroll: true }); }
 }
 function head(m, title, sub) { m.appendChild(el('h1', '', esc(t(title)))); if (sub) m.appendChild(el('p', 'sub', sub)); }
@@ -750,7 +752,7 @@ function pPQ(m) {
       && has(S.f.s, i.id, i.q, i.g.join(' '), i.doc, (respOfPQ(i) || {}).name, evText(st[i.id])));
     const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; list.forEach(i => { const o = (st[i.id] || {}).st; if (o) cnt[o]++; });
     const nn = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
-    m.appendChild(el('div', 'card', `<div class="row"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${nn} (${pct(nn, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
+    m.appendChild(el('div', 'listsum', `<div class="small"><b>${list.length}</b> <span class="dim">ВП · ${esc(t('Оценено'))} ${nn} (${pct(nn, list.length)}%) · ★ — применяется при оценке соблюдения Стандарта</span></div>${prog(cnt, list.length)}`));
     const selOn = !!S.pqSelMode;
     if (selOn) { const ids = new Set(list.map(i => i.id)); S.pqSel = new Set([...S.pqSel].filter(id => ids.has(id))); m.appendChild(pqBulkBar(list)); }
     const onSel = e => { const x = e.target.closest('[data-pqsel]'); if (!x) return; if (x.checked) S.pqSel.add(x.dataset.pqsel); else S.pqSel.delete(x.dataset.pqsel); pqBulkCount(list); };
