@@ -99,6 +99,7 @@ h3{font-size:14px;margin:14px 0 6px}
 .card.hit:hover{border-color:var(--accent)}
 .callout{border-left:4px solid var(--accent);background:var(--accent-soft)}
 .warn{color:var(--exp)}
+.callout.warn{border-left-color:var(--exp);color:inherit}.callout.warn b{color:var(--exp)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
 
 /* --- бейджи --- */
