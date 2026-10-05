@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '56';
+const APP_VERSION = '57';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -231,8 +231,23 @@ const focusSel = n => { const ds = Object.entries(n.dataset || {}); if (!ds.leng
 function render() {
   const m = $('#main');
   const y = window.scrollY; const ae = document.activeElement; const sel = ae && m.contains(ae) ? focusSel(ae) : '';
-  m.innerHTML = '';
-  try { PAGES[S.page](m); injectActiveFilters(m); markAbbr(m); } catch (e) { console.error(e); m.innerHTML = `<div class="card"><b>Ошибка отображения раздела.</b><div class="mono mt">${esc(e.message)}</div></div>`; }
+  // Набор в поле поиска панели фильтров перерисовывает раздел на каждое слово. Поле (и его панель) не пересоздаём:
+  // убранный из документа элемент теряет фокус, а на телефоне закрывается клавиатура. Панель остаётся прежней,
+  // её кнопки и списки берутся из свежей отрисовки (у них замыкания на новый отфильтрованный список).
+  const keepInp = ae && m.contains(ae) && ae.matches('input.inp[type=search]') ? ae : null;
+  const keepTb = keepInp && keepInp.parentNode.classList.contains('toolbar') && keepInp.parentNode.parentNode === m ? keepInp.parentNode : null;
+  if (keepTb) [...m.children].forEach(n => { if (n !== keepTb) n.remove(); }); else m.innerHTML = '';
+  try { PAGES[S.page](m);
+    if (keepTb && keepTb.parentNode === m) {
+      const fresh = [...m.children].find(n => n !== keepTb && n.classList.contains('toolbar') && n.querySelector('input.inp[type=search]'));
+      if (fresh) {
+        let n = keepTb.nextSibling; while (n && n !== fresh) { const nx = n.nextSibling; m.insertBefore(n, keepTb); n = nx; }   // заголовок и вкладки — перед панелью
+        const fi = fresh.querySelector('input.inp[type=search]'); [...keepTb.children].forEach(c => { if (c !== keepInp) c.remove(); });
+        let before = true; [...fresh.childNodes].forEach(c => { if (c === fi) { before = false; return; } if (before) keepTb.insertBefore(c, keepInp); else keepTb.appendChild(c); });
+        fresh.remove();
+      } else keepTb.remove();   // в новой отрисовке панели нет (другая вкладка)
+    }
+    injectActiveFilters(m); markAbbr(m); } catch (e) { console.error(e); m.innerHTML = `<div class="card"><b>Ошибка отображения раздела.</b><div class="mono mt">${esc(e.message)}</div></div>`; }
   window.scrollTo(0, y);
   if (sel) { const n = m.querySelector(sel); if (n) n.focus({ preventScroll: true }); }
 }
