@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '61';
+const APP_VERSION = '63';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Испытания': 'Security tests', 'План 2026': '2026 plan', 'Сценарии': 'Scenarios', 'Порядок': 'Procedure', 'Что проверяется': 'What is tested', 'Испытаний в плане': 'Tests in plan', 'Сценариев': 'Scenarios', 'Форма': 'Type', 'Все формы': 'All types', 'Все окна': 'All windows', 'Окна': 'Windows', 'Негласное': 'Covert', 'Гласное': 'Overt', 'Цели испытаний': 'Purposes of tests', 'Меры безопасности при испытании': 'Safeguards during a test', 'Отчёт об испытании': 'Test report', 'Порядок проведения испытания': 'Test procedure', 'План испытаний': 'Test plan', 'Уведомить до': 'Notify by',
   'Обзор': 'Overview', 'USAP-CMA': 'USAP-CMA', 'Протокольные вопросы': 'Protocol Questions', 'Контрольный перечень (CC)': 'Compliance Checklist',
   'SASAQ': 'SASAQ', 'Дорожная карта': 'Roadmap', 'Документы АБ': 'AVSEC documents', 'Реестр документов': 'Document register',
   'Соответствие ИКАО': 'ICAO compliance matrix', 'Инструктивные материалы': 'Guidance material', 'Материалы (Drive)': 'Files (Drive)',
@@ -90,7 +91,8 @@ const ROUTES = [
     { id: 'cap', ic: '⚑', t: 'Выводы аудита 2019 (CAP)', cnt: () => D('cap2019') ? D('cap2019').findings.length : '' } ] },
   { g: 'Надзор АБ', items: [
     { id: 'subjects', ic: '🏢', t: 'Субъекты надзора', short: 'Субъекты', cnt: () => D('subjects') ? D('subjects').orgs.length : '' },
-    { id: 'qc', ic: '🔍', t: 'Контроль качества', short: 'КК', cnt: () => D('qc') ? (D('qc').findings.length || D('qc').activities.length || '') : '' } ] },
+    { id: 'qc', ic: '🔍', t: 'Контроль качества', short: 'КК', cnt: () => D('qc') ? (D('qc').findings.length || D('qc').activities.length || '') : '' } ,
+    { id: 'tests', ic: '🧪', t: 'Испытания', short: 'Исп.', cnt: () => D('tests') ? D('tests').scenarios.length : '' } ] },
   { g: 'Документы АБ', items: [
     { id: 'docs', ic: '📚', t: 'Реестр документов', cnt: () => D('registry') ? D('registry').docs.length : '' },
     { id: 'matrix', ic: '⊞', t: 'Соответствие ИКАО', cnt: () => D('matrix') ? D('matrix').sections.reduce((a, s) => a + s.items.length, 0) : '' },
@@ -535,7 +537,7 @@ const STAGES = [
   { id: 'mou', t: 'МоВ с ИКАО, уведомление об аудите и согласование сроков', hint: () => { const u = U(); return u ? `МоВ подписан ${fmtDate(u.mou.signed)}. Уведомление ИКАО от ${fmtDate(u.notification.date)} (${u.notification.ref}): предложено ${u.notification.proposed}. Согласовано: ${fmtDate(u.audit.start)} – ${fmtDate(u.audit.end)}${u.audit.agreedBy ? ` (${esc(u.audit.agreedBy)})` : ''}.` : 'Дата аудита задаётся в «Данные → Настройки».'; }, auto: () => U() ? 'done' : (settings().auditDate ? 'wip' : '') },
   { id: 'sasaq', t: 'Заполнение и подача SASAQ (EN) через защищённую ссылку ИКАО', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const d = D('sasaq'); if (!d) return ''; const f = d.items.filter(i => i.filled).length; return `Черновик SASAQ 1 (19.06.2026): заполнено ${f} из ${d.items.length} вопросов. Подаётся вместе с CC и обновлённым CAP — не позднее чем за 60 дней до аудита.`; }, auto: () => (auditState().docs.sasaq || {}).st === 'sent' ? 'done' : 'wip' },
   { id: 'cc', t: 'Контрольные перечни соответствия (CC) по Прил. 17 и Прил. 9 (EN): заполнение, проверка, подача', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const u = U(); const d = D('cc'); const base = d ? `Редакция в3 (01.07.2026) в портале: ${d.items.filter(i => i.kind === 'std' || i.kind === 'rp').length} SARPs. ` : ''; const sent = (auditState().docs.cc || {}).st === 'sent'; return base + (sent ? 'Отправлено в ИКАО.' : (u && u.ccCheck ? `Проверка редакции 12.09.2026 (${fmtDate(u.ccCheck.date)}): ${u.ccCheck.verdict} ${u.ccCheck.summary}` : '')); }, auto: () => (auditState().docs.cc || {}).st === 'sent' ? 'done' : 'wip' },
-  { id: 'cap', t: 'Обновлённый план корректирующих действий (CAP) по итогам аудита USAP-CMA 2019', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const c = D('cap2019'); const u = U(); return c ? `${c.meta.update && c.meta.update.incorrect ? '⚠ В ИКАО 18.09 ушла редакция ПКД с замечаниями (12 открытых пунктов без срока, НПАБГА «pending approval»). ' : ''}${c.meta.update ? `Редакция EN (${c.meta.update.approved}): выполнено ${capStats(c).done} из ${capStats(c).total}, незакрыто ${capStats(c).open}. ` : ''}Основа — ПКД 2020: ${c.meta.findings} выводов, ${c.meta.items} рекомендаций (раздел «Выводы аудита 2019»). ${u ? `Результаты ИКАО 2019: EI ${u.previous.results2019.ei} %, соответствие Прил. 17 — ${u.previous.results2019.compliance} %; ${u.previous.results.source}: EI ${u.previous.results.ei} %, соответствие — ${u.previous.results.compliance} %.` : ''}` : ''; }, auto: () => (auditState().docs.cap || {}).st === 'sent' ? 'done' : (D('cap2019') && D('cap2019').meta.update ? 'wip' : '') },
+  { id: 'cap', t: 'Обновлённый план корректирующих действий (CAP) по итогам аудита USAP-CMA 2019', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const c = D('cap2019'); const u = U(); return c ? `${c.meta.update && c.meta.update.incorrect ? `⚠ В ИКАО 18.09 ушла редакция ПКД с замечаниями (${c.findings.reduce((n, f) => n + f.items.filter(i => i.status && i.status.flag === 'no-deadline').length, 0)} открытых пунктов без срока, НПАБГА «pending approval»). ` : ''}${c.meta.update ? `Редакция EN (${c.meta.update.approved}): выполнено ${capStats(c).done} из ${capStats(c).total}, незакрыто ${capStats(c).open}. ` : ''}Основа — ПКД 2020: ${c.meta.findings} выводов, ${c.meta.items} рекомендаций (раздел «Выводы аудита 2019»). ${u ? `Результаты ИКАО 2019: EI ${u.previous.results2019.ei} %, соответствие Прил. 17 — ${u.previous.results2019.compliance} %; ${u.previous.results.source}: EI ${u.previous.results.ei} %, соответствие — ${u.previous.results.compliance} %.` : ''}` : ''; }, auto: () => (auditState().docs.cap || {}).st === 'sent' ? 'done' : (D('cap2019') && D('cap2019').meta.update ? 'wip' : '') },
   { id: 'docs', t: 'Пакет национальной, аэропортовой и эксплуатантской документации (запрос ИКАО от 15.06.2026, SASAQ GEN-05) и переводы на английский', due: () => (U() || { audit: {} }).audit.docsDeadline, hint: () => { const u = U(); if (!u) return ''; const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => docSent(r, a.docs)).length; return `Отправлено ${sent} из ${n} позиций (чек-лист — раздел «Аудит USAP-CMA 2026»). Загрузка только через защищённую ссылку ИКАО, не по e-mail.`; }, auto: () => { const u = U(); if (!u) return 'wip'; const a = auditState(); const sent = u.requested.filter(r => docSent(r, a.docs)).length; return sent === u.requested.length ? 'done' : 'wip'; } },
   { id: 'pq', t: 'Самооценка по протокольным вопросам (ВП) — 9 областей, 8 КЭ', hint: () => { const d = D('pq'); if (!d) return ''; const st = pqState(); const n = d.items.filter(i => (st[i.id] || {}).st).length; return `Оценено ${n} из ${d.items.length} ВП (${pct(n, d.items.length)}%). Все ВП будут рассмотрены — аудит полномасштабный.`; }, auto: () => { const d = D('pq'); if (!d) return ''; const st = pqState(); const n = d.items.filter(i => (st[i.id] || {}).st).length; return n === 0 ? '' : n === d.items.length ? 'done' : 'wip'; } },
   { id: 'evidence', t: 'Доказательная база по ВП; адаптированные наборы ВП для DYU, эксплуатантов и госорганов; подготовка персонала к интервью', hint: 'Доказательства фиксируются в карточке каждого ВП (поле «Доказательства»). Группа ИКАО запрашивает письменные подтверждения по каждому ответу — у каждой проверяемой организации документы должны быть под рукой.', auto: () => { const st = pqState(); return Object.values(st).some(o => o.ev) ? 'wip' : ''; } },
@@ -548,10 +550,10 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, evplan: pEvPlan, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, evplan: pEvPlan, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
+const FILTER_LABELS = { tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
 const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1, pre: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
@@ -561,6 +563,9 @@ function filterVal(k, v) {
   if (k === 'resp') return v === 'none' ? 'Не назначен' : nameOf(v);
   if (k === 'l') return String(v).toUpperCase();
   if (k === 'type') return S.page === 'qc' ? qcType(v).name_ru : subjType(v).name_ru;
+  if (k === 'tk') return TKIND[v] || v;
+  if (k === 'ta') return `${v}. ${(tsArea(+v) || {}).name || ''}`.slice(0, 50);
+  if (k === 'tw') return `${v} · ${(tsWin(v) || {}).name || ''}`;
   if (k === 'sev') return qcSev(v).level + ' — ' + qcSev(v).name_ru;
   if (k === 'kind') return ORGK[v] || v;
   if (k === 'pst') return PSTL[v] || v;
@@ -1836,6 +1841,114 @@ function pQC(m) {
   }
 }
 
+// ── Испытания системы АБ (tests.json): порядок, сценарии, план на год ──
+// Сценарии — на уровне цели и объекта; полный сценарий (ДСП) в портал не вносится (tests.json → meta.classification)
+const TESTTABS = [{ id: 'sum', t: 'Обзор' }, { id: 'plan', t: 'План 2026' }, { id: 'scen', t: 'Сценарии' }, { id: 'order', t: 'Порядок' }];
+const TS = () => D('tests');
+const TKIND = { overt: 'Гласное', covert: 'Негласное', both: 'Обе формы' };
+const TLEVEL = { state: 'Государственное', gknb: 'ГКНБ (п. 56)', internal: 'Внутреннее' };
+const TPST = { proposed: 'Предложено', agreed: 'Согласовано с ГКНБ', notified: 'Субъект уведомлён', done: 'Проведено', cancelled: 'Отменено' };
+const TPSB = { proposed: 'draft', agreed: 'wip', notified: 'wip', done: 'ok', cancelled: 'na' };
+const TWINB = { plan: 'ok', blackout: 'unsat', admin: 'info' };
+const TWINL = { plan: 'окно испытаний', blackout: 'пауза', admin: 'решения и сроки' };
+const tsScen = id => (TS() ? TS().scenarios.find(x => x.id === id) : null);
+const tsArea = n => (TS() ? TS().areas.find(x => x.n === n) : null);
+const tsWin = c => (TS() ? TS().windows.find(x => x.code === c) : null);
+const tsPeriod = x => x.start === x.end ? fmtDate(x.start) : `${fmtDate(x.start)} – ${fmtDate(x.end)}`;
+const tsSiteChips = (orgs, sites) => (sites || []).length ? sites.map(s => (orgs || []).length === 1 ? idChip(`S:${orgs[0]}/${s}`) : esc(s)).join(' ') : '<span class="dim">—</span>';
+function tsPlanOf(sc) { const d = TS(); return d.plan.items.filter(x => x.scenario === sc); }
+function openTestScenario(s) {
+  const d = TS(); const its = tsPlanOf(s.id);
+  const ar = (s.areas || []).map(n => { const a = tsArea(n); return a ? `<li>п. 26 · ${n}. ${esc(a.name)}</li>` : ''; }).join('');
+  openSheet(`<div class="sheet-head"><div class="small dim">${idChip(s.id)} ${badge(s.kind === 'covert' ? 'unsat' : 'info', TKIND[s.kind])} ${badge('area', TLEVEL[s.level] || s.level)}</div><h2>${esc(s.title)}</h2></div>
+    ${kv([['Цель', esc(s.goal)], ['Как оценивается', esc(s.criteria)], ['Субъекты', s.orgs.map(orgChip).join(' ')], ['Объекты', tsSiteChips(s.orgs, s.sites)],
+      ['ВП областей', s.pq.map(a => `<a href="#pq?area=${esc(a)}"><span class="badge b-area">${esc(a)}</span></a>`).join(' ')],
+      ['Способы по Правилам КК п. 53', (s.methods || []).length ? `пп. ${s.methods.join(', ')} (перечень — в Правилах; конкретный способ выбирает руководитель испытания)` : ''], ['Примечание', esc(s.note || '')]])}
+    ${ar ? `<h3 class="mt">${esc(t('Что проверяется'))}</h3><ul class="list small">${ar}</ul>` : ''}
+    <h3 class="mt">${esc(t('Цели испытания'))} <span class="dim small">п. 27</span></h3><ul class="list small">${(s.purposes || []).map(i => `<li>${esc(d.purposes[i - 1] || '')}</li>`).join('')}</ul>
+    <h3 class="mt">${esc(t('В плане 2026'))} <span class="dim small">${its.length}</span></h3>
+    ${its.length ? table(['№', 'Окно', 'Субъект', 'Форма', 'Статус'], its, x => [idChip(x.id), esc(x.window) + ' · ' + tsPeriod(x), orgChip(x.org), esc(TKIND[x.kind]), badge(TPSB[x.status], TPST[x.status])]).outerHTML : `<p class="small dim">${esc(t('Нет в плане 2026'))}</p>`}
+    <div class="callout small mt">${esc(d.meta.classification)}</div>`);
+}
+function openTestPlanItem(x) {
+  const d = TS(); const s = tsScen(x.scenario); const w = tsWin(x.window);
+  openSheet(`<div class="sheet-head"><div class="small dim">${idChip(x.id)} ${badge(TPSB[x.status], TPST[x.status])} ${badge(x.type === 'admin' ? 'info' : x.kind === 'covert' ? 'unsat' : 'ok', x.type === 'admin' ? 'Срок / решение' : TKIND[x.kind])}</div><h2>${s ? esc(s.title) : esc(x.note)}</h2></div>
+    ${kv([['Окно', w ? `${esc(w.code)} · ${esc(w.name)}` : esc(x.window)], ['Сроки', tsPeriod(x) + (x.kind === 'covert' && x.type === 'test' ? ` <span class="small dim">${esc(t('окно, не дата испытания'))}</span>` : '')],
+      ['Субъект', orgChip(x.org)], ['Объект', x.site ? idChip(`S:${x.org}/${x.site}`) : ''], ['Сценарий', s ? `${idChip(s.id)} ${esc(s.title)}` : ''],
+      ['Форма', esc(TKIND[x.kind] || '')], ['Уровень', esc(TLEVEL[x.level] || '')], ['Приоритет', esc(x.prio) + ' <span class="small dim">' + esc(t('ориентировочный, до присвоения категорий риска')) + '</span>'],
+      ['Уведомить до', x.notice_by ? `<b>${fmtDate(x.notice_by)}</b> <span class="small dim">${esc(t('10 рабочих дней до начала, п. 32; праздничные дни учесть'))}</span>` : ''],
+      ['Руководитель', esc(x.lead)], ['Примечание', esc(x.note)]])}
+    ${s ? `<p class="mt"><button class="btn sm ghost" data-go="tests?t=scen">${esc(t('Все сценарии'))} →</button></p>` : ''}`);
+}
+function pTests(m) {
+  const d = TS(); if (!d) return m.appendChild(el('div', 'empty', 'Данные об испытаниях не загружены'));
+  head(m, 'Испытания', `${esc(d.meta.title)} · ${esc(t('обновлено'))} ${fmtDate(d.meta.updated)}`);
+  const tab = TESTTABS.some(x => x.id === S.f.t) ? S.f.t : 'sum';
+  const items = d.plan.items, tests = items.filter(x => x.type === 'test');
+  m.appendChild(segbar(TESTTABS.map(x => ({ ...x, n: x.id === 'plan' ? items.length : x.id === 'scen' ? d.scenarios.length : null })), tab, id => go('tests', { ...S.f, t: id === 'sum' ? '' : id }, S.q)));
+  if (tab === 'sum') {
+    const nextW = d.windows.filter(w => w.kind === 'plan' && daysTo(w.end) >= 0).sort((a, b) => a.start.localeCompare(b.start))[0];
+    const decide = d.plan.items.find(x => x.id === 'TP-2026-13'); const left = decide ? daysTo(decide.end) : null;
+    const tiles = el('div', 'tiles');
+    tiles.appendChild(tile('info', d.scenarios.length, 'Сценариев', () => go('tests', { t: 'scen' })));
+    tiles.appendChild(tile('info', tests.length, 'Испытаний в плане', () => go('tests', { t: 'plan' })));
+    if (nextW) tiles.appendChild(tile('info', daysTo(nextW.start) > 0 ? daysTo(nextW.start) : 0, `Дней до окна ${nextW.code}`, () => go('tests', { t: 'plan', tw: nextW.code })));
+    if (left != null) tiles.appendChild(tile(left >= 0 ? 'exp' : 'draft', left >= 0 ? left : '—', 'Дней до решения по окну A', () => go('tests', { t: 'plan', tw: 'O' })));
+    m.appendChild(tiles);
+    if (left != null && left >= 0) m.appendChild(el('div', 'callout warn mb', `<b>${esc(t('Решение по окну A — до'))} ${fmtDate(decide.end)}:</b> ${esc(d.meta.issues[0])}`));
+    const c0 = el('div', 'card'); c0.innerHTML = `<h2>${esc(t('Что проверяется'))} <span class="dim small">Правила КК п. 26</span></h2>`;
+    c0.appendChild(table(['№', 'Область проверки', 'ВП', 'Сценарии'], d.areas, a => [a.n, esc(a.name), `<a href="#pq?area=${esc(a.pq)}"><span class="badge b-area">${esc(a.pq)}</span></a>`, d.scenarios.filter(s => (s.areas || []).includes(a.n)).map(s => idChip(s.id)).join(' ') || '<span class="dim">—</span>'], null, { w: ['6%', '58%', '10%', '26%'] }));
+    m.appendChild(c0);
+    const g = el('div', 'grid2');
+    const c1 = el('div', 'card'); c1.innerHTML = `<h2>${esc(t('Формы'))}</h2>` + kv(d.kinds.map(k => [k.name, esc(k.rule)])) + `<h3 class="mt">${esc(t('Уровни'))}</h3>` + kv(d.levels.map(k => [k.name, esc(k.rule)]));
+    const c2 = el('div', 'card'); c2.innerHTML = `<h2>${esc(t('Цели испытаний'))} <span class="dim small">п. 27</span></h2><ul class="list small">${d.purposes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    g.appendChild(c1); g.appendChild(c2); m.appendChild(g);
+    const w = el('div', 'card'); w.innerHTML = `<h2>${esc(t('Требует решения'))} <span class="dim small">${d.meta.issues.length}</span></h2><ul class="list">${d.meta.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    m.appendChild(w);
+    m.appendChild(el('div', 'callout small', esc(d.meta.classification)));
+    m.appendChild(el('p', 'small dim', esc(d.meta.note) + ' ' + esc(t('Основание')) + ': ' + esc(d.meta.basis.join(' · '))));
+  }
+  if (tab === 'plan') {
+    const p = d.plan;
+    const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('План испытаний'))} ${p.year} <span class="dim small">${esc(p.version)} · ${badge(p.status === 'approved' ? 'ok' : 'draft', p.status === 'approved' ? 'утверждён' : 'примерный, не утверждён')}</span></h2><p class="small dim">${esc(p.basis)}</p><p class="small">${esc(p.note)}</p>`;
+    m.appendChild(c);
+    const wl = el('div', 'card'); wl.innerHTML = `<h2>${esc(t('Окна'))}</h2>`;
+    wl.appendChild(table(['Окно', 'Сроки', 'Тип', 'Зачем'], d.windows, w => [`<b>${esc(w.code)}</b> ${esc(w.name)}`, tsPeriod(w), badge(TWINB[w.kind], TWINL[w.kind]), `<span class="small">${esc(w.why)}</span>`], w => go('tests', { ...S.f, t: 'plan', tw: S.f.tw === w.code ? '' : w.code }, S.q), { w: ['26%', '16%', '15%', '43%'] }));
+    m.appendChild(wl);
+    const tb = el('div', 'toolbar');
+    tb.appendChild(selector('Все окна', 'tw', d.windows.map(w => w.code), c => `${c} · ${tsWin(c).name}`));
+    tb.appendChild(selector('Все формы', 'tk', ['overt', 'covert'], k => TKIND[k]));
+    tb.appendChild(selector('Все субъекты', 'org', uniq(items.map(x => x.org)), c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; }));
+    m.appendChild(tb);
+    const rows = items.filter(x => (!S.f.tw || x.window === S.f.tw) && (!S.f.tk || x.kind === S.f.tk) && (!S.f.org || x.org === S.f.org));
+    m.appendChild(table(['№', 'Окно · сроки', 'Субъект · объект', 'Сценарий', 'Форма', 'Приор.', 'Уведомить до', 'Статус'], rows, x => {
+      const s = tsScen(x.scenario);
+      return [idChip(x.id), `<b>${esc(x.window)}</b> · ${tsPeriod(x)}`, orgChip(x.org) + (x.site ? ' ' + idChip(`S:${x.org}/${x.site}`) : ''),
+        s ? `${idChip(s.id)} <span class="small">${esc(s.title)}</span>` : `<span class="small">${esc(x.note)}</span>`,
+        x.type === 'admin' ? badge('info', 'срок') : badge(x.kind === 'covert' ? 'unsat' : 'ok', TKIND[x.kind]), esc(x.prio), x.notice_by ? fmtDate(x.notice_by) : '—', badge(TPSB[x.status], TPST[x.status])];
+    }, openTestPlanItem, { w: ['9%', '13%', '14%', '24%', '11%', '5%', '10%', '14%'] }));
+    m.appendChild(el('p', 'small dim', esc(t('Негласные испытания даны окном: точную дату знают руководитель испытания и ГКНБ. «Уведомить до» — для гласных: 10 рабочих дней до начала, п. 32.'))));
+  }
+  if (tab === 'scen') {
+    const tb = el('div', 'toolbar');
+    tb.appendChild(selector('Все области', 'ta', d.areas.map(a => String(a.n)), n => `${n}. ${tsArea(+n).name.slice(0, 48)}`));
+    tb.appendChild(selector('Все формы', 'tk', ['overt', 'covert', 'both'], k => TKIND[k]));
+    tb.appendChild(inputFilter('Поиск по сценариям'));
+    m.appendChild(tb);
+    const rows = d.scenarios.filter(s => (!S.f.ta || (s.areas || []).includes(+S.f.ta)) && (!S.f.tk || s.kind === S.f.tk) && has(S.f.s, s.id, s.title, s.goal, s.orgs.join(' ')));
+    m.appendChild(table(['Код', 'Сценарий', 'Что оценивает', 'Форма', 'Субъекты', 'ВП', 'В плане'], rows, s => [idChip(s.id), `<b>${esc(s.title)}</b>`, `<span class="small">${esc(s.goal)}</span>`, badge(s.kind === 'covert' ? 'unsat' : 'info', TKIND[s.kind]), s.orgs.map(orgChip).join(' '), s.pq.map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' '), tsPlanOf(s.id).length || '—'], openTestScenario, { w: ['7%', '20%', '30%', '12%', '15%', '9%', '7%'] }));
+    m.appendChild(el('div', 'callout small', esc(d.meta.classification)));
+  }
+  if (tab === 'order') {
+    const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('Порядок проведения испытания'))} <span class="dim small">Правила КК</span></h2>`;
+    c.appendChild(table(['№', 'Шаг', 'Срок', 'Основание'], d.workflow, x => [x.n, esc(x.step), `<span class="small">${esc(x.due)}</span>`, `<span class="small dim">${esc(x.basis)}</span>`], null, { w: ['5%', '60%', '21%', '14%'] }));
+    m.appendChild(c);
+    const g = el('div', 'grid2');
+    const c1 = el('div', 'card'); c1.innerHTML = `<h2>${esc(t('Меры безопасности при испытании'))}</h2><ul class="list small">${d.safeguards.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    const c2 = el('div', 'card'); c2.innerHTML = `<h2>${esc(t('Отчёт об испытании'))} <span class="dim small">Прил. 3</span></h2><ul class="list small">${d.reportFields.map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="small dim">${esc(t('Находки заносятся в раздел «Контроль качества»; результаты негласных испытаний — только факт и итог.'))}</p>`;
+    g.appendChild(c1); g.appendChild(c2); m.appendChild(g);
+  }
+}
 function pTeam(m) {
   const d = D('team') || { meta: {}, members: [] };
   head(m, 'Ответственные', `${esc(d.meta.title || '')} · ${esc(d.meta.sub || '')} · источник: ${esc(d.meta.source || '')}`);
@@ -2298,6 +2411,7 @@ function pFind(m) {
   if (cap) group('Выводы аудита 2019 (CAP)', cap.findings.filter(f => f.items.some(i => has(q, i.sarp, i.pq, i.rec, i.action, i.status && i.status.en))), f => `${badge(CAPB[f.priority], CAPP[f.priority] || f.priority)} <span class="badge b-area">${f.area}</span> Вывод № ${f.n}: ${esc(f.items.map(i => i.rec).join(' · ').slice(0, 220))}`, f => go('cap', { area: f.area }, q));
   const sj = D('subjects'); if (sj) group('Субъекты надзора', sj.orgs.filter(o => has(q, o.code, o.name, o.name_en, o.short_name, o.tbd, (o.programmes || []).map(p => p.programme_type).join(' '))), o => `<span class="code">${esc(o.code)}</span> <b>${esc(orgName(o))}</b> <span class="dim small">${esc(subjType(o.entity_type).name_ru)}</span>${o.tbd ? ` <span class="warn small">${esc(o.tbd)}</span>` : ''}`, openOrg);
   const qd = D('qc'); if (qd) { group('Контроль качества — мероприятия', qd.activities.filter(a => has(q, a.ref_no, a.org, a.summary)), a => `<span class="code">${esc(a.ref_no)}</span> ${esc(qcType(a.activity_type).name_ru)} · ${esc(a.org)}`, openActivity); group('Контроль качества — находки', qd.findings.filter(f => has(q, f.ref_no, f.description, f.requirement, f.org)), f => `<span class="code">${esc(f.ref_no)}</span> ${esc((f.description || '').slice(0, 160))} ${idChip(f.requirement)}`, openFinding); }
+  const tsd = D('tests'); if (tsd) group('Испытания — сценарии', tsd.scenarios.filter(x => has(q, x.id, x.title, x.goal, x.orgs.join(' '))), x => `<span class="code">${esc(x.id)}</span> ${esc(x.title)}`, openTestScenario);
   if (reg) group('Реестр документов', reg.docs.filter(x => has(q, x.ru, x.tj, x.en, x.approved, x.icao.join(' '))), x => `${badge(x.bucket)} <b>${esc(x.ru)}</b><div class="small dim">${esc(x.en)}</div>`, openDoc);
   if (mx) group('Матрица ИКАО', mx.sections.flatMap(s => s.items).filter(i => has(q, i.title, i.icao, i.status, i.analog)), i => `${badge(i.bucket)} ${esc(i.title)} <span class="dim small">${esc(i.icao)}</span>`, () => go('matrix', {}, ''));
   if (gm) group('Инструктивные материалы', gm.items.filter(i => has(q, i.code, i.title, i.ncasp)), i => `<span class="code">${esc(i.code)}</span> ${esc(i.title)}`, i => window.open(i.folder, '_blank'));

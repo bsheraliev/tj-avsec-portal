@@ -28,9 +28,10 @@
   "subjects.json",
   "sync.json",
   "team.json",
+  "tests.json",
   "usap.json"
  ],
- "built": "2026-10-05",
+ "built": "2026-10-12",
  "site": "https://bsheraliev.github.io/tj-avsec-portal/",
  "tg": "https://t.me/TJ_AVSEC_bot"
 }
