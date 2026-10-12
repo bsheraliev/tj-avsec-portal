@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '65';
+const APP_VERSION = '66';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Бланк сценария': 'Scenario form', 'Посмотреть бланк': 'View form', 'заполнять и хранить офлайн': 'fill in and keep offline',
   'Детальный сценарий': 'Detailed scenario', 'Детальный сценарий и роли': 'Detailed scenario and roles', 'Хронология дня испытания': 'Test-day timeline', 'Роли': 'Roles', 'Заполняет руководитель испытания': 'To be filled in by the test leader', 'Скачать бланк сценария (Word)': 'Download scenario form (Word)', 'Бланк (Word)': 'Form (Word)', 'Шаг': 'Step',
   'только': 'only',
   'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
@@ -1936,30 +1937,81 @@ function tsDetail(s) {
     ${T(['Время', 'Шаг', 'Фиксируем / основание'], [...L.before.map(x => [esc(x.at), esc(x.step), `<span class="small dim">${esc(x.doc)}</span>`]), ...L.mid.map(x => [`<b>Т0 +${esc(x.at)}</b>`, esc(x.step), `<span class="small">${esc(t('Фиксируем'))}: ${esc(x.rec)}</span>`]), ...L.after.map(x => [esc(x.at), esc(x.step), `<span class="small dim">${esc(x.doc)}</span>`])])}
     <h4 class="mt">${esc(t('Роли'))}</h4>${T(['Роль', 'Кто', 'Задача'], d.roles.map(r => [`<b>${esc(r.role)}</b>`, esc(r.who), `<span class="small">${esc(r.task)} <span class="dim">· ${esc(r.doc)}</span></span>`]))}
     <h4 class="mt">${esc(t('Заполняет руководитель испытания'))}</h4><ul class="list small">${d.blank_fields.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-    <p class="mt"><button class="btn sm" data-tsblank="${esc(s.id)}">${esc(t('Скачать бланк сценария (Word)'))}</button> <span class="small dim">${esc(t('заполнять и хранить офлайн, в портал и мессенджеры не загружать'))}</span></p>`;
+    <p class="mt"><button class="btn sm" data-tsblank="${esc(s.id)}">${esc(t('Скачать бланк сценария (Word)'))}</button> <button class="btn sm ghost" data-tsview="${esc(s.id)}">${esc(t('Посмотреть бланк'))}</button> <span class="small dim">${esc(t('заполнять и хранить офлайн, в портал и мессенджеры не загружать'))}</span></p>`;
 }
-function tsBlankHtml(s) {
-  const d = TS(), L = tsDayLines(s), sev = (QC() || { severity: [] }).severity; const e = esc;
-  const ln = n => '_'.repeat(n);
-  const tb = (head, rows) => `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:10pt"><tr>${head.map(h => `<th style="background:#e6eef6;text-align:left">${e(h)}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
-  const blankRows = (n, k) => Array.from({ length: n }, () => Array(k).fill('&nbsp;'));
+// бланк сценария: общий набор блоков → .docx (минимальный OOXML в zip без сжатия, без библиотек) и HTML для просмотра
+function tsBlankBlocks(s) {
+  const d = TS(), L = tsDayLines(s), sev = (QC() || { severity: [] }).severity; const ln = n => '_'.repeat(n);
   const orgs = s.orgs.map(c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; }).join(', ');
-  const forms = `${s.kind === 'overt' ? '☒' : '☐'} гласное &nbsp; ${s.kind === 'covert' ? '☒' : '☐'} негласное${s.kind === 'both' ? ' (выбрать)' : ''}`;
-  const rows6 = [...L.before.map(x => [e(x.at), e(x.step), e(x.doc), '&nbsp;']), ...L.mid.map(x => [`Т0 +${e(x.at)}`, e(x.step) + `<br><i>Фиксируем: ${e(x.rec)}</i>`, '&nbsp;', '&nbsp;']), ...L.after.map(x => [e(x.at), e(x.step), e(x.doc), '&nbsp;'])];
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Сценарий испытания ${e(s.id)}</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt}h1{font-size:15pt;text-align:center;margin:8pt 0}h2{font-size:12pt;margin:14pt 0 4pt}.gr{text-align:right;font-weight:bold;color:#a32020}</style></head><body>
-<p class="gr">ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ</p><p style="text-align:right;font-size:9pt">Заполняет и хранит руководитель испытания (Правила КК п. 51, 59, 67). Не загружать в портал, мессенджеры и общие папки.</p>
-<h1>СЦЕНАРИЙ ИСПЫТАНИЯ СИСТЕМЫ АВИАЦИОННОЙ БЕЗОПАСНОСТИ № ${ln(6)}</h1><p style="text-align:center">Шифр шаблона ${e(s.id)} · ${e(s.title)}</p>
-<h2>1. Цель испытания</h2><p>${e(s.goal)}</p><p style="font-size:10pt">${(s.purposes || []).map(i => '☒ ' + e(d.purposes[i - 1] || '')).join('<br>')}</p>
-<h2>2. Субъект, объект, форма, дата</h2>${tb(['Субъект', 'Объект', 'Форма', 'Дата и время начала'], [[e(orgs), (s.sites || []).map(e).join(', ') || ln(12), forms, ln(18)]])}
-<h2>3. Описание сценария</h2><p>Способ по п. 53 Правил КК: ${(s.methods || []).length ? 'пп. ' + s.methods.join(', ') + ' — выбрать' : 'не применяется'} ${ln(30)}</p><p>${ln(110)}</p><p>${ln(110)}</p>
-<h2>4. Образцы</h2><p style="font-size:10pt">Только разрешённые законом, безопасные, не мешающие работе, с информационной биркой и контактом для уведомления (п. 55). Выдача и возврат — по описи; перечень — в запросе органу нацбезопасности (п. 54).</p>${tb(['№', 'Образец', 'Кол-во', 'Бирка', 'Выдан (подпись, время)', 'Возвращён (подпись, время)'], blankRows(4, 6))}
-<h2>5. Участники и роли</h2>${tb(['Роль', 'Ф.И.О.', 'Задача', 'Документ о статусе №'], d.roles.map(r => [`<b>${e(r.role)}</b> (${e(r.who)})`, '&nbsp;', e(r.task), '&nbsp;']))}
-<h2>6. Порядок и хронология дня испытания</h2><p style="font-size:10pt">${e(d.t0.note)}</p>${tb(['Время (ориентир)', 'Шаг', 'Основание', 'Фактическое время'], rows6)}
-<h2>7. Меры на случай негативного развития (Приложение 5)</h2><ul>${d.safeguards.map(x => `<li>${e(x)}</li>`).join('')}</ul><p>Координационный центр, телефон ${ln(20)} · дежурный МВД ${ln(20)} · объектовая особенность: ${ln(40)}</p>
-<h2>8. Журнал хронологии (ведёт наблюдатель)</h2>${tb(['Время', 'Пост / место', 'Действие группы', 'Действие персонала', 'Результат'], blankRows(8, 5))}
-<h2>9. Оценка результата</h2><p style="font-size:10pt">По шкале Правил КК п. 113; отчёт и оценка — Приложение 3.</p>${tb(['Что оценивалось', 'Результат'], (s.run || []).map(x => [e(x.step) + `<br><i>${e(x.record)}</i>`, sev.filter(v => ['compliant', 'minor', 'major', 'critical', 'nc'].includes(v.code)).map(v => '☐ ' + e(v.level)).join(' &nbsp; ')]))}
-<p style="margin-top:14pt">Руководитель испытания ${ln(20)} &nbsp; Ф.И.О. ${ln(24)} &nbsp; Дата ${ln(12)}</p>
-<p style="font-size:9pt;margin-top:10pt">Основание: Правила проведения контроля качества, п. 26–27, 47–55, 102–105, Приложения 3 и 5. Бланк создан порталом AvSec Portal из общих данных (цель и объект); конкретные способы, образцы, место, время и участников вносит руководитель испытания.</p></body></html>`;
+  const forms = `${s.kind === 'overt' ? '☒' : '☐'} гласное    ${s.kind === 'covert' ? '☒' : '☐'} негласное${s.kind === 'both' ? ' (выбрать)' : ''}`;
+  const blank = (n, k) => Array.from({ length: n }, () => Array(k).fill(''));
+  const B = [];
+  B.push({ k: 'p', t: 'ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ', b: true, color: 'A32020', align: 'right' });
+  B.push({ k: 'p', t: 'Заполняет и хранит руководитель испытания (Правила КК п. 51, 59, 67). Не загружать в портал, мессенджеры и общие папки.', size: 9, align: 'right' });
+  B.push({ k: 'p', t: `СЦЕНАРИЙ ИСПЫТАНИЯ СИСТЕМЫ АВИАЦИОННОЙ БЕЗОПАСНОСТИ № ${ln(6)}`, b: true, size: 15, align: 'center', before: 120 });
+  B.push({ k: 'p', t: `Шифр шаблона ${s.id} · ${s.title}`, align: 'center' });
+  B.push({ k: 'h', t: '1. Цель испытания' }, { k: 'p', t: s.goal });
+  (s.purposes || []).forEach(i => B.push({ k: 'p', t: '☒ ' + (d.purposes[i - 1] || ''), size: 10, after: 20 }));
+  B.push({ k: 'h', t: '2. Субъект, объект, форма, дата' }, { k: 't', w: [32, 16, 26, 26], head: ['Субъект', 'Объект', 'Форма', 'Дата и время начала'], rows: [[orgs, (s.sites || []).join(', ') || ln(10), forms, ln(18)]] });
+  B.push({ k: 'h', t: '3. Описание сценария' }, { k: 'p', t: `Способ по п. 53 Правил КК: ${(s.methods || []).length ? 'пп. ' + s.methods.join(', ') + ' — выбрать' : 'не применяется'} ${ln(28)}` }, { k: 'p', t: ln(86) }, { k: 'p', t: ln(86) });
+  B.push({ k: 'h', t: '4. Образцы' }, { k: 'p', t: 'Только разрешённые законом, безопасные, не мешающие работе, с информационной биркой и контактом для уведомления (п. 55). Выдача и возврат — по описи; перечень — в запросе органу нацбезопасности (п. 54).', size: 10 },
+    { k: 't', w: [5, 30, 10, 13, 21, 21], head: ['№', 'Образец', 'Кол-во', 'Бирка', 'Выдан (подпись, время)', 'Возвращён (подпись, время)'], rows: blank(4, 6), tall: true });
+  B.push({ k: 'h', t: '5. Участники и роли' }, { k: 't', w: [24, 20, 40, 16], head: ['Роль', 'Ф.И.О.', 'Задача', 'Документ о статусе №'], rows: d.roles.map(r => [[{ t: r.role, b: true }, { t: `\n${r.who}` }], '', r.task, '']) });
+  B.push({ k: 'h', t: '6. Порядок и хронология дня испытания' }, { k: 'p', t: d.t0.note, size: 10 },
+    { k: 't', w: [16, 52, 16, 16], head: ['Время (ориентир)', 'Шаг', 'Основание', 'Фактическое время'], rows: [...L.before.map(x => [x.at, x.step, x.doc, '']), ...L.mid.map(x => [`Т0 +${x.at}`, [{ t: x.step }, { t: `\nФиксируем: ${x.rec}`, i: true }], '', '']), ...L.after.map(x => [x.at, x.step, x.doc, ''])] });
+  B.push({ k: 'h', t: '7. Меры на случай негативного развития (Приложение 5)' }, ...d.safeguards.map(x => ({ k: 'p', t: '• ' + x, size: 10, after: 20, ind: 280, hang: 200 })),
+    { k: 'p', t: `Координационный центр, телефон ${ln(16)} · дежурный МВД ${ln(16)} · особенность объекта: ${ln(30)}`, before: 80 });
+  B.push({ k: 'h', t: '8. Журнал хронологии (ведёт наблюдатель)' }, { k: 't', w: [10, 18, 28, 28, 16], head: ['Время', 'Пост / место', 'Действие группы', 'Действие персонала', 'Результат'], rows: blank(8, 5), tall: true });
+  B.push({ k: 'h', t: '9. Оценка результата' }, { k: 'p', t: 'По шкале Правил КК п. 113; отчёт и оценка — Приложение 3.', size: 10 },
+    { k: 't', w: [62, 38], head: ['Что оценивалось', 'Результат'], rows: (s.run || []).map(x => [[{ t: x.step }, { t: `\n${x.record}`, i: true }], sev.filter(v => ['compliant', 'minor', 'major', 'critical', 'nc'].includes(v.code)).map(v => '☐ ' + v.level).join('   ')]) });
+  B.push({ k: 'p', t: `Руководитель испытания ${ln(18)}   Ф.И.О. ${ln(22)}   Дата ${ln(10)}`, before: 240 },
+    { k: 'p', t: 'Основание: Правила проведения контроля качества, п. 26–27, 47–55, 102–105, Приложения 3 и 5. Бланк создан порталом AvSec Portal из общих данных (цель и объект); конкретные способы, образцы, место, время и участников вносит руководитель испытания.', size: 9, before: 120 });
+  return B;
+}
+const tsX = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const tsRuns = c => (Array.isArray(c) ? c : [c]).map(r => typeof r === 'string' ? { t: r } : r);
+function tsBlankHtml(s) {
+  const run = (r, b) => { const o = typeof r === 'string' ? { t: r } : r; const st = `${o.b || b ? 'font-weight:700;' : ''}${o.i ? 'font-style:italic;' : ''}`; return `<span style="${st}">${esc(o.t).replace(/\n/g, '<br>')}</span>`; };
+  return tsBlankBlocks(s).map(b => b.k === 'h' ? `<h4 class="mt">${esc(b.t)}</h4>`
+    : b.k === 'p' ? `<p class="small" style="text-align:${b.align || 'left'};${b.b ? 'font-weight:700;' : ''}${b.color ? `color:#${b.color};` : ''}margin:4px 0">${esc(b.t)}</p>`
+    : `<div class="tw"><table><thead><tr>${b.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${b.rows.map(r => `<tr>${r.map(c => `<td>${tsRuns(c).map(x => run(x)).join('') || '&nbsp;'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`).join('');
+}
+const TS_CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const tsCrc = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = TS_CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function tsZip(files, mime) {   // zip без сжатия (метод 0), имена в UTF-8
+  const enc = new TextEncoder(), u16 = n => [n & 255, (n >> 8) & 255], u32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+  const parts = [], cd = []; let off = 0;
+  files.forEach(f => { const nm = enc.encode(f.name), data = enc.encode(f.data), crc = tsCrc(data), sz = data.length;
+    const lh = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), ...u16(0)]);
+    parts.push(lh, nm, data);
+    cd.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nm);
+    off += lh.length + nm.length + sz; });
+  const cdSize = cd.reduce((a, x) => a + x.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...cd, end], { type: mime });
+}
+function tsBlankDocx(s) {
+  const W = 9638, X = tsX;
+  const run = (o, base) => { const rp = `<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>${o.b || base.b ? '<w:b/>' : ''}${o.i ? '<w:i/>' : ''}${o.color || base.color ? `<w:color w:val="${o.color || base.color}"/>` : ''}<w:sz w:val="${Math.round((o.size || base.size || 11) * 2)}"/><w:szCs w:val="${Math.round((o.size || base.size || 11) * 2)}"/></w:rPr>`;
+    return String(o.t).split('\n').map((x, i) => `${i ? `<w:r>${rp}<w:br/></w:r>` : ''}<w:r>${rp}<w:t xml:space="preserve">${X(x)}</w:t></w:r>`).join(''); };
+  const para = (runs, o = {}) => `<w:p><w:pPr>${o.keep ? '<w:keepNext/>' : ''}<w:spacing w:before="${o.before || 0}" w:after="${o.after == null ? 80 : o.after}"/>${o.ind ? `<w:ind w:left="${o.ind}" w:hanging="${o.hang || 0}"/>` : ''}${o.align ? `<w:jc w:val="${o.align}"/>` : ''}</w:pPr>${runs}</w:p>`;
+  const bd = ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(k => `<w:${k} w:val="single" w:sz="4" w:space="0" w:color="808080"/>`).join('');
+  const table = b => { const tw = b.w.map(x => Math.round(W * x / 100));
+    const cell = (c, i, hd) => `<w:tc><w:tcPr><w:tcW w:w="${tw[i]}" w:type="dxa"/>${hd ? '<w:shd w:val="clear" w:color="auto" w:fill="E6EEF6"/>' : ''}</w:tcPr>${para(tsRuns(c).map(r => run(r, { b: hd, size: 10 })).join(''), { after: 20 })}</w:tc>`;
+    return `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblBorders>${bd}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="70" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${tw.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>
+      <w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>${b.head.map((h, i) => cell(h, i, true)).join('')}</w:tr>${b.rows.map(r => `<w:tr><w:trPr><w:cantSplit/>${b.tall ? '<w:trHeight w:val="420" w:hRule="atLeast"/>' : ''}</w:trPr>${r.map((c, i) => cell(c, i, false)).join('')}</w:tr>`).join('')}</w:tbl>${para('', { after: 60 })}`; };
+  const body = tsBlankBlocks(s).map(b => b.k === 'h' ? para(run({ t: b.t, b: true, size: 12 }, {}), { before: 200, after: 60, keep: true })
+    : b.k === 'p' ? para(run({ t: b.t, b: b.b, color: b.color, size: b.size }, {}), { align: b.align, before: b.before, after: b.after, ind: b.ind, hang: b.hang })
+    : table(b)).join('');
+  const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const doc = `${H}<w:document ${NS}><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rId2"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const hdr = `${H}<w:hdr ${NS}>${para(run({ t: 'ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ · сценарий испытания ' + s.id, b: true, color: 'A32020', size: 9 }, {}), { align: 'right', after: 0 })}</w:hdr>`;
+  const sty = `${H}<w:styles ${NS}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="ru-RU"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
+  const ct = `${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>`;
+  const rels = `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+  const drels = `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>`;
+  return tsZip([{ name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels }, { name: 'word/document.xml', data: doc }, { name: 'word/styles.xml', data: sty }, { name: 'word/header1.xml', data: hdr }, { name: 'word/_rels/document.xml.rels', data: drels }], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 function openTestScenario(s) {
   const d = TS(); const its = tsPlanOf(s.id);
@@ -2579,7 +2631,8 @@ async function boot() {
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
-    const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) download('\ufeff' + tsBlankHtml(sc), `Сценарий испытания ${sc.id} — бланк.doc`, 'application/msword;charset=utf-8'); return; }
+    const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) download(tsBlankDocx(sc), `Scenario_${sc.id}_blank.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'); return; }
+    const tsv = e.target.closest('[data-tsview]'); if (tsv) { const sc = tsScen(tsv.dataset.tsview); if (sc) openSheet(`<div class="sheet-head"><div class="small dim">${idChip(sc.id)} ${esc(t('Бланк сценария'))}</div><h2>${esc(sc.title)}</h2></div><div class="callout warn small">ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ — ${esc(t('заполнять и хранить офлайн'))}</div>${tsBlankHtml(sc)}<p class="mt"><button class="btn sm" data-tsblank="${esc(sc.id)}">${esc(t('Скачать бланк сценария (Word)'))}</button></p>`); return; }
     const tss = e.target.closest('[data-tsscen]'); if (tss) { const sc = tsScen(tss.dataset.tsscen); if (sc) openTestScenario(sc); return; }
     const oact = e.target.closest('[data-openactivity]'); if (oact) { const it = QC() && QC().activities.find(x => x.ref_no === oact.dataset.openactivity); if (it) openActivity(it); return; }
     const ofin = e.target.closest('[data-openfinding]'); if (ofin) { const it = QC() && QC().findings.find(x => x.ref_no === ofin.dataset.openfinding); if (it) openFinding(it); return; }
