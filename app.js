@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '66';
+const APP_VERSION = '67';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Сохранить бланк': 'Save form', 'Telegram не даёт сохранить файл прямо из приложения. Выберите способ:': 'Telegram cannot save a file from the app. Choose a way:', 'Открыть в браузере и скачать .docx': 'Open in browser and download .docx', 'В браузере понадобится код доступа; откроется карточка сценария — нажмите «Бланк (Word)».': 'The browser will ask for the access code; the scenario card opens — tap "Form (Word)".', 'Скопировать текст бланка': 'Copy form text', 'Вставьте в Word, заметки или «Избранное» Telegram.': 'Paste into Word, notes or Telegram Saved Messages.', 'Текст бланка скопирован': 'Form text copied', 'Не удалось скопировать': 'Copy failed',
   'Бланк сценария': 'Scenario form', 'Посмотреть бланк': 'View form', 'заполнять и хранить офлайн': 'fill in and keep offline',
   'Детальный сценарий': 'Detailed scenario', 'Детальный сценарий и роли': 'Detailed scenario and roles', 'Хронология дня испытания': 'Test-day timeline', 'Роли': 'Roles', 'Заполняет руководитель испытания': 'To be filled in by the test leader', 'Скачать бланк сценария (Word)': 'Download scenario form (Word)', 'Бланк (Word)': 'Form (Word)', 'Шаг': 'Step',
   'только': 'only',
@@ -2013,6 +2014,29 @@ function tsBlankDocx(s) {
   const drels = `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>`;
   return tsZip([{ name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels }, { name: 'word/document.xml', data: doc }, { name: 'word/styles.xml', data: sty }, { name: 'word/header1.xml', data: hdr }, { name: 'word/_rels/document.xml.rels', data: drels }], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
+// текст бланка (для копирования), без форматирования
+function tsBlankText(s) {
+  const cell = c => tsRuns(c).map(r => r.t).join('').replace(/\n/g, ' / ');
+  return tsBlankBlocks(s).map(b => b.k === 'h' ? '\n' + b.t.toUpperCase() : b.k === 'p' ? b.t
+    : b.head.join('\t') + '\n' + b.rows.map(r => r.map(cell).join('\t')).join('\n')).join('\n').trim();
+}
+const tsBlankUrl = id => `${location.origin}${location.pathname}#tests?t=scen&s=${encodeURIComponent(id)}`;
+// Telegram не сохраняет файлы по blob-ссылке: пробуем системное «Поделиться», иначе — запасные пути (браузер, копирование, просмотр)
+async function tsDownloadBlank(sc) {
+  const name = `Scenario_${sc.id}_blank.docx`, blob = tsBlankDocx(sc), tg = TG();
+  if (!tg) { download(blob, name, blob.type); return; }
+  try {
+    const f = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  openSheet(`<div class="sheet-head"><div class="small dim">${idChip(sc.id)} ${esc(t('Бланк сценария'))}</div><h2>${esc(t('Сохранить бланк'))}</h2></div>
+    <p class="small">${esc(t('Telegram не даёт сохранить файл прямо из приложения. Выберите способ:'))}</p>
+    <p><button class="btn" data-tsext="${esc(sc.id)}">${esc(t('Открыть в браузере и скачать .docx'))}</button></p>
+    <p class="small dim">${esc(t('В браузере понадобится код доступа; откроется карточка сценария — нажмите «Бланк (Word)».'))}</p>
+    <p><button class="btn ghost" data-tscopy="${esc(sc.id)}">${esc(t('Скопировать текст бланка'))}</button></p>
+    <p class="small dim">${esc(t('Вставьте в Word, заметки или «Избранное» Telegram.'))}</p>
+    <p><button class="btn ghost" data-tsview="${esc(sc.id)}">${esc(t('Посмотреть бланк'))}</button></p>`);
+}
 function openTestScenario(s) {
   const d = TS(); const its = tsPlanOf(s.id);
   const ar = (s.areas || []).map(n => { const a = tsArea(n); return a ? `<li>п. 26 · ${n}. ${esc(a.name)}</li>` : ''; }).join('');
@@ -2631,7 +2655,9 @@ async function boot() {
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
-    const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) download(tsBlankDocx(sc), `Scenario_${sc.id}_blank.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'); return; }
+    const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) tsDownloadBlank(sc); return; }
+    const tsx = e.target.closest('[data-tsext]'); if (tsx) { const u = tsBlankUrl(tsx.dataset.tsext); const tg = TG(); if (tg && tg.openLink) tg.openLink(u); else window.open(u, '_blank', 'noopener'); return; }
+    const tsc = e.target.closest('[data-tscopy]'); if (tsc) { const sc = tsScen(tsc.dataset.tscopy); if (sc) { const txt = tsBlankText(sc); const ok = () => toast(t('Текст бланка скопирован')); const fb = () => { const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (_) { toast(t('Не удалось скопировать')); } ta.remove(); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb(); } return; }
     const tsv = e.target.closest('[data-tsview]'); if (tsv) { const sc = tsScen(tsv.dataset.tsview); if (sc) openSheet(`<div class="sheet-head"><div class="small dim">${idChip(sc.id)} ${esc(t('Бланк сценария'))}</div><h2>${esc(sc.title)}</h2></div><div class="callout warn small">ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ — ${esc(t('заполнять и хранить офлайн'))}</div>${tsBlankHtml(sc)}<p class="mt"><button class="btn sm" data-tsblank="${esc(sc.id)}">${esc(t('Скачать бланк сценария (Word)'))}</button></p>`); return; }
     const tss = e.target.closest('[data-tsscen]'); if (tss) { const sc = tsScen(tss.dataset.tsscen); if (sc) openTestScenario(sc); return; }
     const oact = e.target.closest('[data-openactivity]'); if (oact) { const it = QC() && QC().activities.find(x => x.ref_no === oact.dataset.openactivity); if (it) openActivity(it); return; }
