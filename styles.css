@@ -342,3 +342,28 @@ button.idc.clk:hover{border-color:var(--accent)}
 details.card>summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 details.card>summary h2{margin:0;display:inline}
 details.card>summary::after{margin-left:auto}
+
+/* Испытания: хронология и календарь */
+.tlbox{margin-top:10px}.tlbox summary{cursor:pointer;font-weight:600}
+.tl{list-style:none;margin:8px 0 0;padding:0 0 0 12px;border-left:2px solid var(--line)}
+.tl li{position:relative;padding:2px 0 10px 12px;font-size:.92em}
+.tl li::before{content:"";position:absolute;left:-19px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid var(--card)}
+.tl.run li::before{background:var(--exp)}
+.tl .off{display:block;font-weight:700;color:var(--accent);font-size:.82em}
+.tl .who{font-size:.82em;color:var(--dim);margin-top:2px}
+.scn h3{margin:6px 0 4px}
+.evrow{display:grid;grid-template-columns:152px 108px 1fr;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line);font-size:.92em}
+.evrow.past{opacity:.55}.evd{font-weight:600;white-space:nowrap}
+.gantt{display:grid;grid-template-columns:minmax(150px,27%) 1fr;gap:5px 10px;align-items:center;font-size:.8em}
+.glab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gtrack{position:relative;height:16px;background:var(--accent-soft);border-radius:4px}
+.gtrack.ghead{background:none;height:14px;border-bottom:1px solid var(--line)}
+.gmon{position:absolute;top:-2px;transform:translateX(2px);color:var(--dim);font-size:.9em}
+.gbar{position:absolute;top:2px;bottom:2px;border-radius:3px;min-width:3px}
+.gbar.ovt{background:var(--ok)}.gbar.cov{background:var(--miss)}.gbar.win{background:var(--ok)}.gbar.pause{background:var(--miss);opacity:.55}.gbar.adm{background:var(--info)}.gbar.icao{background:var(--draft)}
+.gbar.rep{background:var(--info);opacity:.6}.gbar.cap{background:var(--info);opacity:.3}
+.gmark{position:absolute;top:0;bottom:0;width:2px;background:var(--draft)}.gmark.ntc{background:var(--exp)}
+.gnow{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.7;z-index:2}
+.gleg{display:inline-block;width:12px;height:8px;border-radius:2px;margin:0 4px 0 10px;vertical-align:middle;background:var(--ok)}
+.gleg.cov,.gleg.pause{background:var(--miss)}.gleg.rep,.gleg.cap{background:var(--info)}.gleg.icao{background:var(--draft)}
+@media (max-width:640px){.gantt{grid-template-columns:1fr}.glab{margin-top:6px}.gtrack.ghead{margin-top:0}.evrow{grid-template-columns:auto 1fr}.evrow .badge{grid-column:2;justify-self:start}.evrow .evt{grid-column:1/3}}

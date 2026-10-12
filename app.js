@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '63';
+const APP_VERSION = '64';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,8 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'только': 'only',
+  'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
   'Испытания': 'Security tests', 'План 2026': '2026 plan', 'Сценарии': 'Scenarios', 'Порядок': 'Procedure', 'Что проверяется': 'What is tested', 'Испытаний в плане': 'Tests in plan', 'Сценариев': 'Scenarios', 'Форма': 'Type', 'Все формы': 'All types', 'Все окна': 'All windows', 'Окна': 'Windows', 'Негласное': 'Covert', 'Гласное': 'Overt', 'Цели испытаний': 'Purposes of tests', 'Меры безопасности при испытании': 'Safeguards during a test', 'Отчёт об испытании': 'Test report', 'Порядок проведения испытания': 'Test procedure', 'План испытаний': 'Test plan', 'Уведомить до': 'Notify by',
   'Обзор': 'Overview', 'USAP-CMA': 'USAP-CMA', 'Протокольные вопросы': 'Protocol Questions', 'Контрольный перечень (CC)': 'Compliance Checklist',
   'SASAQ': 'SASAQ', 'Дорожная карта': 'Roadmap', 'Документы АБ': 'AVSEC documents', 'Реестр документов': 'Document register',
@@ -1843,7 +1845,7 @@ function pQC(m) {
 
 // ── Испытания системы АБ (tests.json): порядок, сценарии, план на год ──
 // Сценарии — на уровне цели и объекта; полный сценарий (ДСП) в портал не вносится (tests.json → meta.classification)
-const TESTTABS = [{ id: 'sum', t: 'Обзор' }, { id: 'plan', t: 'План 2026' }, { id: 'scen', t: 'Сценарии' }, { id: 'order', t: 'Порядок' }];
+const TESTTABS = [{ id: 'sum', t: 'Обзор' }, { id: 'plan', t: 'План 2026' }, { id: 'chrono', t: 'Хронология' }, { id: 'scen', t: 'Сценарии' }, { id: 'order', t: 'Порядок' }];
 const TS = () => D('tests');
 const TKIND = { overt: 'Гласное', covert: 'Негласное', both: 'Обе формы' };
 const TLEVEL = { state: 'Государственное', gknb: 'ГКНБ (п. 56)', internal: 'Внутреннее' };
@@ -1857,6 +1859,69 @@ const tsWin = c => (TS() ? TS().windows.find(x => x.code === c) : null);
 const tsPeriod = x => x.start === x.end ? fmtDate(x.start) : `${fmtDate(x.start)} – ${fmtDate(x.end)}`;
 const tsSiteChips = (orgs, sites) => (sites || []).length ? sites.map(s => (orgs || []).length === 1 ? idChip(`S:${orgs[0]}/${s}`) : esc(s)).join(' ') : '<span class="dim">—</span>';
 function tsPlanOf(sc) { const d = TS(); return d.plan.items.filter(x => x.scenario === sc); }
+const tsAdd = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const TS_DOW = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const tsDay = iso => `${TS_DOW[new Date(iso + 'T00:00:00Z').getUTCDay()]} ${fmtDate(iso).slice(0, 5)}`;
+// хронология одного испытания: общий порядок (Правила КК) + ход Т0 по сценарию
+function tsTimeline(s, open) {
+  const d = TS(); const forms = s.kind === 'both' ? ['overt', 'covert'] : [s.kind];
+  const steps = (s.level === 'state') ? d.chronology.filter(x => x.forms.some(f => forms.includes(f))) : [];
+  const li = x => `<li><span class="off">${esc(x.off)}${s.kind === 'both' && x.forms.length === 1 ? ` <span class="dim">(${esc(t('только') + ' ' + t(TKIND[x.forms[0]]).toLowerCase())})</span>` : ''}</span>${esc(x.step)}<div class="who">${esc(x.who)} · ${esc(x.doc)}</div></li>`;
+  const ofs = steps.length ? steps.map(li).join('') : `<li><span class="off">${esc(t('Порядок'))}</span>${esc(t('Для этого сценария общий порядок АГА не применяется — действует порядок ГКНБ или программа организации (п. 56, 99–100).'))}</li>`;
+  return `<details class="tlbox"${open ? ' open' : ''}><summary>${esc(t('Хронология испытания'))} <span class="dim small">${steps.length ? esc(steps[0].off) + ' → ' + esc(steps[steps.length - 1].off) : ''}</span></summary><ol class="tl">${ofs}</ol></details>`;
+}
+const tsRun = s => `<h4 class="mt">${esc(t('Как проходит (Т0)'))}</h4><ol class="tl run">${(s.run || []).map(x => `<li>${esc(x.step)}<div class="who">${esc(t('Фиксируем'))}: ${esc(x.record)}</div></li>`).join('')}</ol>`;
+function tsScenCard(s) {
+  const its = tsPlanOf(s.id); const c = el('div', 'card scn');
+  c.innerHTML = `<div class="small dim">${idChip(s.id)} ${badge(s.kind === 'covert' ? 'unsat' : 'info', TKIND[s.kind])} ${badge('area', TLEVEL[s.level] || s.level)} ${(s.pq || []).map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' ')}</div>
+    <h3>${esc(s.title)}</h3><p class="small">${esc(s.goal)}</p>
+    <p class="small dim">${esc(t('Субъекты'))}: ${s.orgs.map(orgChip).join(' ')} ${tsSiteChips(s.orgs, s.sites)}</p>
+    ${tsRun(s)}${tsTimeline(s, false)}
+    <p class="mt small"><b>${esc(t('В плане 2026'))}:</b> ${its.length ? its.map(x => `<button class="idc clk" data-go="tests?t=plan&tw=${esc(x.window)}">${esc(x.id)}</button> <span class="dim">${esc(x.window)} · ${tsPeriod(x)}</span>`).join(' · ') : `<span class="dim">${esc(t('нет'))}</span>`}</p>`;
+  return c;
+}
+// события хронологии 2026: уведомления, испытания, отчёты и ПКД (расчёт по Правилам КК), окна, аудит ИКАО
+function tsEvents() {
+  const d = TS(), u = U(), ev = [];
+  const orgN = c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; };
+  d.windows.forEach(w => ev.push({ date: w.start, end: w.end, kind: w.kind === 'blackout' ? 'pause' : 'win', text: `${t('Окно')} ${w.code}: ${w.name}` }));
+  d.plan.items.forEach(x => {
+    const s = tsScen(x.scenario); const nm = s ? `${s.id} ${s.title} — ${orgN(x.org)}${x.site ? ' / ' + x.site : ''}` : x.note;
+    if (x.type === 'admin') { ev.push({ date: x.end, kind: 'admin', text: x.note, ref: x.id }); return; }
+    if (x.notice_by) ev.push({ date: x.notice_by, kind: 'notice', text: `${t('Уведомить субъект')} (${t('гласное')}, п. 32): ${nm}`, ref: x.id });
+    ev.push({ date: x.start, end: x.end, kind: x.kind === 'covert' ? 'covert' : 'test', text: `${x.kind === 'covert' ? t('Негласное (окно)') : t('Гласное')}: ${nm}`, ref: x.id });
+    const rep = tsAdd(x.end, 5), cap = tsAdd(rep, 10);
+    ev.push({ date: rep, kind: 'report', text: `${t('Отчёт по Прил. 3 готов')} (5 дн., п. 102): ${s ? s.id : ''} ${orgN(x.org)}`, ref: x.id });
+    ev.push({ date: cap, kind: 'cap', text: `${t('ПКД субъекта')} (10 кал. дн., п. 47): ${s ? s.id : ''} ${orgN(x.org)}`, ref: x.id });
+  });
+  (d.milestones || []).forEach(m => ev.push({ date: m.date, kind: 'admin', text: m.text }));
+  if (u) {
+    if (u.audit.docsApprovedDeadline) ev.push({ date: u.audit.docsApprovedDeadline, kind: 'icao', text: `${t('Крайний срок документов для ИКАО')} (14:00)` });
+    ev.push({ date: u.audit.start, end: u.audit.end, kind: 'icao', text: t('Аудит ИКАО USAP-CMA') });
+  }
+  return ev.sort((a, b) => a.date.localeCompare(b.date) || (a.kind > b.kind ? 1 : -1));
+}
+const TSEVL = { win: 'окно', pause: 'пауза', notice: 'уведомление', test: 'гласное', covert: 'негласное', report: 'отчёт', cap: 'ПКД', admin: 'срок', icao: 'ИКАО' };
+const TSEVB = { win: 'ok', pause: 'unsat', notice: 'draft', test: 'ok', covert: 'unsat', report: 'info', cap: 'info', admin: 'draft', icao: 'part' };
+function tsGantt() {
+  const d = TS(), ev = tsEvents();
+  const D0 = '2026-10-12', D1 = '2026-12-31', span = (new Date(D1) - new Date(D0)) / 86400000;
+  const pc = iso => Math.max(0, Math.min(100, (new Date(iso) - new Date(D0)) / 86400000 / span * 100));
+  const bar = (a, b, cls, tip) => { const l = pc(a), r = pc(tsAdd(b, 1)); return r > l ? `<i class="gbar ${cls}" style="left:${l}%;width:${r - l}%" title="${esc(tip)}"></i>` : ''; };
+  const mon = [['2026-10-12', 'окт'], ['2026-11-01', 'ноя'], ['2026-12-01', 'дек']].map(([a, n]) => `<span class="gmon" style="left:${pc(a)}%">${esc(t(n))}</span>`).join('');
+  const now = today(); const nowL = now >= D0 && now <= D1 ? `<i class="gnow" style="left:${pc(now)}%" title="${esc(t('Сегодня'))}"></i>` : '';
+  const rows = [];
+  const row = (label, track) => rows.push(`<div class="glab">${label}</div><div class="gtrack">${track}${nowL}</div>`);
+  d.windows.forEach(w => row(`<b>${esc(w.code)}</b> ${esc(w.name)}`, bar(w.start, w.end, w.kind === 'blackout' ? 'pause' : w.kind === 'admin' ? 'adm' : 'win', `${w.name}: ${tsPeriod(w)}`)));
+  const u = U(); if (u) row(`<b>ИКАО</b> ${esc(t('аудит и срок документов'))}`, bar(u.audit.start, u.audit.end, 'icao', `${t('Аудит ИКАО')}: ${fmtDate(u.audit.start)} – ${fmtDate(u.audit.end)}`) + (u.audit.docsApprovedDeadline ? `<i class="gmark" style="left:${pc(u.audit.docsApprovedDeadline)}%" title="${esc(t('Документы для ИКАО'))}: ${fmtDate(u.audit.docsApprovedDeadline)}"></i>` : ''));
+  d.plan.items.filter(x => x.type === 'test').forEach(x => {
+    const rep = tsAdd(x.end, 5), cap = tsAdd(rep, 10);
+    row(`${idChip(x.id)} ${esc(x.scenario)} ${esc(x.org)}`,
+      (x.notice_by ? `<i class="gmark ntc" style="left:${pc(x.notice_by)}%" title="${esc(t('Уведомить до'))}: ${fmtDate(x.notice_by)}"></i>` : '') + bar(x.start, x.end, x.kind === 'covert' ? 'cov' : 'ovt', `${tsPeriod(x)}`) + bar(tsAdd(x.end, 1), rep, 'rep', `${t('Отчёт до')} ${fmtDate(rep)}`) + bar(tsAdd(rep, 1), cap, 'cap', `${t('ПКД до')} ${fmtDate(cap)}`));
+  });
+  return `<div class="gantt"><div class="glab"></div><div class="gtrack ghead">${mon}</div>${rows.join('')}</div>
+    <p class="small dim mt"><i class="gleg ovt"></i>${esc(t('гласное'))} <i class="gleg cov"></i>${esc(t('негласное (окно)'))} <i class="gleg rep"></i>${esc(t('отчёт, 5 дн.'))} <i class="gleg cap"></i>${esc(t('ПКД, 10 кал. дн.'))} <i class="gleg win"></i>${esc(t('окно'))} <i class="gleg pause"></i>${esc(t('пауза'))} <i class="gleg icao"></i>ИКАО · ${esc(t('Сегодня'))} — ${t('вертикальная линия')}</p>`;
+}
 function openTestScenario(s) {
   const d = TS(); const its = tsPlanOf(s.id);
   const ar = (s.areas || []).map(n => { const a = tsArea(n); return a ? `<li>п. 26 · ${n}. ${esc(a.name)}</li>` : ''; }).join('');
@@ -1864,6 +1929,7 @@ function openTestScenario(s) {
     ${kv([['Цель', esc(s.goal)], ['Как оценивается', esc(s.criteria)], ['Субъекты', s.orgs.map(orgChip).join(' ')], ['Объекты', tsSiteChips(s.orgs, s.sites)],
       ['ВП областей', s.pq.map(a => `<a href="#pq?area=${esc(a)}"><span class="badge b-area">${esc(a)}</span></a>`).join(' ')],
       ['Способы по Правилам КК п. 53', (s.methods || []).length ? `пп. ${s.methods.join(', ')} (перечень — в Правилах; конкретный способ выбирает руководитель испытания)` : ''], ['Примечание', esc(s.note || '')]])}
+    ${tsRun(s)}${tsTimeline(s, true)}
     ${ar ? `<h3 class="mt">${esc(t('Что проверяется'))}</h3><ul class="list small">${ar}</ul>` : ''}
     <h3 class="mt">${esc(t('Цели испытания'))} <span class="dim small">п. 27</span></h3><ul class="list small">${(s.purposes || []).map(i => `<li>${esc(d.purposes[i - 1] || '')}</li>`).join('')}</ul>
     <h3 class="mt">${esc(t('В плане 2026'))} <span class="dim small">${its.length}</span></h3>
@@ -1885,7 +1951,7 @@ function pTests(m) {
   head(m, 'Испытания', `${esc(d.meta.title)} · ${esc(t('обновлено'))} ${fmtDate(d.meta.updated)}`);
   const tab = TESTTABS.some(x => x.id === S.f.t) ? S.f.t : 'sum';
   const items = d.plan.items, tests = items.filter(x => x.type === 'test');
-  m.appendChild(segbar(TESTTABS.map(x => ({ ...x, n: x.id === 'plan' ? items.length : x.id === 'scen' ? d.scenarios.length : null })), tab, id => go('tests', { ...S.f, t: id === 'sum' ? '' : id }, S.q)));
+  m.appendChild(segbar(TESTTABS.map(x => ({ ...x, n: x.id === 'plan' ? items.length : x.id === 'scen' ? d.scenarios.length : null })), tab, id => go('tests', { t: id === 'sum' ? '' : id }, S.q)));
   if (tab === 'sum') {
     const nextW = d.windows.filter(w => w.kind === 'plan' && daysTo(w.end) >= 0).sort((a, b) => a.start.localeCompare(b.start))[0];
     const decide = d.plan.items.find(x => x.id === 'TP-2026-13'); const left = decide ? daysTo(decide.end) : null;
@@ -1897,7 +1963,7 @@ function pTests(m) {
     m.appendChild(tiles);
     if (left != null && left >= 0) m.appendChild(el('div', 'callout warn mb', `<b>${esc(t('Решение по окну A — до'))} ${fmtDate(decide.end)}:</b> ${esc(d.meta.issues[0])}`));
     const c0 = el('div', 'card'); c0.innerHTML = `<h2>${esc(t('Что проверяется'))} <span class="dim small">Правила КК п. 26</span></h2>`;
-    c0.appendChild(table(['№', 'Область проверки', 'ВП', 'Сценарии'], d.areas, a => [a.n, esc(a.name), `<a href="#pq?area=${esc(a.pq)}"><span class="badge b-area">${esc(a.pq)}</span></a>`, d.scenarios.filter(s => (s.areas || []).includes(a.n)).map(s => idChip(s.id)).join(' ') || '<span class="dim">—</span>'], null, { w: ['6%', '58%', '10%', '26%'] }));
+    c0.appendChild(table(['№', 'Область проверки', 'ВП', 'Сценарии'], d.areas, a => [a.n, esc(a.name), `<a href="#pq?area=${esc(a.pq)}"><span class="badge b-area">${esc(a.pq)}</span></a>`, d.scenarios.filter(s => (s.areas || []).includes(a.n)).map(s => `<button class="idc clk" data-go="tests?t=scen&s=${esc(s.id)}">${esc(s.id)}</button>`).join(' ') || '<span class="dim">—</span>'], null, { w: ['6%', '58%', '10%', '26%'] }));
     m.appendChild(c0);
     const g = el('div', 'grid2');
     const c1 = el('div', 'card'); c1.innerHTML = `<h2>${esc(t('Формы'))}</h2>` + kv(d.kinds.map(k => [k.name, esc(k.rule)])) + `<h3 class="mt">${esc(t('Уровни'))}</h3>` + kv(d.levels.map(k => [k.name, esc(k.rule)]));
@@ -1929,6 +1995,16 @@ function pTests(m) {
     }, openTestPlanItem, { w: ['9%', '13%', '14%', '24%', '11%', '5%', '10%', '14%'] }));
     m.appendChild(el('p', 'small dim', esc(t('Негласные испытания даны окном: точную дату знают руководитель испытания и ГКНБ. «Уведомить до» — для гласных: 10 рабочих дней до начала, п. 32.'))));
   }
+  if (tab === 'chrono') {
+    const ev = tsEvents(); const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('Хронология 2026'))} <span class="dim small">${esc(t('12.10 — 31.12; расчётные даты отчётов и ПКД — по Правилам КК п. 102 и 47'))}</span></h2>${tsGantt()}`;
+    m.appendChild(c);
+    const L = el('div', 'card'); let cur = ''; let html = `<h2>${esc(t('Лента событий'))} <span class="dim small">${ev.length}</span></h2>`;
+    ev.forEach(e => { const mo = e.date.slice(0, 7); if (mo !== cur) { cur = mo; html += `<h3 class="mt">${esc(['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][+mo.slice(5) - 1])} ${mo.slice(0, 4)}</h3>`; }
+      const past = e.date < today();
+      html += `<div class="evrow${past ? ' past' : ''}"><span class="evd">${tsDay(e.date)}${e.end && e.end !== e.date ? ' – ' + fmtDate(e.end).slice(0, 5) : ''}</span><span class="badge b-${TSEVB[e.kind]}">${esc(t(TSEVL[e.kind]))}</span><span class="evt">${esc(e.text)}${e.ref ? ` ${idChip(e.ref)}` : ''}</span></div>`; });
+    L.innerHTML = html; m.appendChild(L);
+    m.appendChild(el('p', 'small dim', esc(t('Даты уведомлений — не позднее чем за 10 рабочих дней до начала гласного испытания (п. 32). Отчёт — 5 дней после проверки (п. 102), ПКД — 10 календарных дней после получения отчёта (п. 47); даты рассчитаны от конца окна и сдвигаются вместе с ним.'))));
+  }
   if (tab === 'scen') {
     const tb = el('div', 'toolbar');
     tb.appendChild(selector('Все области', 'ta', d.areas.map(a => String(a.n)), n => `${n}. ${tsArea(+n).name.slice(0, 48)}`));
@@ -1936,7 +2012,9 @@ function pTests(m) {
     tb.appendChild(inputFilter('Поиск по сценариям'));
     m.appendChild(tb);
     const rows = d.scenarios.filter(s => (!S.f.ta || (s.areas || []).includes(+S.f.ta)) && (!S.f.tk || s.kind === S.f.tk) && has(S.f.s, s.id, s.title, s.goal, s.orgs.join(' ')));
-    m.appendChild(table(['Код', 'Сценарий', 'Что оценивает', 'Форма', 'Субъекты', 'ВП', 'В плане'], rows, s => [idChip(s.id), `<b>${esc(s.title)}</b>`, `<span class="small">${esc(s.goal)}</span>`, badge(s.kind === 'covert' ? 'unsat' : 'info', TKIND[s.kind]), s.orgs.map(orgChip).join(' '), s.pq.map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' '), tsPlanOf(s.id).length || '—'], openTestScenario, { w: ['7%', '20%', '30%', '12%', '15%', '9%', '7%'] }));
+    m.appendChild(el('p', 'small dim', `${esc(t('Показано'))} ${rows.length} ${esc(t('из'))} ${d.scenarios.length}${rows.length < d.scenarios.length ? ` · <a href="#tests?t=scen">${esc(t('Показать все'))}</a>` : ''}`));
+    rows.forEach(s => m.appendChild(tsScenCard(s)));
+    if (!rows.length) m.appendChild(el('div', 'empty', esc(t('Ничего не найдено'))));
     m.appendChild(el('div', 'callout small', esc(d.meta.classification)));
   }
   if (tab === 'order') {
