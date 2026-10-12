@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '64';
+const APP_VERSION = '65';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Детальный сценарий': 'Detailed scenario', 'Детальный сценарий и роли': 'Detailed scenario and roles', 'Хронология дня испытания': 'Test-day timeline', 'Роли': 'Roles', 'Заполняет руководитель испытания': 'To be filled in by the test leader', 'Скачать бланк сценария (Word)': 'Download scenario form (Word)', 'Бланк (Word)': 'Form (Word)', 'Шаг': 'Step',
   'только': 'only',
   'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
   'Испытания': 'Security tests', 'План 2026': '2026 plan', 'Сценарии': 'Scenarios', 'Порядок': 'Procedure', 'Что проверяется': 'What is tested', 'Испытаний в плане': 'Tests in plan', 'Сценариев': 'Scenarios', 'Форма': 'Type', 'Все формы': 'All types', 'Все окна': 'All windows', 'Окна': 'Windows', 'Негласное': 'Covert', 'Гласное': 'Overt', 'Цели испытаний': 'Purposes of tests', 'Меры безопасности при испытании': 'Safeguards during a test', 'Отчёт об испытании': 'Test report', 'Порядок проведения испытания': 'Test procedure', 'План испытаний': 'Test plan', 'Уведомить до': 'Notify by',
@@ -1877,6 +1878,7 @@ function tsScenCard(s) {
     <h3>${esc(s.title)}</h3><p class="small">${esc(s.goal)}</p>
     <p class="small dim">${esc(t('Субъекты'))}: ${s.orgs.map(orgChip).join(' ')} ${tsSiteChips(s.orgs, s.sites)}</p>
     ${tsRun(s)}${tsTimeline(s, false)}
+    <p class="mt"><button class="btn sm ghost" data-tsscen="${esc(s.id)}">${esc(t('Детальный сценарий и роли'))} →</button> <button class="btn sm" data-tsblank="${esc(s.id)}">${esc(t('Бланк (Word)'))}</button></p>
     <p class="mt small"><b>${esc(t('В плане 2026'))}:</b> ${its.length ? its.map(x => `<button class="idc clk" data-go="tests?t=plan&tw=${esc(x.window)}">${esc(x.id)}</button> <span class="dim">${esc(x.window)} · ${tsPeriod(x)}</span>`).join(' · ') : `<span class="dim">${esc(t('нет'))}</span>`}</p>`;
   return c;
 }
@@ -1922,6 +1924,43 @@ function tsGantt() {
   return `<div class="gantt"><div class="glab"></div><div class="gtrack ghead">${mon}</div>${rows.join('')}</div>
     <p class="small dim mt"><i class="gleg ovt"></i>${esc(t('гласное'))} <i class="gleg cov"></i>${esc(t('негласное (окно)'))} <i class="gleg rep"></i>${esc(t('отчёт, 5 дн.'))} <i class="gleg cap"></i>${esc(t('ПКД, 10 кал. дн.'))} <i class="gleg win"></i>${esc(t('окно'))} <i class="gleg pause"></i>${esc(t('пауза'))} <i class="gleg icao"></i>ИКАО · ${esc(t('Сегодня'))} — ${t('вертикальная линия')}</p>`;
 }
+// детальный сценарий: день испытания по ступеням — ориентировочное время Т0 (шаблон; факт и конкретику задаёт руководитель испытания)
+function tsDayLines(s) {
+  const d = TS(), box = (d.t0 && d.t0.box) || 20;
+  return { before: d.t0.before, mid: (s.run || []).map((x, i) => ({ at: `${i * box}–${(i + 1) * box} мин`, step: x.step, rec: x.record })), after: d.t0.after };
+}
+function tsDetail(s) {
+  const d = TS(), L = tsDayLines(s); const T = (h, r) => table(h, r, x => x, null, { empty: '—' }).outerHTML;
+  return `<h3 class="mt">${esc(t('Детальный сценарий'))} <span class="dim small">${esc(t('шаблон; полный сценарий — ДСП, у руководителя испытания'))}</span></h3>
+    <h4 class="mt">${esc(t('Хронология дня испытания'))} <span class="dim small">${esc(d.t0.note)}</span></h4>
+    ${T(['Время', 'Шаг', 'Фиксируем / основание'], [...L.before.map(x => [esc(x.at), esc(x.step), `<span class="small dim">${esc(x.doc)}</span>`]), ...L.mid.map(x => [`<b>Т0 +${esc(x.at)}</b>`, esc(x.step), `<span class="small">${esc(t('Фиксируем'))}: ${esc(x.rec)}</span>`]), ...L.after.map(x => [esc(x.at), esc(x.step), `<span class="small dim">${esc(x.doc)}</span>`])])}
+    <h4 class="mt">${esc(t('Роли'))}</h4>${T(['Роль', 'Кто', 'Задача'], d.roles.map(r => [`<b>${esc(r.role)}</b>`, esc(r.who), `<span class="small">${esc(r.task)} <span class="dim">· ${esc(r.doc)}</span></span>`]))}
+    <h4 class="mt">${esc(t('Заполняет руководитель испытания'))}</h4><ul class="list small">${d.blank_fields.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+    <p class="mt"><button class="btn sm" data-tsblank="${esc(s.id)}">${esc(t('Скачать бланк сценария (Word)'))}</button> <span class="small dim">${esc(t('заполнять и хранить офлайн, в портал и мессенджеры не загружать'))}</span></p>`;
+}
+function tsBlankHtml(s) {
+  const d = TS(), L = tsDayLines(s), sev = (QC() || { severity: [] }).severity; const e = esc;
+  const ln = n => '_'.repeat(n);
+  const tb = (head, rows) => `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;width:100%;font-size:10pt"><tr>${head.map(h => `<th style="background:#e6eef6;text-align:left">${e(h)}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
+  const blankRows = (n, k) => Array.from({ length: n }, () => Array(k).fill('&nbsp;'));
+  const orgs = s.orgs.map(c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; }).join(', ');
+  const forms = `${s.kind === 'overt' ? '☒' : '☐'} гласное &nbsp; ${s.kind === 'covert' ? '☒' : '☐'} негласное${s.kind === 'both' ? ' (выбрать)' : ''}`;
+  const rows6 = [...L.before.map(x => [e(x.at), e(x.step), e(x.doc), '&nbsp;']), ...L.mid.map(x => [`Т0 +${e(x.at)}`, e(x.step) + `<br><i>Фиксируем: ${e(x.rec)}</i>`, '&nbsp;', '&nbsp;']), ...L.after.map(x => [e(x.at), e(x.step), e(x.doc), '&nbsp;'])];
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Сценарий испытания ${e(s.id)}</title><style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt}h1{font-size:15pt;text-align:center;margin:8pt 0}h2{font-size:12pt;margin:14pt 0 4pt}.gr{text-align:right;font-weight:bold;color:#a32020}</style></head><body>
+<p class="gr">ДЛЯ СЛУЖЕБНОГО ПОЛЬЗОВАНИЯ</p><p style="text-align:right;font-size:9pt">Заполняет и хранит руководитель испытания (Правила КК п. 51, 59, 67). Не загружать в портал, мессенджеры и общие папки.</p>
+<h1>СЦЕНАРИЙ ИСПЫТАНИЯ СИСТЕМЫ АВИАЦИОННОЙ БЕЗОПАСНОСТИ № ${ln(6)}</h1><p style="text-align:center">Шифр шаблона ${e(s.id)} · ${e(s.title)}</p>
+<h2>1. Цель испытания</h2><p>${e(s.goal)}</p><p style="font-size:10pt">${(s.purposes || []).map(i => '☒ ' + e(d.purposes[i - 1] || '')).join('<br>')}</p>
+<h2>2. Субъект, объект, форма, дата</h2>${tb(['Субъект', 'Объект', 'Форма', 'Дата и время начала'], [[e(orgs), (s.sites || []).map(e).join(', ') || ln(12), forms, ln(18)]])}
+<h2>3. Описание сценария</h2><p>Способ по п. 53 Правил КК: ${(s.methods || []).length ? 'пп. ' + s.methods.join(', ') + ' — выбрать' : 'не применяется'} ${ln(30)}</p><p>${ln(110)}</p><p>${ln(110)}</p>
+<h2>4. Образцы</h2><p style="font-size:10pt">Только разрешённые законом, безопасные, не мешающие работе, с информационной биркой и контактом для уведомления (п. 55). Выдача и возврат — по описи; перечень — в запросе органу нацбезопасности (п. 54).</p>${tb(['№', 'Образец', 'Кол-во', 'Бирка', 'Выдан (подпись, время)', 'Возвращён (подпись, время)'], blankRows(4, 6))}
+<h2>5. Участники и роли</h2>${tb(['Роль', 'Ф.И.О.', 'Задача', 'Документ о статусе №'], d.roles.map(r => [`<b>${e(r.role)}</b> (${e(r.who)})`, '&nbsp;', e(r.task), '&nbsp;']))}
+<h2>6. Порядок и хронология дня испытания</h2><p style="font-size:10pt">${e(d.t0.note)}</p>${tb(['Время (ориентир)', 'Шаг', 'Основание', 'Фактическое время'], rows6)}
+<h2>7. Меры на случай негативного развития (Приложение 5)</h2><ul>${d.safeguards.map(x => `<li>${e(x)}</li>`).join('')}</ul><p>Координационный центр, телефон ${ln(20)} · дежурный МВД ${ln(20)} · объектовая особенность: ${ln(40)}</p>
+<h2>8. Журнал хронологии (ведёт наблюдатель)</h2>${tb(['Время', 'Пост / место', 'Действие группы', 'Действие персонала', 'Результат'], blankRows(8, 5))}
+<h2>9. Оценка результата</h2><p style="font-size:10pt">По шкале Правил КК п. 113; отчёт и оценка — Приложение 3.</p>${tb(['Что оценивалось', 'Результат'], (s.run || []).map(x => [e(x.step) + `<br><i>${e(x.record)}</i>`, sev.filter(v => ['compliant', 'minor', 'major', 'critical', 'nc'].includes(v.code)).map(v => '☐ ' + e(v.level)).join(' &nbsp; ')]))}
+<p style="margin-top:14pt">Руководитель испытания ${ln(20)} &nbsp; Ф.И.О. ${ln(24)} &nbsp; Дата ${ln(12)}</p>
+<p style="font-size:9pt;margin-top:10pt">Основание: Правила проведения контроля качества, п. 26–27, 47–55, 102–105, Приложения 3 и 5. Бланк создан порталом AvSec Portal из общих данных (цель и объект); конкретные способы, образцы, место, время и участников вносит руководитель испытания.</p></body></html>`;
+}
 function openTestScenario(s) {
   const d = TS(); const its = tsPlanOf(s.id);
   const ar = (s.areas || []).map(n => { const a = tsArea(n); return a ? `<li>п. 26 · ${n}. ${esc(a.name)}</li>` : ''; }).join('');
@@ -1929,7 +1968,7 @@ function openTestScenario(s) {
     ${kv([['Цель', esc(s.goal)], ['Как оценивается', esc(s.criteria)], ['Субъекты', s.orgs.map(orgChip).join(' ')], ['Объекты', tsSiteChips(s.orgs, s.sites)],
       ['ВП областей', s.pq.map(a => `<a href="#pq?area=${esc(a)}"><span class="badge b-area">${esc(a)}</span></a>`).join(' ')],
       ['Способы по Правилам КК п. 53', (s.methods || []).length ? `пп. ${s.methods.join(', ')} (перечень — в Правилах; конкретный способ выбирает руководитель испытания)` : ''], ['Примечание', esc(s.note || '')]])}
-    ${tsRun(s)}${tsTimeline(s, true)}
+    ${tsRun(s)}${tsTimeline(s, true)}${tsDetail(s)}
     ${ar ? `<h3 class="mt">${esc(t('Что проверяется'))}</h3><ul class="list small">${ar}</ul>` : ''}
     <h3 class="mt">${esc(t('Цели испытания'))} <span class="dim small">п. 27</span></h3><ul class="list small">${(s.purposes || []).map(i => `<li>${esc(d.purposes[i - 1] || '')}</li>`).join('')}</ul>
     <h3 class="mt">${esc(t('В плане 2026'))} <span class="dim small">${its.length}</span></h3>
@@ -2540,6 +2579,8 @@ async function boot() {
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
+    const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) download('\ufeff' + tsBlankHtml(sc), `Сценарий испытания ${sc.id} — бланк.doc`, 'application/msword;charset=utf-8'); return; }
+    const tss = e.target.closest('[data-tsscen]'); if (tss) { const sc = tsScen(tss.dataset.tsscen); if (sc) openTestScenario(sc); return; }
     const oact = e.target.closest('[data-openactivity]'); if (oact) { const it = QC() && QC().activities.find(x => x.ref_no === oact.dataset.openactivity); if (it) openActivity(it); return; }
     const ofin = e.target.closest('[data-openfinding]'); if (ofin) { const it = QC() && QC().findings.find(x => x.ref_no === ofin.dataset.openfinding); if (it) openFinding(it); return; }
     const oorg = e.target.closest('[data-openorg]'); if (oorg) { const it = subjOrgs().find(x => x.code === oorg.dataset.openorg); if (it) openOrg(it); return; }
