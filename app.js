@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '68';
+const APP_VERSION = '69';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -158,8 +158,16 @@ async function loadFile(name) {
 }
 /* Ошибки загрузки — по файлам, чтобы на экране было видно, чего именно не хватает. */
 S.loadErrors = [];
+/* Предварительная оценка и подсказки ВП — почти половина объёма (276 из 572 КБ). Нужны только в карточках и сводках ВП,
+   везде читаются через D() с проверкой на пустоту, поэтому подгружаются после первого экрана (loadLazy). */
+const LAZY = ['pq_assess.json', 'pq_hints.json'];
+async function loadLazy() {
+  const names = (S.cfg.files || []).filter(f => LAZY.includes(f)); if (!names.length) return;
+  await Promise.all(names.map(f => loadFile(f).then(r => { S.D[f.replace(/\.json$/, '')] = r; }).catch(e => console.warn(f, e))));
+  try { render(); } catch (e) { console.warn(e); }   // перерисовать текущую страницу уже с оценкой и подсказками
+}
 async function loadAll() {
-  const files = S.cfg.files || [];
+  const files = (S.cfg.files || []).filter(f => !LAZY.includes(f));
   S.loadErrors = [];
   let done = 0;
   const tick = () => { const b = $('#loadProg'); if (b) b.textContent = `Загружено ${done} из ${files.length}`; };
@@ -171,11 +179,11 @@ const cryptoReady = () => !!(window.crypto && crypto.subtle && typeof Decompress
 /* ---------- вход ---------- */
 function showGate(show) { $('#gate').hidden = !show; if (show) setTimeout(() => $('#gateCode').focus(), 50); }
 async function enter() {
-  $('#main').innerHTML = '<div class="loading">Расшифровываю данные…<div class="small mt" id="loadProg"></div><div class="dim small mt">Первый вход скачивает около 0,6 МБ, дальше портал работает офлайн.</div></div>';
+  $('#main').innerHTML = '<div class="loading">Расшифровываю данные…<div class="small mt" id="loadProg"></div><div class="dim small mt">Первый вход скачивает около 0,3 МБ, остальное докачивается фоном, дальше портал работает офлайн.</div></div>';
   await loadAll();
   pnoteMigrate();
   if (!D('pq') && !D('registry')) {
-    const missing = S.loadErrors.filter(e => /HTTP 404/.test(e)).length, total = (S.cfg.files || []).length;
+    const missing = S.loadErrors.filter(e => /HTTP 404/.test(e)).length, total = (S.cfg.files || []).filter(f => !LAZY.includes(f)).length;
     const hint = missing === total && total
       ? `Папка <span class="mono">data-enc/</span> отсутствует или пуста (${missing} файлов не найдено). Скопируйте её из репозитория или соберите: <span class="mono">node tools/build.mjs --code "…"</span> при наличии <span class="mono">data/*.json</span>.`
       : 'Проверьте код доступа, сеть и наличие файлов data-enc/*.enc.';
@@ -184,7 +192,8 @@ async function enter() {
     return;
   }
   $('#who').hidden = !!S.cfg.plain;
-  try { buildNav(); route(); syncInit(); } catch (e) { enterFail(e); }
+  try { buildNav(); route(); syncInit(); } catch (e) { enterFail(e); return; }
+  loadLazy();
 }
 /* Сбой после загрузки данных (старый WebView, битое состояние устройства) раньше оставлял экран «Расшифровываю…» навсегда. */
 function enterFail(e) {
