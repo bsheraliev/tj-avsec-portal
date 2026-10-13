@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '67';
+const APP_VERSION = '68';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -127,7 +127,7 @@ const hex = buf => Array.from(new Uint8Array(buf), b => b.toString(16).padStart(
 const unhex = h => Uint8Array.from((h.match(/.{2}/g) || []), x => parseInt(x, 16));
 async function deriveKey(code) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(norm(code)), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unhex(S.cfg.salt), iterations: S.cfg.kdfIter || 250000, hash: 'SHA-256' }, base, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unhex(S.cfg.salt), iterations: S.cfg.kdfIter || 200000, hash: 'SHA-256' }, base, 256);
   return new Uint8Array(bits);
 }
 async function keyOk(raw) { return hex(await crypto.subtle.digest('SHA-256', raw)) === S.cfg.check; }
@@ -139,16 +139,31 @@ async function decryptEnc(bytes, raw) {
 }
 async function loadFile(name) {
   if (S.cfg.plain) { const r = await fetch('data/' + name, { cache: 'no-cache' }); if (!r.ok) throw new Error(`data/${name}: HTTP ${r.status}`); return r.json(); }
-  const r = await fetch('data-enc/' + name + '.enc');
-  if (!r.ok) throw new Error(`data-enc/${name}.enc: HTTP ${r.status}`);
-  return JSON.parse(await decryptEnc(await r.arrayBuffer(), S.key));
+  // зависший запрос на слабой сети раньше вешал вход навсегда: таймаут 20 с и до трёх попыток
+  let last;
+  for (let n = 0; n < 3; n++) {
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
+    try {
+      const r = await fetch('data-enc/' + name + '.enc', { signal: ac.signal });
+      if (!r.ok) throw new Error(`data-enc/${name}.enc: HTTP ${r.status}`);
+      const buf = await r.arrayBuffer(); clearTimeout(tm);
+      return JSON.parse(await decryptEnc(buf, S.key));
+    } catch (e) {
+      clearTimeout(tm); last = e.name === 'AbortError' ? new Error(`data-enc/${name}.enc: нет ответа за 20 с`) : e;
+      if (/HTTP 404/.test(last.message)) break;
+      await new Promise(res => setTimeout(res, 600 * (n + 1)));
+    }
+  }
+  throw last;
 }
 /* Ошибки загрузки — по файлам, чтобы на экране было видно, чего именно не хватает. */
 S.loadErrors = [];
 async function loadAll() {
   const files = S.cfg.files || [];
   S.loadErrors = [];
-  const got = await Promise.all(files.map(f => loadFile(f).catch(e => { console.warn(f, e); S.loadErrors.push(String(e && e.message || e)); return null; })));
+  let done = 0;
+  const tick = () => { const b = $('#loadProg'); if (b) b.textContent = `Загружено ${done} из ${files.length}`; };
+  const got = await Promise.all(files.map(f => loadFile(f).catch(e => { console.warn(f, e); S.loadErrors.push(String(e && e.message || e)); return null; }).then(r => { done++; tick(); return r; })));
   files.forEach((f, i) => { if (got[i]) S.D[f.replace(/\.json$/, '')] = got[i]; });
 }
 const cryptoReady = () => !!(window.crypto && crypto.subtle && typeof DecompressionStream !== 'undefined');
@@ -156,7 +171,7 @@ const cryptoReady = () => !!(window.crypto && crypto.subtle && typeof Decompress
 /* ---------- вход ---------- */
 function showGate(show) { $('#gate').hidden = !show; if (show) setTimeout(() => $('#gateCode').focus(), 50); }
 async function enter() {
-  $('#main').innerHTML = '<div class="loading">Расшифровываю данные…</div>';
+  $('#main').innerHTML = '<div class="loading">Расшифровываю данные…<div class="small mt" id="loadProg"></div><div class="dim small mt">Первый вход скачивает около 0,6 МБ, дальше портал работает офлайн.</div></div>';
   await loadAll();
   pnoteMigrate();
   if (!D('pq') && !D('registry')) {
@@ -169,7 +184,13 @@ async function enter() {
     return;
   }
   $('#who').hidden = !!S.cfg.plain;
-  buildNav(); route(); syncInit();
+  try { buildNav(); route(); syncInit(); } catch (e) { enterFail(e); }
+}
+/* Сбой после загрузки данных (старый WebView, битое состояние устройства) раньше оставлял экран «Расшифровываю…» навсегда. */
+function enterFail(e) {
+  console.error(e);
+  $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось открыть портал.</b><p class="dim small">Версия v${esc(APP_VERSION)}. Сообщите текст ниже администратору.</p><pre class="mono small" style="white-space:pre-wrap">${esc(String(e && (e.stack || e.message) || e).slice(0, 600))}</pre><div class="row mt"><button class="btn sm ghost" onclick="location.reload()">Повторить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
+  const b = $('#errLogout'); if (b) b.onclick = () => { LS.del(K.key); location.reload(); };
 }
 function initGate() {
   $('#gateForm').onsubmit = async e => {
@@ -2682,7 +2703,7 @@ async function boot() {
   catch (e) { $('#main').innerHTML = '<div class="empty">Не найден data/config.json. Портал нужно открыть через http(s)-сервер (node tools/serve.mjs), а не как файл.</div>'; return; }
   if (S.cfg.plain) { await enter(); return; }
   const saved = LS.get(K.key, '');
-  if (saved && cryptoReady()) { try { const raw = unhex(saved); if (await keyOk(raw)) { S.key = raw; await enter(); return; } } catch (e) {} LS.del(K.key); }
+  if (saved && cryptoReady()) { try { const raw = unhex(saved); if (await keyOk(raw)) { S.key = raw; await enter(); return; } } catch (e) { enterFail(e); return; } LS.del(K.key); }
   $('#main').innerHTML = ''; showGate(true);
 }
 boot();
