@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '70';
+const APP_VERSION = '71';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Документы по испытанию': 'Test documents', 'нет или проект': 'missing or draft', 'Шаг · документ': 'Step · document', 'Кто': 'Who', 'Статус': 'Status', 'Примечание': 'Note', 'До испытания': 'Before the test', 'День испытания': 'Test day', 'После испытания': 'After the test', 'Итог': 'Result', 'по сценарию; отчёт по Прил. 3 — см. чек-лист': 'per scenario; Appendix 3 report — see checklist', 'Документы по каждому испытанию': 'Documents for each test', 'чек-лист от рапорта до дела': 'checklist from internal memo to case file', 'Состояние по конкретному испытанию — в карточке пункта плана («План 2026» → строка). Гласное: все шаги; негласное: без уведомления субъекта (п. 34).': 'Status for a specific test is in the plan item card (“Plan 2026” → row). Overt: all steps; covert: without notifying the entity (para. 34).', 'обе': 'both', 'Документы': 'Documents',
   'Не догрузились': 'Not loaded', 'повторю при появлении сети': 'will retry when online', 'предварительная оценка и подсказки к ВП пока не видны': 'preliminary assessment and PQ hints are not shown yet', 'Догрузить': 'Load now', 'Догружаю…': 'Loading…',
   'Сохранить бланк': 'Save form', 'Telegram не даёт сохранить файл прямо из приложения. Выберите способ:': 'Telegram cannot save a file from the app. Choose a way:', 'Открыть в браузере и скачать .docx': 'Open in browser and download .docx', 'В браузере понадобится код доступа; откроется карточка сценария — нажмите «Бланк (Word)».': 'The browser will ask for the access code; the scenario card opens — tap "Form (Word)".', 'Скопировать текст бланка': 'Copy form text', 'Вставьте в Word, заметки или «Избранное» Telegram.': 'Paste into Word, notes or Telegram Saved Messages.', 'Текст бланка скопирован': 'Form text copied', 'Не удалось скопировать': 'Copy failed',
   'Бланк сценария': 'Scenario form', 'Посмотреть бланк': 'View form', 'заполнять и хранить офлайн': 'fill in and keep offline',
@@ -1917,6 +1918,22 @@ const TKIND = { overt: 'Гласное', covert: 'Негласное', both: 'О
 const TLEVEL = { state: 'Государственное', gknb: 'ГКНБ (п. 56)', internal: 'Внутреннее' };
 const TPST = { proposed: 'Предложено', agreed: 'Согласовано с ГКНБ', notified: 'Субъект уведомлён', done: 'Проведено', cancelled: 'Отменено' };
 const TPSB = { proposed: 'draft', agreed: 'wip', notified: 'wip', done: 'ok', cancelled: 'na' };
+const TRES = { positive: 'положительный', negative: 'отрицательный', mixed: 'смешанный' }, TRESB = { positive: 'ok', negative: 'unsat', mixed: 'part' };
+// чек-лист документов по испытанию: шаги tests.docs_steps по форме испытания; статус шага — из plan.items[].docs,
+// без записи: проведённое — «нет», будущее — «предстоит». Документы остаются в деле (ДСП), в портале — статус и ссылка на запись доказательства
+const TDSB = { ok: 'ok', draft: 'draft', missing: 'missing', todo: 'info', na: 'na', tbd: 'tbd' };
+const TDPH = { before: 'До испытания', day: 'День испытания', after: 'После испытания' };
+const tdLabel = st => ((TS() || {}).docs_statuses || {})[st] || st;
+function tsDocsOf(x) { const d = TS(); return (d.docs_steps || []).filter(st => !st.forms || st.forms.includes('both') || st.forms.includes(x.kind)).map(st => { const r = (x.docs || {})[st.id] || {}; return { ...st, st: r.st || (x.status === 'done' ? 'missing' : 'todo'), note: r.note || '', ev: r.ev || [] }; }); }
+function tsDocsStat(x) { const L = tsDocsOf(x).filter(z => z.st !== 'na'); return { ok: L.filter(z => z.st === 'ok').length, n: L.length, bad: L.filter(z => z.st === 'missing' || z.st === 'draft' || z.st === 'tbd').length }; }
+const evRef = id => { const e = ((D('evidence') || {}).items || []).find(z => z.id === id); return e ? `<span class="small">${idChip(id)} ${esc(e.name)}${e.dsp ? ' <span class="badge b-na">ДСП</span>' : ''}${e.url ? ` <button class="idc clk" type="button" data-open="${esc(e.url)}">Drive</button>` : ''}</span>` : idChip(id); };
+function tsDocsHtml(x) {
+  const L = tsDocsOf(x), st = tsDocsStat(x); let html = `<h4 class="mt">${esc(t('Документы по испытанию'))} <span class="dim small">${st.ok} ${esc(t('из'))} ${st.n}${st.bad ? ` · <span class="warn">${st.bad} ${esc(t('нет или проект'))}</span>` : ''}</span></h4>`;
+  ['before', 'day', 'after'].forEach(ph => { const rows = L.filter(z => z.phase === ph); if (!rows.length) return;
+    html += `<p class="small dim mt" style="margin-bottom:4px"><b>${esc(t(TDPH[ph]))}</b></p><div class="tw"><table><thead><tr><th>№</th><th>${esc(t('Шаг · документ'))}</th><th>${esc(t('Кто'))}</th><th>${esc(t('Статус'))}</th><th>${esc(t('Примечание'))}</th></tr></thead><tbody>`
+      + rows.map(z => `<tr><td>${z.n}</td><td>${esc(z.step)}<div class="small dim">${esc(z.doc)} · ${esc(z.basis)}</div></td><td class="small">${esc(z.who)}</td><td>${badge(TDSB[z.st], tdLabel(z.st))}</td><td class="small">${esc(z.note)}${z.ev.length ? `<div>${z.ev.map(evRef).join('<br>')}</div>` : ''}</td></tr>`).join('') + '</tbody></table></div>'; });
+  return html;
+}
 const TWINB = { plan: 'ok', blackout: 'unsat', admin: 'info' };
 const TWINL = { plan: 'окно испытаний', blackout: 'пауза', admin: 'решения и сроки' };
 const tsScen = id => (TS() ? TS().scenarios.find(x => x.id === id) : null);
@@ -2117,11 +2134,12 @@ function openTestScenario(s) {
 function openTestPlanItem(x) {
   const d = TS(); const s = tsScen(x.scenario); const w = tsWin(x.window);
   openSheet(`<div class="sheet-head"><div class="small dim">${idChip(x.id)} ${badge(TPSB[x.status], TPST[x.status])} ${badge(x.type === 'admin' ? 'info' : x.kind === 'covert' ? 'unsat' : 'ok', x.type === 'admin' ? 'Срок / решение' : TKIND[x.kind])}</div><h2>${s ? esc(s.title) : esc(x.note)}</h2></div>
-    ${kv([['Окно', w ? `${esc(w.code)} · ${esc(w.name)}` : esc(x.window)], ['Сроки', tsPeriod(x) + (x.kind === 'covert' && x.type === 'test' ? ` <span class="small dim">${esc(t('окно, не дата испытания'))}</span>` : '')],
+    ${kv([['Окно', w ? `${esc(w.code)} · ${esc(w.name)}` : esc(x.window)], ['Сроки', tsPeriod(x) + (x.kind === 'covert' && x.type === 'test' && x.status !== 'done' ? ` <span class="small dim">${esc(t('окно, не дата испытания'))}</span>` : '')],
       ['Субъект', orgChip(x.org)], ['Объект', x.site ? idChip(`S:${x.org}/${x.site}`) : ''], ['Сценарий', s ? `${idChip(s.id)} ${esc(s.title)}` : ''],
       ['Форма', esc(TKIND[x.kind] || '')], ['Уровень', esc(TLEVEL[x.level] || '')], ['Приоритет', esc(x.prio) + ' <span class="small dim">' + esc(t('ориентировочный, до присвоения категорий риска')) + '</span>'],
       ['Уведомить до', x.notice_by ? `<b>${fmtDate(x.notice_by)}</b> <span class="small dim">${esc(t('10 рабочих дней до начала, п. 32; праздничные дни учесть'))}</span>` : ''],
-      ['Руководитель', esc(x.lead)], ['Примечание', esc(x.note)]])}
+      ['Руководитель', esc(x.lead)], ['Итог', x.result ? badge(TRESB[x.result], TRES[x.result]) + ` <span class="small dim">${esc(t('по сценарию; отчёт по Прил. 3 — см. чек-лист'))}</span>` : ''], ['Примечание', esc(x.note)]])}
+    ${x.type === 'test' ? tsDocsHtml(x) : ''}
     ${s ? `<p class="mt"><button class="btn sm ghost" data-go="tests?t=scen">${esc(t('Все сценарии'))} →</button></p>` : ''}`);
 }
 function pTests(m) {
@@ -2165,12 +2183,14 @@ function pTests(m) {
     tb.appendChild(selector('Все субъекты', 'org', uniq(items.map(x => x.org)), c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; }));
     m.appendChild(tb);
     const rows = items.filter(x => (!S.f.tw || x.window === S.f.tw) && (!S.f.tk || x.kind === S.f.tk) && (!S.f.org || x.org === S.f.org));
-    m.appendChild(table(['№', 'Окно · сроки', 'Субъект · объект', 'Сценарий', 'Форма', 'Приор.', 'Уведомить до', 'Статус'], rows, x => {
-      const s = tsScen(x.scenario);
+    m.appendChild(table(['№', 'Окно · сроки', 'Субъект · объект', 'Сценарий', 'Форма', 'Приор.', 'Уведомить до', 'Статус', 'Документы'], rows, x => {
+      const s = tsScen(x.scenario); const ds = x.type === 'test' ? tsDocsStat(x) : null;
       return [idChip(x.id), `<b>${esc(x.window)}</b> · ${tsPeriod(x)}`, orgChip(x.org) + (x.site ? ' ' + idChip(`S:${x.org}/${x.site}`) : ''),
         s ? `${idChip(s.id)} <span class="small">${esc(s.title)}</span>` : `<span class="small">${esc(x.note)}</span>`,
-        x.type === 'admin' ? badge('info', 'срок') : badge(x.kind === 'covert' ? 'unsat' : 'ok', TKIND[x.kind]), esc(x.prio), x.notice_by ? fmtDate(x.notice_by) : '—', badge(TPSB[x.status], TPST[x.status])];
-    }, openTestPlanItem, { w: ['9%', '13%', '14%', '24%', '11%', '5%', '10%', '14%'] }));
+        x.type === 'admin' ? badge('info', 'срок') : badge(x.kind === 'covert' ? 'unsat' : 'ok', TKIND[x.kind]), esc(x.prio), x.notice_by ? fmtDate(x.notice_by) : '—',
+        badge(TPSB[x.status], TPST[x.status]) + (x.result ? ' ' + badge(TRESB[x.result], TRES[x.result]) : ''),
+        ds ? `${ds.ok}/${ds.n}${ds.bad ? ` <span class="warn small">⚠ ${ds.bad}</span>` : ''}` : ''];
+    }, openTestPlanItem, { w: ['8%', '12%', '13%', '22%', '10%', '5%', '9%', '13%', '8%'] }));
     m.appendChild(el('p', 'small dim', esc(t('Негласные испытания даны окном: точную дату знают руководитель испытания и ГКНБ. «Уведомить до» — для гласных: 10 рабочих дней до начала, п. 32.'))));
   }
   if (tab === 'chrono') {
@@ -2199,6 +2219,11 @@ function pTests(m) {
     const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('Порядок проведения испытания'))} <span class="dim small">Правила КК</span></h2>`;
     c.appendChild(table(['№', 'Шаг', 'Срок', 'Основание'], d.workflow, x => [x.n, esc(x.step), `<span class="small">${esc(x.due)}</span>`, `<span class="small dim">${esc(x.basis)}</span>`], null, { w: ['5%', '60%', '21%', '14%'] }));
     m.appendChild(c);
+    if ((d.docs_steps || []).length) {
+      const cd = el('div', 'card'); cd.innerHTML = `<h2>${esc(t('Документы по каждому испытанию'))} <span class="dim small">${esc(t('чек-лист от рапорта до дела'))} · ${d.docs_steps.length}</span></h2><p class="small dim">${esc(t('Состояние по конкретному испытанию — в карточке пункта плана («План 2026» → строка). Гласное: все шаги; негласное: без уведомления субъекта (п. 34).'))}</p>`;
+      cd.appendChild(table(['№', 'Этап', 'Шаг', 'Документ', 'Кто', 'Основание', 'Форма'], d.docs_steps, z => [z.n, `<span class="small">${esc(t(TDPH[z.phase]))}</span>`, esc(z.step), `<span class="small">${esc(z.doc)}</span>`, `<span class="small">${esc(z.who)}</span>`, `<span class="small dim">${esc(z.basis)}</span>`, `<span class="small">${esc((z.forms || []).includes('both') ? t('обе') : (z.forms || []).map(f => TKIND[f]).join(', '))}</span>`], null, { w: ['4%', '11%', '34%', '17%', '13%', '13%', '8%'] }));
+      m.appendChild(cd);
+    }
     const g = el('div', 'grid2');
     const c1 = el('div', 'card'); c1.innerHTML = `<h2>${esc(t('Меры безопасности при испытании'))}</h2><ul class="list small">${d.safeguards.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
     const c2 = el('div', 'card'); c2.innerHTML = `<h2>${esc(t('Отчёт об испытании'))} <span class="dim small">Прил. 3</span></h2><ul class="list small">${d.reportFields.map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="small dim">${esc(t('Находки заносятся в раздел «Контроль качества»; результаты негласных испытаний — только факт и итог.'))}</p>`;
