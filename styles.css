@@ -2,7 +2,7 @@
 :root{
   --bg:#f3f6f9; --card:#fff; --ink:#12202f; --dim:#5b6b7d; --line:#dde4ec;
   --accent:#123b5e; --accent-soft:#e6eef6; --accent-ink:#fff;
-  --ok:#1a7f4b; --ok-bg:#e6f4ec;
+  --ok:#176e42; --ok-bg:#e6f4ec;
   --draft:#8a6100; --draft-bg:#fdf3dc;
   --miss:#a32020; --miss-bg:#fbe9e9;
   --na:#5b6b7d; --na-bg:#eef1f5;
@@ -269,9 +269,12 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
 .chk{display:flex;align-items:center;gap:8px;margin:2px 0 6px;font-size:13px;cursor:pointer}
 .chk input{width:16px;height:16px;accent-color:var(--accent);flex:0 0 auto}
 .evhead{margin-top:12px}
-.evrow{display:grid;grid-template-columns:2fr 1.4fr auto auto;gap:6px;margin-bottom:6px}
+.evrow{display:grid;grid-template-columns:2fr 1.4fr auto auto auto;gap:6px;margin-bottom:6px}
+.evrow .sel{min-width:0;padding:4px 6px}
 .evrow .inp{width:100%;min-width:0}
 @media (max-width:640px){
+  .badge{white-space:normal;max-width:100%}   /* длинные бейджи легенды (qc, gm) не растягивают страницу — D2 */
+  td .badge{display:inline;box-decoration-break:clone;-webkit-box-decoration-break:clone}   /* ячейка-карточка на телефоне — inline: inline-block внутри inline-td не ограничивается шириной */
   .cerow{grid-template-columns:1fr auto;gap:4px 8px}
   .cebar{grid-column:1/-1}
   .evrow{grid-template-columns:1fr auto}

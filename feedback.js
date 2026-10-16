@@ -64,6 +64,7 @@
     'width:40px;height:40px;border-radius:50%;border:1px solid rgba(128,128,128,.45);background:rgba(30,30,30,.72);' +
     'color:#fff;font:18px/1 system-ui,sans-serif;cursor:pointer;opacity:.7;padding:0}' +
     '.fbk-btn:hover,.fbk-btn:focus-visible{opacity:1}' +
+    '@media (max-width:640px){.fbk-btn{bottom:calc(70px + env(safe-area-inset-bottom,0px))}}' +   /* над нижней панелью телефона — не перекрывать вкладку «Обзор» */
     '.fbk-back{position:fixed;inset:0;z-index:2147483001;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}' +
     '.fbk-box{background:#fff;color:#1a1a1a;width:100%;max-width:480px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;' +
     'padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font:15px/1.4 system-ui,sans-serif;box-sizing:border-box}' +

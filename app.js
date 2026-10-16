@@ -4,12 +4,12 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '72';
+const APP_VERSION = '73';
 
 /* ---------- хранилище ---------- */
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { try { toast(t('Не сохранено: хранилище браузера переполнено — выгрузите резервную копию (Данные) и очистите журнал'), 'err'); } catch (_) { /* до инициализации */ } return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
 const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev', sync: 'avsec-sync', areats: 'avsec-arearesp-ts', pnote: 'avsec-pnote' };
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Надзор АБ': 'AVSEC oversight', 'Субъекты надзора': 'Regulated entities', 'Контроль качества': 'Quality control', 'Контроль качества АБ': 'AVSEC quality control', '№ ВП': 'PQ No.', 'Прил.': 'Annex', 'Удовл.': 'Sat.', 'Неудовл.': 'Unsat.', 'Наименование': 'Name', 'Пункт': 'Paragraph', 'Текст SARP': 'SARP text', 'Код': 'Code', 'Ответ (фрагмент)': 'Answer (excerpt)', 'Организация': 'Organisation', 'Тип': 'Type', 'Риск': 'Risk', 'Программы': 'Programmes', 'Основание': 'Basis', 'Уведомление': 'Notice', 'Акт / отчёт': 'Report', 'Субъект': 'Entity', 'Мероприятие': 'Activity', 'Месяц': 'Month', 'Несоответствие': 'Finding', 'Срок устранения': 'Closure due', 'Рекомендация ИКАО': 'ICAO recommendation', 'Корректирующее действие (ПКД 2020)': 'Corrective action (CAP 2020)', 'Сроки': 'Dates', 'Очень высокий': 'Critical', 'Документ ИКАО': 'ICAO document', 'Критический элемент': 'Critical element', 'Очистить': 'Clear', 'Пункт / страница': 'Paragraph / page', 'Поиск по тексту ВП': 'Search PQ text', 'Файл': 'File', 'Области': 'Areas', 'Ф.И.О.': 'Name', 'Название': 'Title', 'Этап': 'Stage', 'Распределение областей проверки': 'Audit area assignments', 'Состав': 'Team members', 'Инструктивный материал': 'Guidance material', 'Раздел / § НПАБГА РТ': 'NCASP section / §', 'Документ / программа': 'Document / programme', 'Требование ИКАО и НППБ': 'ICAO and NCASP requirement', 'Статус в АГА при ПРТ': 'Status at CAA', 'Аналог РК / КР': 'KZ / KG analogue', 'Тема': 'Topic', 'Реквизиты': 'Reference', 'Файл / источник': 'File / source', 'Зачем': 'Purpose', 'Окно · сроки': 'Window · dates', 'Субъект · объект': 'Entity · site', 'Сценарий': 'Scenario', 'Приор.': 'Prio.', 'Удовлетворительно без подтверждения': 'Satisfactory without evidence of implementation', 'нет доказательств: документ + пункт или файл': 'no evidence: document + paragraph or file', 'нужна запись о внедрении (акт, отчёт, журнал) — норма практику не доказывает': 'needs a record of implementation (report, log, minutes) — a rule does not prove practice', 'опирается только на неутверждённый документ или самодекларацию (SASAQ, CC, ПКД)': 'relies only on a draft document or self-declaration (SASAQ, CC, CAP)', 'файлы — проекты без реквизитов (подпись, номер, дата)': 'files are drafts without signature, number, date', 'у документов нет даты': 'documents have no date', 'рекомендация ПКД 2019 по этому ВП не закрыта': '2019 CAP recommendation for this PQ is still open', 'в оценке указано, что ещё нужно': 'preliminary assessment lists what is still needed', '«Удовлетворительно» без подтверждения': '"Satisfactory" without evidence of implementation', 'Из предварительной оценки': 'From preliminary assessment', 'из оценки': 'from assessment', 'подтверждённый': 'confirmed', 'без подтверждения внедрения': 'without evidence of implementation', 'подтверждённый EI — без ВП «удовлетворительно» без подтверждения': 'confirmed EI — excluding unsupported "satisfactory"', 'Аудитор ИКАО такой ВП не зачтёт. Сохранить всё равно?': 'An ICAO auditor will not accept this PQ. Save anyway?', 'Закрыть без сохранения?': 'Close without saving?', 'ВП изменён на другом устройстве, пока карточка была открыта. Сохранить вашу версию поверх? (Отмена — открыть свежую)': 'This PQ was changed on another device while the card was open. Overwrite with your version? (Cancel — reload the card)', 'Снять самооценку ВП': 'Clear self-assessment of PQ', 'Статус, доказательства и заметка удалятся на всех устройствах.': 'Status, evidence and note will be removed on all devices.', 'Статус, доказательства и заметка удалятся на этом устройстве.': 'Status, evidence and note will be removed on this device.', 'Перекрыто более поздней правкой с другого устройства': 'Overridden by a later change from another device', 'Не сохранено: хранилище браузера переполнено — выгрузите резервную копию (Данные) и очистите журнал': 'Not saved: browser storage is full — export a backup (Data) and clear the log', 'тип': 'type', 'норма': 'rule', 'запись / акт': 'record / report', 'Тип доказательства: норма (документ, пункт) или запись о внедрении (акт, отчёт, журнал, протокол)': 'Evidence type: rule (document, paragraph) or record of implementation (report, log, minutes)', 'документ · пункт или страница · дата · тип (норма или запись о внедрении) — как требует USAP': 'document · paragraph or page · date · type (rule or record) — as USAP requires', 'ВП получат «удовлетворительно» без подтверждения внедрения (только норма, проект документа или самодекларация) — они попадут в «К работе».': 'PQs will become "satisfactory" without evidence of implementation (rule, draft or self-declaration only) — they will be listed under "To do".', 'Отменить можно кнопкой «Отменить последнее» в списке ВП → «Выбрать» до перезагрузки страницы.': 'Undo with "Undo last" in the PQ list → "Select" until the page is reloaded.', 'ВП без единого доказательства получат «удовлетворительно» — аудитор ИКАО это не зачтёт.': 'PQs without any evidence will become "satisfactory" — an ICAO auditor will not accept this.', 'пропущено — изменены позже': 'skipped — changed later', 'Кто я': 'Who am I', 'Фамилия И. — автор правок на этом устройстве': 'Surname N. — author of changes on this device', 'Пишется в журнал изменений и в выгрузку OLF («Latest Modified By»); пусто — NCMC': 'Written to the change log and OLF export ("Latest Modified By"); empty — NCMC', 'Убрать': 'Remove',
   'С категорией риска': 'With risk category', 'Без категории': 'No category', 'Высокий': 'High', 'Средне-высокий': 'Medium-high', 'Средний': 'Medium', 'Средне-низкий': 'Medium-low', 'Низкий': 'Low', 'проверка состояния': 'security audit', 'инспекция': 'inspection', 'испытание': 'test', 'Ежегодная программа надзора 2026, прил. 4': 'Annual oversight programme 2026, Annex 4', 'предложение портала — вне программы 2026': 'portal proposal — outside the 2026 programme', 'Категория риска': 'Risk category', 'Периодичность': 'Periodicity', 'Источник': 'Source',
   'Документы по испытанию': 'Test documents', 'нет или проект': 'missing or draft', 'Шаг · документ': 'Step · document', 'Кто': 'Who', 'Статус': 'Status', 'Примечание': 'Note', 'До испытания': 'Before the test', 'День испытания': 'Test day', 'После испытания': 'After the test', 'Итог': 'Result', 'по сценарию; отчёт по Прил. 3 — см. чек-лист': 'per scenario; Appendix 3 report — see checklist', 'Документы по каждому испытанию': 'Documents for each test', 'чек-лист от рапорта до дела': 'checklist from internal memo to case file', 'Состояние по конкретному испытанию — в карточке пункта плана («План 2026» → строка). Гласное: все шаги; негласное: без уведомления субъекта (п. 34).': 'Status for a specific test is in the plan item card (“Plan 2026” → row). Overt: all steps; covert: without notifying the entity (para. 34).', 'обе': 'both', 'Документы': 'Documents',
   'Не догрузились': 'Not loaded', 'повторю при появлении сети': 'will retry when online', 'предварительная оценка и подсказки к ВП пока не видны': 'preliminary assessment and PQ hints are not shown yet', 'Догрузить': 'Load now', 'Догружаю…': 'Loading…',
@@ -189,7 +190,7 @@ async function loadLazy() {
   // открытая карточка ВП собиралась без этих данных — пересобрать её, сохранив прокрутку
   try {
     syRerender();
-    if (!$('#sheet').hidden && S.sheetPQ) { const it = D('pq') && D('pq').items.find(x => x.id === S.sheetPQ); const sc = $('.sheet-card'), y = sc ? sc.scrollTop : 0; if (it) { openPQ(it); if (sc) $('.sheet-card').scrollTop = y; } }
+    if (!$('#sheet').hidden && S.sheetPQ && !S.pqDirty) { const it = D('pq') && D('pq').items.find(x => x.id === S.sheetPQ); const sc = $('.sheet-card'), y = sc ? sc.scrollTop : 0; if (it) { openPQ(it); if (sc) $('.sheet-card').scrollTop = y; } }
   } catch (e) { console.warn(e); }
 }
 const lazyRetry = () => { if (S.lazyErr.length && navigator.onLine !== false) loadLazy(); };
@@ -345,13 +346,15 @@ function table(cols, rows, rowFn, onClick, opts = {}) {
     tr.innerHTML = rowFn(r).map((c, i) => { const v = c == null ? '' : String(c); const plain = v.replace(/<[^>]+>/g, '').trim(); const ctl = /<(input|select|button|textarea)/i.test(v);
       return `<td data-label="${esc(cols[i] || '')}" class="${!ctl && TABLE_NA.has(plain) ? 'na' : ''}${ctl ? ' ctl' : ''}">${v}</td>`; }).join('');
     // клик по контролу внутри строки (галочка, статус, ссылка, кнопка) не должен открывать карточку строки
-    if (onClick) { tr.onclick = e => { if (e.target.closest('input,select,button,a,textarea,label,summary,details')) return; onClick(r); }; tr.tabIndex = 0; tr.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); onClick(r); } }; }
+    if (onClick) { tr.onclick = e => { const x = e.target.closest('input,select,button,a,textarea,label,summary'); if (x && tr.contains(x)) return; onClick(r); };   /* предок-details вне строки (таблица в раскрывашке) — не контрол */ tr.tabIndex = 0; tr.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) { e.preventDefault(); onClick(r); } }; }
     body.appendChild(tr);
   });
   tb.appendChild(body); w.appendChild(tb); return w;
 }
-function openSheet(html) { S.sheetPQ = null; $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; $('.sheet-card').focus(); document.body.style.overflow = 'hidden'; tgSync(); }
-function closeSheet() { $('#sheet').hidden = true; document.body.style.overflow = ''; tgSync(); if (SY.rerender) { SY.rerender = false; render(); } }
+function openSheet(html) { S.sheetPQ = null; S.pqDirty = false; $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; $('.sheet-card').focus(); document.body.style.overflow = 'hidden'; tgSync(); }
+// закрытие по Esc / ✕ / фону: при несохранённом вводе в карточке ВП — спросить
+const closeSheetAsk = () => { if (S.pqDirty && !$('#sheet').hidden && !confirm(t('Закрыть без сохранения?'))) return; closeSheet(); };
+function closeSheet() { S.pqDirty = false; $('#sheet').hidden = true; document.body.style.overflow = ''; tgSync(); if (SY.rerender) { SY.rerender = false; render(); } }
 const kv = pairs => `<div class="kv">${pairs.filter(p => p[1]).map(([k, v]) => `<div>${esc(t(k))}</div><div>${v}</div>`).join('')}</div>`;
 const links = arr => (arr || []).length ? `<ul class="list">${arr.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>${l.date ? ` <span class="dim small">${esc(l.date)}</span>` : ''}</li>`).join('')}</ul>` : '<span class="dim">—</span>';
 function selector(label, key, values, labelFn) {
@@ -399,7 +402,7 @@ function logChange(kind, id, before, after, fields) {
     .map(f => ({ n: f.n, from: logVal(f, (before || {})[f.k]), to: logVal(f, (after || {})[f.k]) }))
     .filter(c => c.from !== c.to);
   if (!ch.length) return;
-  const who = String(settings().ncmc || '').split(',')[0].trim();
+  const who = whoAmI();
   LS.set(K.log, [{ ts: Date.now(), at: today(), kind, id, who, ch }, ...logState()].slice(0, 500));
 }
 function changeLog(kind, id) {
@@ -409,6 +412,8 @@ function changeLog(kind, id) {
     + rows.slice(0, 20).map(r => `<li><span class="dim">${esc(r.at)}${r.who ? ' · ' + esc(r.who) : ''}</span> — `
       + r.ch.map(c => `${esc(c.n)}: <span class="dim">${esc(c.from || '—')}</span> → <b>${esc(c.to || '—')}</b>`).join('; ') + `</li>`).join('') + '</ul></details>';
 }
+// кто правит на этом устройстве: настройка «Кто я» (avsec-settings → me), иначе NCMC из данных
+const whoAmI = () => String(settings().me || String(settings().ncmc || '').split(',')[0]).trim();
 const PQLOGF = [{ k: 'st', n: 'Статус', map: PQST }, { k: 'draft', n: 'Черновик' }, { k: 'due', n: 'Срок' }, { k: 'resp', n: 'Ответственный' }, { k: 'evl', n: 'Доказательства' }, { k: 'note', n: 'Примечание' }, { k: 'en', n: 'English translation' }, { k: 'pnote', n: 'Личная заметка' }];
 // CAPPR объявлен ниже по файлу — поэтому функция, а не константа (иначе ReferenceError при загрузке)
 const CAPLOGF = () => [{ k: 'progress', n: 'Progress Status', map: CAPPR }, { k: 'percent', n: 'Progress %' }, { k: 'org', n: 'Action Office' }, { k: 'evref', n: 'Evidence Reference' }, { k: 'est', n: 'Est. Imp. Date' }, { k: 'rev', n: 'Rev. Imp. Date' }, { k: 'done', n: 'Date of Completion' }];
@@ -456,7 +461,7 @@ function pqWrite(changes) {
     if (rec && 'pnote' in rec) { if (rec.pnote) pn[id] = rec.pnote; else delete pn[id]; const { pnote, ...rest } = rec; rec = rest; }
     else if (!rec) delete pn[id];
     if (rec && pqEmpty(rec) && !rec.cleared) rec = null;                   // осталась только личная заметка — общей записи нет
-    if (rec) d[id] = { ...rec, ts }; else if (p[id] && !p[id].cleared) d[id] = { cleared: true, ts }; else delete d[id];
+    if (rec) d[id] = { ...rec, ts, by: whoAmI() }; else if (p[id] && !p[id].cleared) d[id] = { cleared: true, ts }; else delete d[id];
   });
   LS.set(K.pnote, pn); LS.set(K.pq, d); syncSoon();
 }
@@ -494,8 +499,11 @@ async function syCall(body) {
 // правки устройства, уже совпавшие с общими или устаревшие, убираются из слоя устройства
 function syPrune(c) {
   const d = pqDev(), r = pqRemote(); let n = 0;
-  Object.keys(d).forEach(id => { const x = c.pq[id] || r[id]; if (x && (JSON.stringify(x) === JSON.stringify(d[id]) || stampOf(x) > stampOf(d[id]))) { delete d[id]; n++; } });
+  const lost = [];
+  Object.keys(d).forEach(id => { const x = c.pq[id] || r[id]; if (!x) return; const same = JSON.stringify(x) === JSON.stringify(d[id]);
+    if (same || stampOf(x) > stampOf(d[id])) { if (!same) lost.push(id); delete d[id]; n++; } });
   if (n) LS.set(K.pq, d);
+  if (lost.length) toast(t('Перекрыто более поздней правкой с другого устройства') + ': ВП ' + lost.slice(0, 8).join(', ') + (lost.length > 8 ? '…' : ''), 'warn');
   const ad = LS.get(K.arearesp, {}), at = LS.get(K.areats, {}), sh = areaShared(); let m = 0;
   Object.keys(ad).forEach(a => { const x = c.area[a]; if ((ad[a] || '') === (sh[a] || '') || (x && (x.ts || '') > (at[a] || ''))) { delete ad[a]; delete at[a]; m++; } });
   if (m) { LS.set(K.arearesp, ad); LS.set(K.areats, at); }
@@ -579,7 +587,7 @@ const settings = () => { const u = U() || {}; const d = {};
 /* команда: список по умолчанию — из team.json, правки списка — на устройстве */
 const team = () => { const o = LS.get(K.team, null); if (o) return o; const d = D('team'); return d ? d.members : []; };
 const member = id => team().find(m => m.id === id);
-const nameOf = id => (member(id) || {}).name || id || '';
+const nameOf = id => (member(id) || {}).name || (id ? id + ' ⚠' : '');   // ⚠ — назначение есть, а человека в составе на этом устройстве нет (team.json / avsec-team)
 // ответственные по областям: опубликованное (pq_self.json → arearesp), поверх общее (синхронизация, по области { v, ts }),
 // поверх устройство; '' снимает назначение
 const areaShared = () => { const o = { ...(((D('pq_self') || {}).arearesp) || {}) }, sh = syCache().area;
@@ -621,7 +629,7 @@ const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== un
 const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, evplan: pEvPlan, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
+const FILTER_LABELS = { tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
 const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1, pre: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
@@ -705,6 +713,7 @@ function todoCard(m) {
   if (pq) {
     const st = pqState(); const n = pq.items.filter(i => (st[i.id] || {}).st).length; add(`<b>ВП</b>: оценено ${n} из ${pq.items.length} (${pct(n, pq.items.length)}%)`, '#pq?st=none');
     const od = pq.items.filter(i => { const o = st[i.id] || {}; return o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0; }).length; if (od) add(`<b>ВП с просроченным сроком</b>: <span class="warn">${od}</span>`, '#pq');
+    const wk = pq.items.filter(i => (st[i.id] || {}).st === 'sat' && pqSatWeak(i, st)).length; if (wk) add(`<b>ВП «удовлетворительно» без подтверждения</b>: <span class="warn">${wk}</span> — нужна запись о внедрении или утверждённый документ`, '#pq?weak=1');
   }
   const late = STAGES.filter(s => { const o = planState()[s.id] || {}; const due = o.date || (typeof s.due === 'function' ? s.due() : s.due); return due && stageStatus(s) !== 'done' && daysTo(due) < 0; }).length;
   if (late) add(`<b>Дорожная карта</b>: этапов с просроченным сроком — <span class="warn">${late}</span>`, '#plan');
@@ -801,7 +810,8 @@ function pPQ(m) {
   const none = all.filter(i => !(st[i.id] || {}).st).length;
   const unsat = all.filter(i => (st[i.id] || {}).st === 'unsat').length;
   const over = all.filter(i => { const o = st[i.id] || {}; return o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0; }).length;
-  m.appendChild(segbar(QTABS.map(x => ({ ...x, n: x.id === 'list' ? all.length : x.id === 'todo' ? none + unsat + over : null })), tab, goTab));
+  const weak = all.filter(i => (st[i.id] || {}).st === 'sat' && pqSatWeak(i, st)).length;
+  m.appendChild(segbar(QTABS.map(x => ({ ...x, n: x.id === 'list' ? all.length : x.id === 'todo' ? none + unsat + over + weak : null })), tab, goTab));
 
   if (tab === 'list') {
     const tb = el('div', 'toolbar');
@@ -819,7 +829,7 @@ function pPQ(m) {
     const exo = el('button', 'btn ghost sm', esc(t('Самооценка — сверка с OLF (CSV)'))); exo.onclick = () => exportPQOLF(list); tb.appendChild(exo);
     const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
     m.appendChild(tb);
-    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star) && (!S.f.hint || pqHintOpen(i)) && (!S.f.pre || pqPreOpen(i, st))
+    var list = all.filter(i => (!S.f.area || i.area === S.f.area) && (!S.f.sub || i.sub === S.f.sub) && (!S.f.ce || i.ce === S.f.ce) && (!S.f.star || i.star) && (!S.f.hint || pqHintOpen(i)) && (!S.f.pre || pqPreOpen(i, st)) && (!S.f.weak || ((st[i.id] || {}).st === 'sat' && pqSatWeak(i, st)))
       && (!S.f.st || (S.f.st === 'none' ? !(st[i.id] || {}).st : (st[i.id] || {}).st === S.f.st))
       && (!S.f.resp || (S.f.resp === 'none' ? !respOfPQ(i) : (respOfPQ(i) || {}).id === S.f.resp))
       && (!S.f.over || (o => o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0)(st[i.id] || {}))
@@ -833,7 +843,7 @@ function pPQ(m) {
     const onSel = e => { const x = e.target.closest('[data-pqsel]'); if (!x) return; if (x.checked) S.pqSel.add(x.dataset.pqsel); else S.pqSel.delete(x.dataset.pqsel); pqBulkCount(list); };
     paged(m, list, part => { const tw = table((selOn ? [''] : []).concat(['№ ВП', 'Область', 'КЭ', 'Вопрос', 'Прил.', 'Статус', 'Ответственный', 'Срок']), part,
       i => { const o = st[i.id] || {}; return (selOn ? [`<input type="checkbox" data-pqsel="${esc(i.id)}"${S.pqSel.has(i.id) ? ' checked' : ''} aria-label="${esc(t('Выбрать'))} ${esc(i.id)}">`] : []).concat([`<span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''}${o.draft ? ' <span class="dim" title="Черновик ответа (Draft copy)">✎</span>' : ''}${capHas(i.id) ? ' <span class="dim" title="Вывод аудита 2019 (номер ВП — по протоколу 2019)">⚑</span>' : ''}`, `<span class="badge b-area">${i.area}</span>`, `<span class="badge b-ce">${esc(i.ce)}</span>`,
-        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, (o.st || !pqAssess(i.id) ? pqBadge(o.st) : pqPreBadge(pqAssess(i.id).st)), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']); },
+        `<div class="td-wrap clamp" title="${esc(i.q)}">${esc(i.q)}</div>`, `<span class="mono">${esc(i.doc)}</span>`, (o.st || !pqAssess(i.id) ? pqBadge(o.st) + (o.st === 'sat' ? pqGapsHtml(i, o) : '') : pqPreBadge(pqAssess(i.id).st)), (r => r ? (r.byArea ? `<span class="dim" title="${esc(t('по области'))}">${esc(r.name)}</span>` : esc(r.name)) : '—')(respOfPQ(i)), o.due ? `<span class="${daysTo(o.due) < 0 && o.st !== 'sat' ? 'warn' : ''}">${fmtDate(o.due)}</span>` : '—']); },
       openPQ, { groupKey: S.f.sub || S.f.ce ? null : (i => { const x = d.meta.subs.find(y => y.code === i.sub); return x ? `${x.code} ${x.name}` : i.area; }) });
       tw.addEventListener('change', onSel); m.appendChild(tw); });
   }
@@ -851,13 +861,13 @@ function pPQ(m) {
     ar.innerHTML = `<h2>${esc(t('Области проверки'))} <span class="dim small">${d.meta.areas.length} областей · аудиторы по плану v1.0, две подгруппы с ротацией</span></h2>`;
     ar.appendChild(table(['Область', 'Наименование', 'Аудитор ИКАО', 'ВП', 'Оценено', 'EI'], d.meta.areas, x => {
       const items = all.filter(i => i.area === x.code);
-      const n = { sat: 0, na: 0, done: 0 };
-      items.forEach(i => { const k = (st[i.id] || {}).st; if (k) n.done++; if (k === 'sat') n.sat++; if (k === 'na') n.na++; });
-      const appl = items.length - n.na; const ei = appl ? Math.round(n.sat * 100 / appl) : null;
+      const n = { sat: 0, na: 0, done: 0, weak: 0 };
+      items.forEach(i => { const k = (st[i.id] || {}).st; if (k) n.done++; if (k === 'sat') { n.sat++; if (pqSatWeak(i, st)) n.weak++; } if (k === 'na') n.na++; });
+      const appl = items.length - n.na; const ei = appl ? Math.round(n.sat * 100 / appl) : null, eic = appl ? Math.round((n.sat - n.weak) * 100 / appl) : null;
       return [`<span class="badge b-area">${esc(x.code)}</span>`, `<span class="small">${esc(x.name)}</span>`,
         `<span class="small">${esc(areaAuditor(x.code) || '—')}</span>`, items.length,
         `${n.done} <span class="dim small">(${pct(n.done, items.length)}%)</span>`,
-        ei == null ? '<span class="dim">—</span>' : `<b class="${ei < 60 ? 'warn' : ''}">${ei}%</b>`];
+        ei == null ? '<span class="dim">—</span>' : `<b class="${ei < 60 ? 'warn' : ''}">${ei}%</b>${n.weak ? ` <span class="dim small" title="${esc(t('подтверждённый EI — без ВП «удовлетворительно» без подтверждения'))}">(${eic}% · ⚠ ${n.weak})</span>` : ''}`];
     }, x => go('pq', { area: x.code })));
     m.appendChild(ar);
     const X = xref();
@@ -886,6 +896,7 @@ function pPQ(m) {
       + block('Не оценено', none, '#pq?st=none', 'Без статуса EI считается нулевым — это первое, что смотрит ИКАО')
       + block('Не соответствует', unsat, '#pq?st=unsat', 'Требуют корректирующего действия и доказательства до начала аудита')
       + block('Просрочен срок', over, '#pq?over=1', 'Срок в самооценке прошёл, а статус не «удовлетворительно»')
+      + block('Удовлетворительно без подтверждения', weak, '#pq?weak=1', 'Нет записи о внедрении (КЭ-4…8), только неутверждённая норма или самодекларация, нет даты, не закрыта рекомендация 2019 — аудитор ИКАО такой ВП не зачтёт')
       + block('Есть вывод аудита 2019', cap, '#pq?cap=1', 'По этим ВП были выводы ИКАО — проверьте, закрыты ли рекомендации')
       + (D('pq_hints') ? block('Есть подсказки, нет доказательств', all.filter(pqHintOpen).length, '#pq?hint=1', 'Абзацы НПАБГА, Правил КК, Программы КК и Порядка по упрощению формальностей подобраны по тексту ВП — проверьте и перенесите в доказательства') : '')
       + (D('pq_assess') ? block('Предварительная оценка не принята', all.filter(i => pqPreOpen(i, st)).length, '#pq?pre=1', 'Подготовлено сессией по текстам НПАБГА и Правил КК — откройте ВП, проверьте и примите') : '')
@@ -1021,14 +1032,14 @@ function ceEI(d, list, st) {
   const c = el('div', 'card');
   const rows = Object.keys(d.meta.ce).map(ce => {
     const items = list.filter(i => i.ce === ce); if (!items.length) return null;
-    const n = { sat: 0, unsat: 0, wip: 0, na: 0, none: 0 };
-    items.forEach(i => { n[(st[i.id] || {}).st || 'none']++; });
+    const n = { sat: 0, unsat: 0, wip: 0, na: 0, none: 0, weak: 0 };
+    items.forEach(i => { const k = (st[i.id] || {}).st || 'none'; n[k]++; if (k === 'sat' && pqSatWeak(i, st)) n.weak++; });
     const appl = items.length - n.na;
-    return { ce, n, appl, ei: appl ? Math.round(n.sat * 100 / appl) : null };
+    return { ce, n, appl, ei: appl ? Math.round(n.sat * 100 / appl) : null, eic: appl ? Math.round((n.sat - n.weak) * 100 / appl) : null };
   }).filter(Boolean);
   c.innerHTML = `<h2>${esc(t('EI по критическим элементам'))} <span class="dim small">удовлетворительно ÷ применимые · ${S.f.star ? 'только ★' : 'все ВП'}${S.f.area ? ' · ' + esc(S.f.area) : ''}</span></h2>`
-    + rows.map(r => `<div class="cerow"><div class="celab"><b>${esc(r.ce)}</b> <span class="dim small">${esc(d.meta.ce[r.ce] || '')}</span></div><div class="cebar"><span style="width:${r.ei == null ? 0 : r.ei}%"></span></div><div class="ceval"><b>${r.ei == null ? '—' : r.ei + '%'}</b> <span class="dim small">${r.n.sat}/${r.appl}${r.n.na ? ' · н/п ' + r.n.na : ''}</span></div></div>`).join('')
-    + `<p class="small dim">Неоценённые ВП считаются неудовлетворительными — как в USAP до подтверждения доказательствами.</p>`;
+    + rows.map(r => `<div class="cerow"><div class="celab"><b>${esc(r.ce)}</b> <span class="dim small">${esc(d.meta.ce[r.ce] || '')}</span></div><div class="cebar"><span style="width:${r.ei == null ? 0 : r.ei}%"></span></div><div class="ceval"><b>${r.ei == null ? '—' : r.ei + '%'}</b> <span class="dim small">${r.n.sat}/${r.appl}${r.n.na ? ' · н/п ' + r.n.na : ''}${r.n.weak ? ` · <span class="warn" title="${esc(t('без подтверждения внедрения'))}">⚠ ${r.n.weak}</span> · ${esc(t('подтверждённый'))} ${r.eic}%` : ''}</span></div></div>`).join('')
+    + `<p class="small dim">Неоценённые ВП считаются неудовлетворительными — как в USAP до подтверждения доказательствами. «Подтверждённый EI» — без ВП «удовлетворительно», у которых нет записи о внедрении или утверждённого документа (⚠).</p>`;
   return c;
 }
 /* ---------- подсказки доказательств (pq_hints.json, tools/hints.py): абзацы национальных документов по тексту ВП ---------- */
@@ -1037,6 +1048,32 @@ const hintDoc = code => { const r = D('registry') && D('registry').docs.find(d =
 const pqHints = id => (D('pq_hints') && D('pq_hints').hints[id]) || [];
 // есть подсказки, а доказательств в самооценке ещё нет — очередь для NCMC
 const pqHintOpen = i => pqHints(i.id).length > 0 && !(((pqOf(i.id).evl) || []).length) && !pqOf(i.id).ev;
+/* ---------- закрытие ВП: «удовлетворительно» держится на доказательствах внедрения, а не только на норме ----------
+   КЭ-4…8 — практика (акты, отчёты, журналы, протоколы); проект документа, SASAQ, CC и ПКД — самодекларации, не доказательства.
+   pqGaps(i, o) → список причин ({hard} — доказательств нет вовсе, {soft} — заметка из оценки); пустой список = ВП закрыт.
+   Строка доказательства может нести kind: 'norm' | 'rec' (тип выбирают в форме); без kind тип угадывается по тексту (evIsRec). */
+const PQ_PRACTICE_CE = new Set(['КЭ-4', 'КЭ-5', 'КЭ-6', 'КЭ-7', 'КЭ-8']);
+const EV_SELF = /^(SASAQ|ПКД|CC\b|контрольный перечень)/i;
+const evIsRec = e => e.kind ? e.kind === 'rec' : /акт|отч[её]т|журнал|протокол|сертификат|свидетельств|удостоверен|приказ о назнач|запис|E26-\d|\.(pdf|docx?|xlsx?|jpe?g|png)\b/i.test(`${e.doc || ''} ${e.ref || ''}`);
+const regOfEv = e => { const r = D('registry'); if (!r || !e.doc) return null; const d = norm(e.doc);
+  return r.docs.find(x => x.id === e.reg) || (/^НПАБГА|^НПБГА/i.test(e.doc) ? r.docs.find(x => x.id === 'R02') : null) || r.docs.find(x => x.ru && d.startsWith(norm(x.ru).slice(0, 14))) || null; };
+function pqGaps(i, o) {
+  o = o || pqOf(i.id); if (o.st !== 'sat') return [];
+  const ev = (o.evl || []).filter(e => e && e.doc && e.ref);
+  const files = evFor(i.id).filter(x => evKind(x, i.id) === 'set' && x.st === 'ok');
+  const g = [];
+  if (!ev.length && !files.length) return [{ hard: true, t: t('нет доказательств: документ + пункт или файл') }];
+  if (PQ_PRACTICE_CE.has(i.ce) && !files.length && !ev.some(evIsRec)) g.push({ t: `${i.star ? '★ ' : ''}${i.ce}: ${t('нужна запись о внедрении (акт, отчёт, журнал) — норма практику не доказывает')}` });
+  if (!files.length && ev.every(e => EV_SELF.test(e.doc) || ((regOfEv(e) || {}).bucket || 'ok') !== 'ok')) g.push({ t: t('опирается только на неутверждённый документ или самодекларацию (SASAQ, CC, ПКД)') });
+  if (files.length && files.every(x => x.draft)) g.push({ t: t('файлы — проекты без реквизитов (подпись, номер, дата)') });
+  if (!files.length && !ev.some(e => e.date)) g.push({ t: t('у документов нет даты') });
+  const m = capIdx(); const hits = (m && m.get(i.id)) || [];
+  if (hits.some(({ i: c }) => !capSusp(c, i) && !['done', 'na'].includes(capSt(c)))) g.push({ t: t('рекомендация ПКД 2019 по этому ВП не закрыта') });
+  if (o.gap) g.push({ soft: true, t: t('в оценке указано, что ещё нужно') + ': ' + o.gap });
+  return g;
+}
+const pqSatWeak = (i, st) => (st ? pqGaps(i, st[i.id] || {}) : pqGaps(i)).some(x => !x.soft);
+const pqGapsHtml = (i, o) => { const g = pqGaps(i, o).filter(x => !x.soft); return g.length ? ` <span class="warn" title="${esc(g.map(x => x.t).join('; '))}">⚠</span>` : ''; };
 function hintsBlock(i) {
   const hs = pqHints(i.id); if (!hs.length) return '';
   return `<details class="mt hints"><summary><b>${esc(t('Подсказки доказательств'))}</b> <span class="dim small">${hs.length} · ${esc(t('абзацы национальных документов по тексту ВП — ориентиры, не доказательства; сверьте по первоисточнику'))}</span></summary><ul class="list small">${hs.map((h, k) => `<li><span class="badge b-info">${esc(hintDoc(h.doc))}</span> <b>${esc(h.ref || '')}</b> <span class="dim">${esc(h.ctx || '')}</span><div>${esc(h.text)}</div><button type="button" class="btn sm ghost" data-evhint="${k}">${esc(t('в доказательства'))}</button></li>`).join('')}</ul></details>`;
@@ -1083,7 +1120,7 @@ function assessMerge(o, a) {
   const key = e => norm(e.doc) + '|' + norm(e.ref);
   const evl = (Array.isArray(o.evl) ? o.evl : []).slice(), seen = new Set(evl.map(key));
   (a.evl || []).forEach(e => { if (e && !seen.has(key(e))) { seen.add(key(e)); evl.push({ doc: e.doc || '', ref: e.ref || '', date: e.date || '' }); } });
-  return { ...o, st: a.st, evl, note: o.note || a.note || '', en: o.en || a.en || '', at: today() };
+  return { ...o, st: a.st, evl, note: o.note || a.note || '', en: o.en || a.en || '', gap: o.gap || a.gap || '', conf: a.conf || o.conf || '', at: today() };   // gap/conf из оценки — чтобы «что нужно» не терялось после принятия
 }
 function assessBlock(i) {
   const a = pqAssess(i.id); if (!a) return '';
@@ -1119,12 +1156,13 @@ function assessCard(d, all, st) {
   if (open.length) {
     const r = el('div', 'row mt');
     const b = el('button', 'btn sm', `${esc(t('Принять все непринятые'))} (${open.length})`);
-    b.onclick = () => {
-      if (!confirm(`${t('Принять все непринятые')} (${open.length})?\n${t(D('sync') ? 'Статус и доказательства перейдут в общую самооценку — её сразу увидят все; ВП, у которых статус уже есть, не изменятся.' : 'Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.')}`)) return;
-      const cur = pqState(), ch = {}; let n = 0;
-      open.forEach(i => { const o = cur[i.id] || {}, a = pqAssess(i.id); if (o.st || !a) return;   // существующий статус не трогаем
-        const rec = assessMerge(o, a); logChange('pq', i.id, o, rec, PQLOGF); ch[i.id] = rec; n++; });
-      pqWrite(ch); toast(`${t('Принято ВП')}: ${n}`, 'ok'); render();
+    b.onclick = async () => {
+      if (SY.on) { b.disabled = true; await syncNow(); b.disabled = false; }   // сначала забрать чужие правки — машинная оценка не должна перекрыть их
+      const cur = pqState(), todo = open.filter(i => !(cur[i.id] || {}).st && pqAssess(i.id));
+      const wk = todo.filter(i => { const a = pqAssess(i.id); return a.st === 'sat' && pqSatWeak(i, { [i.id]: assessMerge(cur[i.id] || {}, a) }); }).length;
+      if (!confirm(`${t('Принять все непринятые')} (${todo.length})?\n${t(D('sync') ? 'Статус и доказательства перейдут в общую самооценку — её сразу увидят все; ВП, у которых статус уже есть, не изменятся.' : 'Статус и доказательства перейдут в самооценку этого устройства; ВП, у которых статус уже есть, не изменятся.')}${wk ? `\n⚠ ${wk} ${t('ВП получат «удовлетворительно» без подтверждения внедрения (только норма, проект документа или самодекларация) — они попадут в «К работе».')}` : ''}\n${t('Отменить можно кнопкой «Отменить последнее» в списке ВП → «Выбрать» до перезагрузки страницы.')}`)) return;
+      const n = pqBulkSave(todo.map(i => i.id), (c, id) => c.st ? null : assessMerge(c, pqAssess(id)), t('предварительная оценка'));   // существующий статус не трогаем
+      toast(`${t('Принято ВП')}: ${n}`, 'ok'); render();
     };
     const lk = el('a', 'btn sm ghost', `${esc(t('Открыть непринятые'))} →`); lk.href = '#pq?pre=1';
     r.append(b, lk); c.appendChild(r);
@@ -1134,6 +1172,8 @@ function assessCard(d, all, st) {
 function openPQ(i) { openPQBody(i); S.sheetPQ = i.id; }
 function openPQBody(i) {
   const d = D('pq'); const o = pqOf(i.id); const R = refsForPQ(i); const evl = Array.isArray(o.evl) ? o.evl : [];
+  const base = stampOf(o);   // метка записи на момент открытия: если за это время пришла чужая правка — спросим перед сохранением
+  const gaps = pqGaps(i, o);
   openSheet(`<h3><span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''} <span class="badge b-area">${i.area}</span> <span class="badge b-ce" title="${esc(d.meta.ce[i.ce] || '')}">${esc(i.ce)}</span> ${pqBadge(o.st)}</h3>
     <p><b>${esc(i.q)}</b></p>${capRef(i.id)}
     <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
@@ -1141,7 +1181,8 @@ function openPQBody(i) {
     ${traceBlock(i)}
     ${jLinked('PQ:' + i.id)}
     ${refsBlock(R)}${evFilesBlock(i)}${planBlock(i)}${teamBlock(i)}${hintsBlock(i)}${assessBlock(i)}
-    <h4>Самооценка</h4>
+    <h4>${esc(t('Самооценка'))}</h4>
+    ${gaps.length ? `<div class="callout ${gaps.some(x => !x.soft) ? 'warn' : ''} small"><b>${esc(t(gaps.some(x => !x.soft) ? '«Удовлетворительно» без подтверждения' : 'Из предварительной оценки'))}:</b><ul class="list">${gaps.map(x => `<li>${esc(x.t)}</li>`).join('')}</ul></div>` : ''}
     <form class="form" id="pqForm">
       <div class="two">
         <label>${esc(t('Статус'))}<select name="st">${Object.entries(PQST).map(([k, v]) => `<option value="${k}"${o.st === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select></label>
@@ -1149,18 +1190,19 @@ function openPQBody(i) {
       </div>
       <label class="chk"><input type="checkbox" name="draft"${o.draft ? ' checked' : ''}> ${esc(t('Черновик ответа'))} <span class="dim small">(Draft copy — ответ ещё не утверждён)</span></label>
       <label>${esc(t('Ответственный'))}${(r => r && r.byArea ? ` <span class="dim">(${esc(t('по области'))}: ${esc(r.name)})</span>` : '')(respOfPQ(i))}${respSelect('resp', o.resp || '', true)}</label>
-      <div class="evhead"><b>${esc(t('Доказательства'))}</b> <span class="dim small">документ · пункт или страница · дата — как требует USAP</span></div>
+      <div class="evhead"><b>${esc(t('Доказательства'))}</b> <span class="dim small">${esc(t('документ · пункт или страница · дата · тип (норма или запись о внедрении) — как требует USAP'))}</span></div>
       <div id="evList"></div>
       <datalist id="evDocs">${R.docs.map(({ x }) => `<option value="${esc(x.ru)}">`).join('')}</datalist>
       <div class="row"><button type="button" class="btn sm ghost" id="evAdd">+ ${esc(t('Добавить доказательство'))}</button></div>
       ${o.ev ? `<label class="mt">${esc(t('Ранее внесённый текст доказательств'))} <span class="dim small">(перенесите в список выше и очистите поле)</span><textarea name="ev">${esc(o.ev)}</textarea></label>` : ''}
       <label>${esc(t('Примечание'))}<textarea name="note">${esc(o.note || '')}</textarea></label>
+      ${o.gap && !gaps.length ? `<p class="small dim">⚠ ${esc(t('Что нужно'))} (${esc(t('из оценки'))}): ${esc(o.gap)}</p>` : ''}
       <label>English translation <span class="dim small">перевод примечания и доказательств — аудиторы читают EN</span><textarea name="en">${esc(o.en || '')}</textarea></label>
       <label>${esc(t('Личная заметка'))} <span class="dim small">(Personal note — только на этом устройстве)</span><textarea name="pnote">${esc(o.pnote || '')}</textarea></label>
       <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="pqClear">Очистить</button><span class="dim small grow">${o.at ? 'изменено ' + esc(o.at) : ''}</span></div>
     </form>${changeLog('pq', i.id)}`);
   const evBox = $('#evList');
-  const evRow = (v = {}) => { const r = el('div', 'evrow', `<input class="inp" data-k="doc" list="evDocs" placeholder="Документ" value="${esc(v.doc || '')}"><input class="inp" data-k="ref" placeholder="Пункт / страница" value="${esc(v.ref || '')}"><input class="inp" data-k="date" type="date" value="${esc(v.date || '')}"><button type="button" class="btn sm ghost evdel" title="Убрать">×</button>`);
+  const evRow = (v = {}) => { const r = el('div', 'evrow', `<input class="inp" data-k="doc" list="evDocs" placeholder="${esc(t('Документ'))}" value="${esc(v.doc || '')}"><input class="inp" data-k="ref" placeholder="${esc(t('Пункт / страница'))}" value="${esc(v.ref || '')}"><input class="inp" data-k="date" type="date" value="${esc(v.date || '')}"><select class="sel" data-k="kind" title="${esc(t('Тип доказательства: норма (документ, пункт) или запись о внедрении (акт, отчёт, журнал, протокол)'))}"><option value="">${esc(t('тип'))}</option><option value="norm"${v.kind === 'norm' ? ' selected' : ''}>${esc(t('норма'))}</option><option value="rec"${v.kind === 'rec' ? ' selected' : ''}>${esc(t('запись / акт'))}</option></select><button type="button" class="btn sm ghost evdel" title="${esc(t('Убрать'))}">×</button>`);
     r.querySelector('.evdel').onclick = () => r.remove(); return r; };
   (evl.length ? evl : [{}]).forEach(v => evBox.appendChild(evRow(v)));
   $('#evAdd').onclick = () => evBox.appendChild(evRow());
@@ -1172,24 +1214,31 @@ function openPQBody(i) {
     evBox.appendChild(evRow({ doc: hintDoc(h.doc), ref: [h.ref, h.ctx].filter(Boolean).join(' · ') })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте по первоисточнику и сохраните'), 'ok'); }; });
   $$('#sheet [data-evfile]').forEach(b => { b.onclick = () => { const x = evFiles().find(y => y.id === b.dataset.evfile); if (!x) return;
     const empty = $$('.evrow', evBox).find(r => !r.querySelector('[data-k="doc"]').value && !r.querySelector('[data-k="ref"]').value); if (empty) empty.remove();
-    evBox.appendChild(evRow({ doc: x.name, ref: [x.id, x.from, x.caption].filter(Boolean).join(' · '), date: (x.at || '').slice(0, 10) })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте и сохраните'), 'ok'); }; });
-  const ab = $('#sheet [data-assessapply]'); if (ab) ab.onclick = () => {
-    const a = pqAssess(i.id), cur = pqOf(i.id); if (!a) return;
+    evBox.appendChild(evRow({ doc: x.name, ref: [x.id, x.from, x.caption].filter(Boolean).join(' · '), date: (x.at || '').slice(0, 10), kind: 'rec' })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте и сохраните'), 'ok'); }; });
+  const ab = $('#sheet [data-assessapply]'); if (ab) ab.onclick = async () => {
+    const a = pqAssess(i.id); if (!a) return;
+    if (SY.on) { ab.disabled = true; await syncNow(); ab.disabled = false; }   // чужая правка, ещё не полученная, важнее машинной оценки
+    const cur = pqOf(i.id);
     if (cur.st && !confirm(`${t('Обновить из предварительной оценки')}: ВП ${i.id} — «${t(PQST[cur.st] || cur.st)}» → «${t(PQST[a.st] || a.st)}».\n${t('Доказательства из оценки добавятся к имеющимся; примечание и перевод останутся прежними.')}`)) return;
     const rec = assessMerge(cur, a);
     logChange('pq', i.id, cur, rec, PQLOGF);
     pqWrite({ [i.id]: rec }); toast(t('Принято: ВП') + ' ' + i.id, 'ok');
     const sc = $('.sheet-card').scrollTop; openPQ(i); $('.sheet-card').scrollTop = sc; render();
   };
+  S.pqDirty = false; $('#pqForm').oninput = () => { S.pqDirty = true; };   // есть несохранённый ввод: карточку не пересобирать и не закрывать молча
   $('#pqForm').onsubmit = e => {
     e.preventDefault(); const f = new FormData(e.target);
-    const rows = $$('.evrow', evBox).map(r => { const g = k => (r.querySelector(`[data-k="${k}"]`).value || '').trim(); return { doc: g('doc'), ref: g('ref'), date: g('date') }; }).filter(x => x.doc || x.ref || x.date);
-    const rec = { st: f.get('st'), draft: !!f.get('draft'), due: f.get('due'), resp: (f.get('resp') || '').trim(), evl: rows, ev: (f.get('ev') || '').trim(), note: f.get('note').trim(), en: (f.get('en') || '').trim(), pnote: (f.get('pnote') || '').trim(), at: today() };
+    if (stampOf(pqOf(i.id)) !== base && !confirm(t('ВП изменён на другом устройстве, пока карточка была открыта. Сохранить вашу версию поверх? (Отмена — открыть свежую)'))) { S.pqDirty = false; openPQ(i); return; }
+    const rows = $$('.evrow', evBox).map(r => { const g = k => (r.querySelector(`[data-k="${k}"]`).value || '').trim(); const x = { doc: g('doc'), ref: g('ref'), date: g('date') }; if (g('kind')) x.kind = g('kind'); return x; }).filter(x => x.doc || x.ref);   // строка с одной датой — не доказательство
+    const rec = { st: f.get('st'), draft: !!f.get('draft'), due: f.get('due'), resp: (f.get('resp') || '').trim(), evl: rows, ev: (f.get('ev') || '').trim(), note: f.get('note').trim(), en: (f.get('en') || '').trim(), pnote: (f.get('pnote') || '').trim(), gap: o.gap || '', conf: o.conf || '', at: today() };
+    if (rec.st === 'sat') { const g = pqGaps(i, rec).filter(x => !x.soft); if (g.length && !confirm(`${t('«Удовлетворительно» без подтверждения')}:\n• ${g.map(x => x.t).join('\n• ')}\n\n${t('Аудитор ИКАО такой ВП не зачтёт. Сохранить всё равно?')}`)) return; }
     logChange('pq', i.id, o, rec, PQLOGF);
     pqWrite({ [i.id]: rec });   // пустую запись (или только с личной заметкой) pqWrite снимает сам
-    toast('Сохранено: ВП ' + i.id, 'ok'); closeSheet(); render();
+    S.pqDirty = false; toast('Сохранено: ВП ' + i.id, 'ok'); closeSheet(); render();
   };
-  $('#pqClear').onclick = () => { pqWrite({ [i.id]: null }); closeSheet(); render(); };
+  $('#pqClear').onclick = () => {
+    if (!confirm(`${t('Снять самооценку ВП')} ${i.id}? ${t(D('sync') ? 'Статус, доказательства и заметка удалятся на всех устройствах.' : 'Статус, доказательства и заметка удалятся на этом устройстве.')}`)) return;
+    logChange('pq', i.id, o, {}, PQLOGF); S.pqDirty = false; pqWrite({ [i.id]: null }); closeSheet(); render(); };
 }
 /* ---------- массовая самооценка (список ВП → «Выбрать»): одно действие на отмеченные ВП ----------
    Меняются только выбранные поля; каждое изменение пишется в историю ВП (logChange), как при ручном сохранении.
@@ -1207,7 +1256,8 @@ function pqBulkSave(ids, fn, label) {
     before[id] = all[id] ? JSON.parse(JSON.stringify(all[id])) : null;
     logChange('pq', id, cur, rec, PQLOGF); ch[id] = rec; n++; });
   if (!n) return 0;
-  pqWrite(ch); S.pqUndo = { label, n, before }; return n;
+  pqWrite(ch); const st2 = pqState(), after = {}; Object.keys(ch).forEach(id => { after[id] = stampOf(st2[id]); });
+  S.pqUndo = { label, n, before, after }; return n;   // after — метки после записи: отмена не тронет ВП, изменённые кем-то позже
 }
 function pqBulkBar(list) {
   const c = el('div', 'card bulk'); c.id = 'pqBulk';
@@ -1224,7 +1274,7 @@ function pqBulkBar(list) {
       ${S.pqUndo ? `<button class="btn sm ghost" type="button" data-b="undo">${esc(t('Отменить последнее'))}: ${esc(S.pqUndo.label)} (${S.pqUndo.n})</button>` : ''}
     </div>
     <p class="small dim">${esc(t('Меняются только выбранные поля; доказательства и примечания остаются. Каждое изменение попадает в историю ВП. Предварительная оценка переносится только в ВП без статуса.'))}</p>`;
-  c.onclick = e => {
+  c.onclick = async e => {
     const b = e.target.closest('[data-b]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
     const ids = [...S.pqSel], v = k => c.querySelector(`[data-b="${k}"]`).value;
     if (b.dataset.b === 'all') { S.pqSel = new Set(list.map(i => i.id)); render(); return; }
@@ -1233,11 +1283,13 @@ function pqBulkBar(list) {
       const stv = v('st'), rv = v('resp'), dv = v('due');
       if (!stv && !rv && !dv) { toast(t('Выберите статус, ответственного или срок'), 'warn'); return; }
       const what = [stv && `${t('статус')} → «${t(PQST[stv])}»`, rv && `${t('ответственный')} → «${rv === '__none' ? t('по области') : nameOf(rv)}»`, dv && `${t('срок')} → ${fmtDate(dv)}`].filter(Boolean).join('; ');
-      if (!confirm(`${t('Изменить')} ${ids.length} ВП: ${what}?\n${t('Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.')}`)) return;
+      const noev = stv === 'sat' ? ids.filter(id => { const o = pqOf(id); return !((o.evl || []).some(x => x && x.doc && x.ref)) && !evFor(id).some(x => evKind(x, id) === 'set'); }).length : 0;
+      if (!confirm(`${t('Изменить')} ${ids.length} ВП: ${what}?${noev ? `\n⚠ ${noev} ${t('ВП без единого доказательства получат «удовлетворительно» — аудитор ИКАО это не зачтёт.')}` : ''}\n${t('Отменить можно кнопкой «Отменить последнее» до перезагрузки страницы.')}`)) return;
       const n = pqBulkSave(ids, cur => { const rec = { ...cur, at: today() }; if (stv) rec.st = stv; if (rv) rec.resp = rv === '__none' ? '' : rv; if (dv) rec.due = dv; return rec; }, what);
       toast(`${t('Изменено')}: ${n} ВП`, 'ok'); S.pqSel = new Set(); render(); return;
     }
     if (b.dataset.b === 'pre') {
+      if (SY.on) { b.disabled = true; await syncNow(); b.disabled = false; }   // чужая правка важнее машинной оценки
       const ok = ids.filter(pqPreable); if (!ok.length) return;
       if (!confirm(`${t('Принять предварительную оценку')}: ${ok.length} ВП?${ids.length > ok.length ? `\n${ids.length - ok.length} ${t('ВП уже со статусом — пропускаются.')}` : ''}`)) return;
       const n = pqBulkSave(ok, (cur, id) => assessMerge(cur, pqAssess(id)), t('предварительная оценка'));
@@ -1245,9 +1297,9 @@ function pqBulkBar(list) {
     }
     if (b.dataset.b === 'undo' && S.pqUndo) {
       const u = S.pqUndo; if (!confirm(`${t('Отменить последнее')}: ${u.label} (${u.n} ВП)?`)) return;
-      const all = pqState(), ch = {};   // записи возвращаются к прежнему виду новой правкой — она уйдёт и на другие устройства
-      Object.entries(u.before).forEach(([id, rec]) => { logChange('pq', id, all[id] || {}, rec || {}, PQLOGF); ch[id] = rec; });
-      pqWrite(ch); S.pqUndo = null; toast(`${t('Отменено')}: ${u.n} ВП`, 'ok'); render();
+      const all = pqState(), ch = {}; let skip = 0;   // записи возвращаются к прежнему виду новой правкой — она уйдёт и на другие устройства
+      Object.entries(u.before).forEach(([id, rec]) => { if (u.after && stampOf(all[id]) !== u.after[id]) { skip++; return; } logChange('pq', id, all[id] || {}, rec || {}, PQLOGF); ch[id] = rec; });
+      if (Object.keys(ch).length) pqWrite(ch); S.pqUndo = null; toast(`${t('Отменено')}: ${u.n - skip} ВП${skip ? ` · ${skip} ${t('пропущено — изменены позже')}` : ''}`, 'ok'); render();
     }
   };
   setTimeout(() => pqBulkCount(list), 0);
@@ -1259,16 +1311,19 @@ function exportPQOLF(list) {
   const st = pqState(), OLFST = { sat: 'Satisfactory', unsat: 'Not Satisfactory', na: 'Not Applicable', wip: '' };
   const dmy = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; };
   const who = id => (logState().find(x => x.kind === 'pq' && x.id === id) || {}).who || String(settings().ncmc || '').split(',')[0].trim();
+  const xt = s => s ? `="${s}"` : '', safe = s => /^[=+\-@]/.test(String(s || '')) ? "'" + s : (s || '');   // Excel: номер ВП не в число/дату, текст не в формулу
   const rows = [['Audit Area', 'PQ  Number', 'CE Code', 'Is PPQ', 'PQ Question', 'Reference', 'Review Evidence', 'Self-Assessment Status of Implementation', 'Remarks', 'Evidence', 'Evidence (Attachments)', 'Latest Modified', 'Latest Modified By']];
   list.forEach(i => { const o = st[i.id] || {};
-    rows.push([i.area, i.id, String(i.ce || '').replace(/^КЭ/, 'CE'), i.star ? 'True' : 'False', i.q, i.doc, i.g.join('\n'), OLFST[o.st || ''] || '',
-      [o.st === 'wip' ? 'In progress' : '', o.en || o.note || ''].filter(Boolean).join(' — '), evText(o), '', dmy(o.at), o.at ? who(i.id) : '']); });
+    rows.push([i.area, xt(i.id), String(i.ce || '').replace(/^КЭ/, 'CE'), i.star ? 'True' : 'False', i.q, xt(i.doc), i.g.join('\n'), OLFST[o.st || ''] || '',
+      safe([o.st === 'wip' ? 'In progress' : '', o.en || (o.note ? '[RU, no EN] ' + o.note : '')].filter(Boolean).join(' — ')), safe(evText(o)),
+      evFor(i.id).filter(x => evKind(x, i.id) === 'set').map(x => `${x.id} ${x.name}`).join('\n'), dmy(o.at), o.at ? (o.by || who(i.id)) : '']); });
   download(csv(rows), `AvSec_SelfAssessment_OLF_${S.f.area || 'all'}_${today()}.csv`, 'text/csv;charset=utf-8');
 }
 function exportPQ(list) {
   const st = pqState();
   const rows = [['№ ВП', '★', 'Область', 'Подраздел', 'КЭ', 'Вопрос', 'Рекомендации', 'Документ ИКАО', 'Статус самооценки', 'Ответственный', 'Срок', 'Доказательства', 'Примечание', 'English translation', 'Черновик']];
-  list.forEach(i => { const o = st[i.id] || {}; rows.push([i.id, i.star ? '*' : '', i.area, i.sub, i.ce, i.q, i.g.join('\n'), i.doc, PQST[o.st || ''], (respOfPQ(i) || {}).name || '', o.due || '', evText(o), o.note || '', o.en || '', o.draft ? 'да' : '']); });
+  const xt = s => s ? `="${s}"` : '', safe = s => /^[=+\-@]/.test(String(s || '')) ? "'" + s : (s || '');
+  list.forEach(i => { const o = st[i.id] || {}; rows.push([xt(i.id), i.star ? '*' : '', i.area, i.sub, i.ce, i.q, i.g.join('\n'), xt(i.doc), PQST[o.st || ''], (respOfPQ(i) || {}).name || '', o.due || '', safe(evText(o)), safe(o.note), safe(o.en), o.draft ? 'да' : '']); });
   download(csv(rows), `AvSec_PQ_${today()}.csv`, 'text/csv;charset=utf-8');
 }
 
@@ -1734,13 +1789,17 @@ function pCAP(m) {
 
 /* ---------- Ответственные ---------- */
 function teamStats() {
-  const pq = D('pq'); const ar = areaResp();
-  return team().map(m => {
-    const its = pq ? pq.items.filter(i => (respOfPQ(i) || {}).id === m.id) : [];
-    const r = { id: m.id, name: m.name, areas: Object.entries(ar).filter(([, v]) => v === m.id).map(([a]) => a), total: its.length, assessed: 0, sat: 0, unsat: 0, wip: 0, overdue: 0 };
+  const pq = D('pq'); const ar = areaResp(); const items = pq ? pq.items : [];
+  const mk = (id, name, its) => {
+    const r = { id, name, areas: Object.entries(ar).filter(([, v]) => v === id).map(([a]) => a), total: its.length, assessed: 0, sat: 0, unsat: 0, wip: 0, overdue: 0 };
     its.forEach(i => { const o = pqOf(i.id); if (o.st) r.assessed++; if (o.st === 'sat') r.sat++; if (o.st === 'unsat') r.unsat++; if (o.st === 'wip') r.wip++; if (o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0) r.overdue++; });
     return r;
-  });
+  };
+  const rows = team().map(m => mk(m.id, m.name, items.filter(i => (respOfPQ(i) || {}).id === m.id)));
+  const gone = {}; items.forEach(i => { const r = respOfPQ(i); if (r && !member(r.id)) (gone[r.id] = gone[r.id] || []).push(i); });   // назначен, но в составе нет (другое устройство / убран)
+  Object.entries(gone).forEach(([id, its]) => rows.push(mk(id, nameOf(id), its)));
+  const none = items.filter(i => !respOfPQ(i)); if (none.length) rows.push(mk('none', t('Не назначен'), none));
+  return rows;
 }
 /* ---------- субъекты надзора АБ (этап 1 «прогнать АБ»): организации, объекты, программы безопасности ---------- */
 // Статусы программ — как в целевой схеме БД (security_programme.status); null = статус ещё не внесён.
@@ -2254,7 +2313,7 @@ function pTeam(m) {
     const c = el('div', 'card'); c.innerHTML = `<h2>Распределение областей проверки</h2><p class="small dim">Ответственный по области отвечает за все ВП области, у которых не назначен личный ответственный (в карточке ВП). Список ВП — по клику на область.</p>`;
     const ar = areaResp(); const st = pqState();
     c.appendChild(table(['Область', 'Название', 'ВП', 'Оценено', 'Ответственный'], pq.meta.areas, a => { const its = pq.items.filter(i => i.area === a.code); const n = its.filter(i => (st[i.id] || {}).st).length;
-      return [`<a href="#pq?area=${a.code}"><span class="badge b-area">${a.code}</span></a>`, esc(a.name), its.length, `${n} (${pct(n, its.length)}%)`, `<select class="sel" data-area="${a.code}" style="height:30px"><option value="">— ${esc(t('Не назначен'))} —</option>${team().map(x => `<option value="${x.id}"${ar[a.code] === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`]; }));
+      return [`<a href="#pq?area=${a.code}"><span class="badge b-area">${a.code}</span></a>`, esc(a.name), its.length, `${n} (${pct(n, its.length)}%)`, `<select class="sel" data-area="${a.code}" style="height:30px"><option value="">— ${esc(t('Не назначен'))} —</option>${team().map(x => `<option value="${x.id}"${ar[a.code] === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}${ar[a.code] && !member(ar[a.code]) ? `<option value="${esc(ar[a.code])}" selected>${esc(nameOf(ar[a.code]))}</option>` : ''}</select>`]; }));
     c.onchange = e => { const x = e.target, a = x.dataset.area; if (!a) return; const all = LS.get(K.arearesp, {}), at = LS.get(K.areats, {});
       if (x.value || areaShared()[a]) all[a] = x.value; else delete all[a]; at[a] = syStamp(Date.now(), (syCache().area[a] || {}).ts); LS.set(K.arearesp, all); LS.set(K.areats, at); syncSoon(); toast('Ответственный по области ' + x.dataset.area + ' сохранён', 'ok'); render(); };
     m.appendChild(c);
@@ -2269,7 +2328,7 @@ function pTeam(m) {
   c2.appendChild(el('div', 'row', `<button class="btn sm" id="tmAdd">＋ Добавить</button>${custom ? '<button class="btn sm ghost" id="tmReset">Вернуть список по умолчанию</button>' : ''}`));
   c2.onclick = e => {
     const del = e.target.closest('[data-del]');
-    if (del) { if (!confirm('Убрать ' + nameOf(del.dataset.del) + ' из списка? Назначения на ВП сохранятся.')) return; LS.set(K.team, team().filter(x => x.id !== del.dataset.del)); render(); return; }
+    if (del) { const nn = pq ? pq.items.filter(i => (respOfPQ(i) || {}).id === del.dataset.del).length : 0; if (!confirm('Убрать ' + nameOf(del.dataset.del) + ' из списка на этом устройстве? Назначения сохранятся (' + nn + ' ВП, будут показаны с ⚠). Состав по умолчанию — team.json.')) return; LS.set(K.team, team().filter(x => x.id !== del.dataset.del)); render(); return; }
     if (e.target.id === 'tmAdd') { const v = prompt('Ф.И.О. (Фамилия Имя)'); if (!v || !v.trim()) return; const id = 'm' + Date.now().toString(36); LS.set(K.team, team().concat([{ id, name: v.trim() }])); render(); }
     if (e.target.id === 'tmReset') { LS.del(K.team); render(); }
   };
@@ -2660,9 +2719,9 @@ function pData(m) {
   head(m, 'Данные и резервная копия', D('sync') ? 'Самооценка ВП, ответственные по областям и журнал аудита — общие для всех устройств (синхронизация). CC, SASAQ, дорожная карта и настройки хранятся в браузере этого устройства: перед сменой устройства или чисткой браузера выгрузите копию.' : 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
   // в полях — только сохранённые переопределения: иначе «Сохранить» без правок заморозило бы текущие данные портала
   const s = settings(); const so = LS.get(K.set, {});
-  const c = el('div', 'card', `<h2>${esc(t('Настройки'))}</h2><p class="small dim">Дата аудита и NCMC берутся из данных портала; здесь их можно переопределить на этом устройстве — пустое поле возвращает значение из данных.</p><form class="form" id="setForm"><div class="two"><label>Дата аудита на месте<input type="date" name="auditDate" value="${esc(so.auditDate || '')}"><span class="small dim">Из данных: ${s.auditDate ? fmtDate(s.auditDate) : '—'}</span></label><label>Национальный координатор (NCMC)<input name="ncmc" value="${esc(so.ncmc || '')}" placeholder="${esc(s.ncmc || 'Ф.И.О., должность')}"><span class="small dim">Из данных: ${esc(s.ncmc || '—')}</span></label></div><div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>`);
+  const c = el('div', 'card', `<h2>${esc(t('Настройки'))}</h2><p class="small dim">Дата аудита и NCMC берутся из данных портала; здесь их можно переопределить на этом устройстве — пустое поле возвращает значение из данных.</p><form class="form" id="setForm"><div class="two"><label>Дата аудита на месте<input type="date" name="auditDate" value="${esc(so.auditDate || '')}"><span class="small dim">Из данных: ${s.auditDate ? fmtDate(s.auditDate) : '—'}</span></label><label>Национальный координатор (NCMC)<input name="ncmc" value="${esc(so.ncmc || '')}" placeholder="${esc(s.ncmc || 'Ф.И.О., должность')}"><span class="small dim">Из данных: ${esc(s.ncmc || '—')}</span></label><label>${esc(t('Кто я'))}<input name="me" value="${esc(so.me || '')}" placeholder="${esc(t('Фамилия И. — автор правок на этом устройстве'))}"><span class="small dim">${esc(t('Пишется в журнал изменений и в выгрузку OLF («Latest Modified By»); пусто — NCMC'))}</span></label></div><div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>`);
   m.appendChild(c);
-  $('#setForm').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target); LS.set(K.set, { auditDate: fd.get('auditDate'), ncmc: fd.get('ncmc').trim() }); toast('Настройки сохранены', 'ok'); render(); };
+  $('#setForm').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target); LS.set(K.set, { auditDate: fd.get('auditDate'), ncmc: fd.get('ncmc').trim(), me: (fd.get('me') || '').trim() }); toast('Настройки сохранены', 'ok'); render(); };
   const st = pqState(), cs = ccState(), ss = sasaqState(), ps = planState();
   const b = el('div', 'card', `<h2>Резервная копия</h2><div class="kv"><div>ВП с самооценкой</div><div>${Object.keys(st).length}</div><div>CC — ручные статусы</div><div>${Object.keys(cs).length}</div><div>SASAQ — отметки</div><div>${Object.keys(ss).length}</div><div>Дорожная карта</div><div>${Object.keys(ps).length}</div><div>Ответственные по областям</div><div>${Object.keys(areaResp()).length}</div><div>Аудит 2026 — чек-листы</div><div>${Object.keys(auditState().docs).length + Object.keys(auditState().log).length}</div></div>
     <div class="row mt"><button class="btn" id="bkExp">⬇ Выгрузить JSON</button><label class="btn ghost" style="cursor:pointer">⬆ Загрузить JSON<input type="file" id="bkImp" accept="application/json" hidden></label><button class="btn danger" id="bkClear">Очистить самооценку</button></div>
@@ -2696,7 +2755,7 @@ function pFind(m) {
   const q = S.q; head(m, 'Результаты поиска', `«${esc(q)}»`);
   if (!q) return m.appendChild(el('div', 'empty', 'Введите запрос в строке поиска'));
   const out = el('div');
-  const group = (title, arr, fn, onClick) => { if (!arr.length) return; out.appendChild(el('h2', 'mt', `${esc(title)} <span class="dim small">${arr.length}</span>`)); arr.slice(0, 40).forEach(x => { const c = el('div', 'card hit', fn(x)); c.onclick = () => onClick(x); out.appendChild(c); }); if (arr.length > 40) out.appendChild(el('div', 'dim small', `… и ещё ${arr.length - 40}. Уточните запрос.`)); };
+  const group = (title, arr, fn, onClick) => { if (!arr.length) return; out.appendChild(el('h2', 'mt', `${esc(title)} <span class="dim small">${arr.length}</span>`)); arr.slice(0, 40).forEach(x => { const c = el('div', 'card hit', fn(x)); c.tabIndex = 0; c.setAttribute('role', 'button'); c.onclick = () => onClick(x); c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(x); } }; out.appendChild(c); }); if (arr.length > 40) out.appendChild(el('div', 'dim small', `… и ещё ${arr.length - 40}. Уточните запрос.`)); };
   const pq = D('pq'), cc = D('cc'), reg = D('registry'), mx = D('matrix'), gm = D('gm'), gl = D('glossary'), ic = D('icao'), sq = D('sasaq'), cap = D('cap2019');
   if (pq) group('Протокольные вопросы', pq.items.filter(i => has(q, i.id, i.q, i.g.join(' '), i.doc)), i => `<span class="code">${esc(i.id)}</span> <span class="badge b-area">${i.area}</span> ${esc(i.q)}`, openPQ);
   if (cc) group('Контрольный перечень (CC)', cc.items.filter(i => i.kind !== 'hdr' && has(q, i.id, i.text, i.ref, i.remarks)), i => `<span class="badge b-${i.kind}">Прил. ${i.annex} · ${esc(i.id)}</span> ${esc(i.text.slice(0, 220))}<div class="small dim">${esc(i.ref)}</div>`, openCC);
@@ -2752,7 +2811,7 @@ async function boot() {
   $('#themeBtn').onclick = () => { LS.set(K.theme, document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); applyTheme(); };
   $$('#lang button').forEach(b => b.onclick = () => { S.lang = (mq.matches && b.classList.contains('on')) ? (S.lang === 'ru' ? 'en' : 'ru') : b.dataset.l; LS.set(K.lang, S.lang); applyLang(); if (S.cfg) { buildNav(); render(); } });
   $('#burger').onclick = () => $('#side').classList.toggle('open');
-  document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet();
+  document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheetAsk();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
     const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) tsDownloadBlank(sc); return; }
@@ -2764,11 +2823,11 @@ async function boot() {
     const ofin = e.target.closest('[data-openfinding]'); if (ofin) { const it = QC() && QC().findings.find(x => x.ref_no === ofin.dataset.openfinding); if (it) openFinding(it); return; }
     const oorg = e.target.closest('[data-openorg]'); if (oorg) { const it = subjOrgs().find(x => x.code === oorg.dataset.openorg); if (it) openOrg(it); return; }
     if (e.target.closest('[data-lazyretry]')) { loadLazy(); toast(t('Догружаю…')); return; }
-    const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it) openPQ(it); return; }
+    const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it && (!S.pqDirty || confirm(t('Закрыть без сохранения?')))) openPQ(it); return; }
     const occ = e.target.closest('[data-opencc]'); if (occ) { const [a, id] = occ.dataset.opencc.split(':'); const it = D('cc') && D('cc').items.find(x => String(x.annex) === a && x.id === id); if (it) openCC(it); return; }
     const opn = e.target.closest('[data-open]'); if (opn) { window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
   // Esc — закрыть шторку; «/» — курсор в поиск, если не печатаем в поле
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); if (e.key === '/' && !/^(input|textarea|select)$/i.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); $('#q').focus(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheetAsk(); if (e.key === '/' && !/^(input|textarea|select)$/i.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); $('#q').focus(); } });
   $('#qclear').onclick = () => { $('#q').value = ''; if (S.page === 'find') go('dash'); };
   let tm; $('#q').oninput = () => { clearTimeout(tm); tm = setTimeout(() => { const v = $('#q').value.trim(); if (v.length >= 2) go('find', {}, v); }, 300); };
   $('#q').onkeydown = e => { if (e.key === 'Enter') { const v = $('#q').value.trim(); if (v) go('find', {}, v); } };
