@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '71';
+const APP_VERSION = '72';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'С категорией риска': 'With risk category', 'Без категории': 'No category', 'Высокий': 'High', 'Средне-высокий': 'Medium-high', 'Средний': 'Medium', 'Средне-низкий': 'Medium-low', 'Низкий': 'Low', 'проверка состояния': 'security audit', 'инспекция': 'inspection', 'испытание': 'test', 'Ежегодная программа надзора 2026, прил. 4': 'Annual oversight programme 2026, Annex 4', 'предложение портала — вне программы 2026': 'portal proposal — outside the 2026 programme', 'Категория риска': 'Risk category', 'Периодичность': 'Periodicity', 'Источник': 'Source',
   'Документы по испытанию': 'Test documents', 'нет или проект': 'missing or draft', 'Шаг · документ': 'Step · document', 'Кто': 'Who', 'Статус': 'Status', 'Примечание': 'Note', 'До испытания': 'Before the test', 'День испытания': 'Test day', 'После испытания': 'After the test', 'Итог': 'Result', 'по сценарию; отчёт по Прил. 3 — см. чек-лист': 'per scenario; Appendix 3 report — see checklist', 'Документы по каждому испытанию': 'Documents for each test', 'чек-лист от рапорта до дела': 'checklist from internal memo to case file', 'Состояние по конкретному испытанию — в карточке пункта плана («План 2026» → строка). Гласное: все шаги; негласное: без уведомления субъекта (п. 34).': 'Status for a specific test is in the plan item card (“Plan 2026” → row). Overt: all steps; covert: without notifying the entity (para. 34).', 'обе': 'both', 'Документы': 'Documents',
   'Не догрузились': 'Not loaded', 'повторю при появлении сети': 'will retry when online', 'предварительная оценка и подсказки к ВП пока не видны': 'preliminary assessment and PQ hints are not shown yet', 'Догрузить': 'Load now', 'Догружаю…': 'Loading…',
   'Сохранить бланк': 'Save form', 'Telegram не даёт сохранить файл прямо из приложения. Выберите способ:': 'Telegram cannot save a file from the app. Choose a way:', 'Открыть в браузере и скачать .docx': 'Open in browser and download .docx', 'В браузере понадобится код доступа; откроется карточка сценария — нажмите «Бланк (Word)».': 'The browser will ask for the access code; the scenario card opens — tap "Form (Word)".', 'Скопировать текст бланка': 'Copy form text', 'Вставьте в Word, заметки или «Избранное» Telegram.': 'Paste into Word, notes or Telegram Saved Messages.', 'Текст бланка скопирован': 'Form text copied', 'Не удалось скопировать': 'Copy failed',
@@ -1782,7 +1783,10 @@ function openOrg(o) {
   const plan5 = (o.areas || []).filter(a => a.text).map(a => `<li><span class="badge b-area">${esc(a.code)}</span> ${esc(a.text)}</li>`).join('');
   openSheet(`<div class="sheet-head"><div class="small dim">${idChip('S:' + o.code)} ${kindBadge(o)}</div><h2>${esc(orgName(o))}</h2></div>
     ${kv([['Тип', `${esc(ty.name_ru)}${ty.ncasp ? ` <span class="small dim">НПАБГА ${esc(ty.ncasp)}</span>` : ''}`], ['Наименование (EN)', esc(o.name_en || '')], ['Коды', esc(codes)], ['Город', esc(o.city || '')],
-      ['Международные рейсы', o.intl_ops == null ? '' : esc(t(o.intl_ops ? 'Да' : 'Нет'))], ['Области проверки', areas], ['Уточнить', o.tbd ? `<span class="warn">${esc(o.tbd)}</span>` : '']])}
+      ['Международные рейсы', o.intl_ops == null ? '' : esc(t(o.intl_ops ? 'Да' : 'Нет'))], ['Области проверки', areas],
+      ['Категория риска', o.risk ? `${riskBadge(o)} <span class="small">T ${esc(o.risk.T)} · C ${esc(o.risk.C)} · V ${esc(o.risk.V)}</span><div class="small dim">${esc(o.risk.src || '')}</div>` : ''],
+      ['Периодичность', o.risk ? `${esc(t('проверка состояния'))}: ${esc(o.risk.audit)} · ${esc(t('инспекция'))}: ${esc(o.risk.inspection)} · ${esc(t('испытание'))}: ${esc(o.risk.test)}` : ''],
+      ['Уточнить', o.tbd ? `<span class="warn">${esc(o.tbd)}</span>` : '']])}
     ${plan5 ? `<h3 class="mt">${esc(t('В разделе 5 плана аудита'))}</h3><ul class="list small">${plan5}</ul>` : ''}
     <h3 class="mt">${esc(t('Программы безопасности'))} <span class="dim small">${progs.length}</span></h3>${pt}
     ${sites.length ? `<h3 class="mt">${esc(t('Объекты'))} <span class="dim small">${sites.length}</span></h3>${stt}` : ''}
@@ -1800,6 +1804,7 @@ function pSubjects(m) {
   tiles.appendChild(tile(nTbd ? 'draft' : 'ok', nTbd, 'уточнить наименование', () => go('subjects', { kind: 'tbd' })));
   tiles.appendChild(tile(noSt ? 'draft' : 'ok', noSt, `программ без статуса (из ${progs.length})`, () => go('subjects', { pst: 'none' })));
   tiles.appendChild(tile(noSent ? 'miss' : 'ok', noSent, 'программ не отправлено в ИКАО', () => go('subjects', { pst: 'nosent' })));
+  const nRisk = orgs.filter(o => o.risk).length; tiles.appendChild(tile(nRisk ? 'info' : 'draft', nRisk, `с категорией риска (из ${orgs.length})`, () => go('subjects', { risk: 'any' })));
   m.appendChild(tiles);
   const tb = el('div', 'toolbar');
   tb.appendChild(selector('Все типы', 'type', d.entity_types.map(x => x.code), c => subjType(c).name_ru));
@@ -1807,16 +1812,19 @@ function pSubjects(m) {
   tb.appendChild(selector('Все области', 'area', areas));
   tb.appendChild(selector('Все роли', 'kind', Object.keys(ORGK), k => ORGK[k]));
   tb.appendChild(selector('Все программы', 'pst', Object.keys(PSTL), v => PSTL[v]));
+  tb.appendChild(selector('Любой риск', 'risk', ['any', 'none', ...Object.keys(RISKL)], v => v === 'any' ? t('С категорией риска') : v === 'none' ? t('Без категории') : t(RISKL[v])));
   m.appendChild(tb);
+  const byRisk = o => S.f.risk === 'any' ? !!o.risk : S.f.risk === 'none' ? !o.risk : (o.risk || {}).level === S.f.risk;
   const byPst = o => { const ps = o.programmes || []; return S.f.pst === 'has' ? ps.length : S.f.pst === 'none' ? ps.some(p => !p.status) : ps.some(progNotSent); };
   const rows = orgs.filter(o => (!S.f.type || o.entity_type === S.f.type) && (!S.f.area || o.areas.some(a => a.code === S.f.area))
-    && (!S.f.kind || orgKind(o) === S.f.kind) && (!S.f.pst || byPst(o)) && has(S.q, o.code, o.name, o.name_en, o.short_name, o.tbd));
+    && (!S.f.kind || orgKind(o) === S.f.kind) && (!S.f.pst || byPst(o)) && (!S.f.risk || byRisk(o)) && has(S.q, o.code, o.name, o.name_en, o.short_name, o.tbd));
   m.appendChild(el('p', 'small dim', `${rows.length} ${esc(t('из'))} ${orgs.length}`));
-  m.appendChild(table(['Код', 'Организация', 'Тип', 'Области', 'Программы', 'Роль'], rows,
-    o => [`<span class="code">${esc(o.code)}</span>`, `<b>${esc(orgName(o))}</b>${o.tbd ? `<div class="small warn">${esc(o.tbd)}</div>` : ''}`, esc(subjType(o.entity_type).name_ru),
+  m.appendChild(table(['Код', 'Организация', 'Тип', 'Риск', 'Области', 'Программы', 'Роль'], rows,
+    o => [`<span class="code">${esc(o.code)}</span>`, `<b>${esc(orgName(o))}</b>${o.tbd ? `<div class="small warn">${esc(o.tbd)}</div>` : ''}`, esc(subjType(o.entity_type).name_ru), riskBadge(o),
       o.areas.map(a => `<span class="badge b-area">${esc(a.code)}</span>`).join(' '),
       (o.programmes || []).map(p => `<span class="badge b-${p.status ? PGSB[p.status] || 'none' : 'tbd'}" title="${esc(subjProg(p.programme_type).name_ru)}">${esc(p.programme_type)}</span>`).join(' ') || '<span class="dim">—</span>',
       kindBadge(o)], openOrg));
+  if (d.meta.risk_note) m.appendChild(el('div', 'callout warn mb small', esc(d.meta.risk_note)));
   const c = el('div', 'card mt'); c.innerHTML = `<h2>${esc(t('Типы субъектов по НПАБГА'))}</h2><p class="small dim">${esc(d.meta.note || '')}</p>`;
   c.appendChild(table(['Тип', 'НПАБГА', 'Программа', 'Организаций'], d.entity_types,
     x => [esc(x.name_ru) + (x.note ? ` <div class="small dim">${esc(x.note)}</div>` : ''), esc(x.ncasp || ''),
@@ -1833,10 +1841,13 @@ const ACTSB = { planned: 'none', in_progress: 'wip', report_draft: 'wip', report
 const FST = { open: 'Открыта', cap_submitted: 'ПКД подан', cap_accepted: 'ПКД принят', cap_rejected: 'ПКД отклонён', implemented: 'Выполнено', closed: 'Закрыта', escalated: 'Эскалация', cancelled: 'Снята' };
 const FSB = { open: 'missing', cap_submitted: 'wip', cap_accepted: 'wip', cap_rejected: 'unsat', implemented: 'ready', closed: 'ok', escalated: 'unsat', cancelled: 'na' };
 const SEVB = { critical: 'unsat', major: 'missing', minor: 'draft', compliant: 'ok', na: 'na', nc: 'tbd' };
-const PLST = { planned: 'none', done: 'ok', postponed: 'draft', cancelled: 'na' };
+const PLST = { planned: 'none', done: 'ok', postponed: 'draft', cancelled: 'na', unconfirmed: 'missing' }, PLSL = { planned: 'Запланировано', done: 'Выполнено', postponed: 'Перенесено', cancelled: 'Отменено', unconfirmed: 'Не подтверждено' };
 const QC = () => D('qc');
 const qcType = c => (QC() && QC().activity_types.find(x => x.code === c)) || { code: c, name_ru: c };
 const qcSev = c => (QC() && QC().severity.find(x => x.code === c)) || { code: c, name_ru: c, level: '?' };
+const RISKL = { high: 'Высокий', mid_high: 'Средне-высокий', mid: 'Средний', mid_low: 'Средне-низкий', low: 'Низкий' }, RISKB = { high: 'missing', mid_high: 'unsat', mid: 'part', mid_low: 'ok', low: 'ok' };
+// категория риска субъекта — из протокола оценки риска (subjects.orgs[].risk); R = (T+C+V)/3
+const riskBadge = o => o.risk ? `<span class="badge b-${RISKB[o.risk.level] || 'none'}" title="T ${esc(o.risk.T)} · C ${esc(o.risk.C)} · V ${esc(o.risk.V)}">R ${esc(o.risk.R)} · ${esc(t(RISKL[o.risk.level] || o.risk.level))}</span>` : '<span class="dim">—</span>';
 const orgChip = code => { const o = subjOrgs().find(x => x.code === code); return o ? `<button class="idc clk" data-openorg="${esc(code)}" title="${esc(orgName(o))}">S:${esc(code)}</button>` : esc(code || '—'); };
 const sevBadge = c => { const x = qcSev(c); return `<span class="badge b-${SEVB[c] || 'none'}" title="${esc(x.name_ru)}">${esc(x.level)} · ${esc(t(c === 'critical' ? 'критическое' : c === 'major' ? 'существенное' : c === 'minor' ? 'незначительное' : x.name_ru))}</span>`; };
 function openActivity(a) {
@@ -1875,7 +1886,7 @@ function pQC(m) {
     c2.appendChild(table(['Уровень', 'Срок', 'Основание'], d.levels_abc, x => [`<b>${esc(x.code)}</b> <span class="small">${esc(x.name_ru)}</span>`, x.deadline_days ? `${x.deadline_days} ${t('дн.')}` : esc(x.deadline || ''), `<span class="small dim">${esc(x.basis)}</span>`]));
     g.appendChild(c2);
     const c3 = el('div', 'card'); c3.innerHTML = `<h2>${esc(t('Категории риска и периодичность'))}</h2><p class="small dim">${esc(d.risk_basis || '')}</p>`;
-    c3.appendChild(table(['Категория', 'Одна проверка в', 'Сертификат не более'], d.risk_categories, x => [esc(x.name_ru), `${x.period_months} ${t('мес.')}`, `${x.cert_months} ${t('мес.')}`]));
+    c3.appendChild(table(['Уровень', 'R', 'Проверка состояния', 'Инспекция', 'Испытание', 'Приемлемость'], d.risk_categories, x => [badge(RISKB[x.code] || 'none', x.name_ru), esc(x.range || ''), `<span class="small">${esc(x.audit || '')}</span>`, `<span class="small">${esc(x.inspection || '')}</span>`, `<span class="small">${esc(x.test || '')}</span>`, `<span class="small dim">${esc(x.acceptable || '')}</span>`]));
     const r = d.cap_rules || {};
     c3.innerHTML += `<h3 class="mt">${esc(t('План корректирующих действий субъекта'))}</h3>` + kv([['Подача', `${r.submit_days} ${esc(r.submit_basis || '')}`], ['Содержание', `<ul class="list small">${(r.contents || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul><span class="small dim">${esc(r.contents_basis || '')}</span>`], ['Утверждение', esc(r.approval || '')], ['Рассмотрение', esc(r.review || '')], ['Закрытие', esc(r.closure || '')]]);
     g.appendChild(c3); m.appendChild(g);
@@ -1885,7 +1896,7 @@ function pQC(m) {
   if (tab === 'plan') {
     const p = d.plan || {};
     const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('План контроля качества'))} ${p.year || ''} <span class="dim small">${esc(p.version || '')} · ${badge(p.status === 'approved' ? 'ok' : p.status === 'closed' ? 'na' : 'draft', p.status === 'approved' ? 'Утверждён' : p.status === 'closed' ? 'Закрыт' : 'Проект')}${p.approved_on ? ' · ' + fmtDate(p.approved_on) : ''}</span></h2><p class="small dim">${esc(p.basis || '')}</p><p class="small">${esc(p.note || '')}</p>`;
-    c.appendChild(table(['№', 'Субъект', 'Мероприятие', 'Месяц', 'Категория риска', 'Статус', 'Факт'], items, x => [esc(x.id), orgChip(x.org), esc(qcType(x.activity_type).name_ru), x.planned_month, esc((d.risk_categories.find(r => r.code === x.risk_category) || {}).name_ru || x.risk_category || '—'), badge(PLST[x.status] || 'none', x.status === 'done' ? 'Выполнено' : x.status === 'postponed' ? 'Перенесено' : x.status === 'cancelled' ? 'Отменено' : 'Запланировано'), x.activity ? `<button class="idc clk" data-openactivity="${esc(x.activity)}">${esc(x.activity)}</button>` : '—'], null, { empty: 'Позиции плана не внесены — источник: график КК, направленный ИКАО 23.09.2026' }));
+    c.appendChild(table(['№', 'Субъект', 'Мероприятие', 'Месяц', 'Категория риска', 'Статус', 'Факт'], items, x => [esc(x.id), orgChip(x.org), esc(qcType(x.activity_type).name_ru), x.planned_month, esc((d.risk_categories.find(r => r.code === x.risk_category) || {}).name_ru || x.risk_category || '—'), badge(PLST[x.status] || 'none', PLSL[x.status] || x.status) + (x.note ? `<div class="small dim">${esc(x.note)}</div>` : ''), x.activity ? `<button class="idc clk" data-openactivity="${esc(x.activity)}">${esc(x.activity)}</button>` : '—'], null, { empty: 'Позиции плана не внесены — источник: график КК, направленный ИКАО 23.09.2026' }));
     m.appendChild(c);
   }
   if (tab === 'acts') {
@@ -1916,8 +1927,8 @@ const TESTTABS = [{ id: 'sum', t: 'Обзор' }, { id: 'plan', t: 'План 202
 const TS = () => D('tests');
 const TKIND = { overt: 'Гласное', covert: 'Негласное', both: 'Обе формы' };
 const TLEVEL = { state: 'Государственное', gknb: 'ГКНБ (п. 56)', internal: 'Внутреннее' };
-const TPST = { proposed: 'Предложено', agreed: 'Согласовано с ГКНБ', notified: 'Субъект уведомлён', done: 'Проведено', cancelled: 'Отменено' };
-const TPSB = { proposed: 'draft', agreed: 'wip', notified: 'wip', done: 'ok', cancelled: 'na' };
+const TPST = { proposed: 'Предложено', agreed: 'Согласовано с ГКНБ', notified: 'Субъект уведомлён', done: 'Проведено', cancelled: 'Отменено', unconfirmed: 'Не подтверждено' };
+const TPSB = { proposed: 'draft', agreed: 'wip', notified: 'wip', done: 'ok', cancelled: 'na', unconfirmed: 'missing' };
 const TRES = { positive: 'положительный', negative: 'отрицательный', mixed: 'смешанный' }, TRESB = { positive: 'ok', negative: 'unsat', mixed: 'part' };
 // чек-лист документов по испытанию: шаги tests.docs_steps по форме испытания; статус шага — из plan.items[].docs,
 // без записи: проведённое — «нет», будущее — «предстоит». Документы остаются в деле (ДСП), в портале — статус и ссылка на запись доказательства
@@ -1926,7 +1937,7 @@ const TDPH = { before: 'До испытания', day: 'День испытан�
 const tdLabel = st => ((TS() || {}).docs_statuses || {})[st] || st;
 function tsDocsOf(x) { const d = TS(); return (d.docs_steps || []).filter(st => !st.forms || st.forms.includes('both') || st.forms.includes(x.kind)).map(st => { const r = (x.docs || {})[st.id] || {}; return { ...st, st: r.st || (x.status === 'done' ? 'missing' : 'todo'), note: r.note || '', ev: r.ev || [] }; }); }
 function tsDocsStat(x) { const L = tsDocsOf(x).filter(z => z.st !== 'na'); return { ok: L.filter(z => z.st === 'ok').length, n: L.length, bad: L.filter(z => z.st === 'missing' || z.st === 'draft' || z.st === 'tbd').length }; }
-const evRef = id => { const e = ((D('evidence') || {}).items || []).find(z => z.id === id); return e ? `<span class="small">${idChip(id)} ${esc(e.name)}${e.dsp ? ' <span class="badge b-na">ДСП</span>' : ''}${e.url ? ` <button class="idc clk" type="button" data-open="${esc(e.url)}">Drive</button>` : ''}</span>` : idChip(id); };
+const evRef = id => { const e = ((D('evidence') || {}).items || []).find(z => z.id === id); return e ? `<span class="small">${idChip(id)} ${esc(e.name)}${e.dsp ? ' <span class="badge b-na">ДСП</span>' : ''}${e.draft ? ' <span class="badge b-draft">проект</span>' : ''}${e.url ? ` <button class="idc clk" type="button" data-open="${esc(e.url)}">Drive</button>` : ''}</span>` : idChip(id); };
 function tsDocsHtml(x) {
   const L = tsDocsOf(x), st = tsDocsStat(x); let html = `<h4 class="mt">${esc(t('Документы по испытанию'))} <span class="dim small">${st.ok} ${esc(t('из'))} ${st.n}${st.bad ? ` · <span class="warn">${st.bad} ${esc(t('нет или проект'))}</span>` : ''}</span></h4>`;
   ['before', 'day', 'after'].forEach(ph => { const rows = L.filter(z => z.phase === ph); if (!rows.length) return;
@@ -2138,6 +2149,7 @@ function openTestPlanItem(x) {
       ['Субъект', orgChip(x.org)], ['Объект', x.site ? idChip(`S:${x.org}/${x.site}`) : ''], ['Сценарий', s ? `${idChip(s.id)} ${esc(s.title)}` : ''],
       ['Форма', esc(TKIND[x.kind] || '')], ['Уровень', esc(TLEVEL[x.level] || '')], ['Приоритет', esc(x.prio) + ' <span class="small dim">' + esc(t('ориентировочный, до присвоения категорий риска')) + '</span>'],
       ['Уведомить до', x.notice_by ? `<b>${fmtDate(x.notice_by)}</b> <span class="small dim">${esc(t('10 рабочих дней до начала, п. 32; праздничные дни учесть'))}</span>` : ''],
+      ['Источник', x.src === 'programme' ? `${esc(t('Ежегодная программа надзора 2026, прил. 4'))}${x.prog_no ? ', № ' + esc(x.prog_no) : ''}` : x.type === 'test' ? esc(t('предложение портала — вне программы 2026')) : ''],
       ['Руководитель', esc(x.lead)], ['Итог', x.result ? badge(TRESB[x.result], TRES[x.result]) + ` <span class="small dim">${esc(t('по сценарию; отчёт по Прил. 3 — см. чек-лист'))}</span>` : ''], ['Примечание', esc(x.note)]])}
     ${x.type === 'test' ? tsDocsHtml(x) : ''}
     ${s ? `<p class="mt"><button class="btn sm ghost" data-go="tests?t=scen">${esc(t('Все сценарии'))} →</button></p>` : ''}`);
@@ -2185,7 +2197,7 @@ function pTests(m) {
     const rows = items.filter(x => (!S.f.tw || x.window === S.f.tw) && (!S.f.tk || x.kind === S.f.tk) && (!S.f.org || x.org === S.f.org));
     m.appendChild(table(['№', 'Окно · сроки', 'Субъект · объект', 'Сценарий', 'Форма', 'Приор.', 'Уведомить до', 'Статус', 'Документы'], rows, x => {
       const s = tsScen(x.scenario); const ds = x.type === 'test' ? tsDocsStat(x) : null;
-      return [idChip(x.id), `<b>${esc(x.window)}</b> · ${tsPeriod(x)}`, orgChip(x.org) + (x.site ? ' ' + idChip(`S:${x.org}/${x.site}`) : ''),
+      return [idChip(x.id) + (x.src === 'programme' ? ` <span class="badge b-info" title="${esc(t('Ежегодная программа надзора 2026, прил. 4'))}">П</span>` : ''), `<b>${esc(x.window)}</b> · ${tsPeriod(x)}`, orgChip(x.org) + (x.site ? ' ' + idChip(`S:${x.org}/${x.site}`) : ''),
         s ? `${idChip(s.id)} <span class="small">${esc(s.title)}</span>` : `<span class="small">${esc(x.note)}</span>`,
         x.type === 'admin' ? badge('info', 'срок') : badge(x.kind === 'covert' ? 'unsat' : 'ok', TKIND[x.kind]), esc(x.prio), x.notice_by ? fmtDate(x.notice_by) : '—',
         badge(TPSB[x.status], TPST[x.status]) + (x.result ? ' ' + badge(TRESB[x.result], TRES[x.result]) : ''),
