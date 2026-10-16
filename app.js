@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '73';
+const APP_VERSION = '74';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -2554,6 +2554,9 @@ function pEvPlan(m) {
   const P = D('evidence_plan');
   if (!P) { head(m, 'План доказательств'); m.appendChild(el('div', 'card', `<p>${esc(t('План ещё не загружен.'))}</p>`)); return; }
   const M = P.meta, W = M.waves || {}, CH = M.channels || {};
+  const tab = S.f.t === 'resp' && D('evidence_resp') ? 'resp' : 'holders';
+  if (D('evidence_resp')) m.appendChild(segbar([{ id: 'holders', t: 'По держателям' }, { id: 'resp', t: 'По ответственным', n: D('evidence_resp').people.length }], tab, id => go('evplan', { t: id === 'holders' ? '' : id })));
+  if (tab === 'resp') return pEvResp(m);
   head(m, 'План доказательств', `${esc(M.title)} · ${esc(t('редакция'))} ${esc(M.ver)} ${esc(t('от'))} ${esc(fmtDate(M.date))}. ${esc(t('«Получено» — файл из группы или из папки ДСП привязан к позиции по ВП и держателю; «проверить» — есть подходящий файл, привязку подтверждает NCMC.'))}`);
   const all = epItems().map(x => ({ ...x, s: epStatus(x) })), cnt = (...k) => all.filter(x => k.includes(x.s.st)).length;
   const tiles = el('div', 'tiles');
@@ -2598,6 +2601,38 @@ function pEvPlan(m) {
     k.innerHTML = `<h2>${esc(t('Контроль исполнения'))}</h2><div class="kv">` + (P.control || []).map(r => `<div>${esc(r[0])}</div><div>${esc(r[1])}</div>`).join('') + '</div>';
     m.appendChild(k);
   }
+}
+/* ---------- план доказательств по ответственным за области (data/evidence_resp.json ← tools/evidence_plan_resp.mjs) ----------
+   Статика из плана (предварительная оценка на дату плана) + живые цифры из самооценки портала по тем же областям. */
+function pEvResp(m) {
+  const R = D('evidence_resp'), pq = D('pq'); if (!R || !pq) return;
+  const M = R.meta, W = M.waves || {}, CH = M.channels || {}, st = pqState();
+  head(m, 'План доказательств', `${esc(M.title)} · ${esc(t('редакция'))} ${esc(M.ver)} ${esc(t('от'))} ${esc(fmtDate(M.date))}. ${esc(M.note || '')}`);
+  const chips = ids => ids.map(p => `<button class="idc clk" type="button" data-openpq="${esc(p)}">${esc(p)}</button>`).join(' ');
+  const tb = el('div', 'toolbar');
+  tb.appendChild(selector('Все ответственные', 'resp', R.people.map(p => p.id), id => (R.people.find(p => p.id === id) || {}).name || id));
+  tb.appendChild(inputFilter('Поиск по плану'));
+  m.appendChild(tb);
+  const sum = el('div', 'card'); sum.innerHTML = `<h2>${esc(t('Распределение и объём'))}</h2><p class="small dim">${esc(t('По плану — из предварительной оценки на дату плана; сейчас — из самооценки портала (общей и этого устройства).'))}</p>`;
+  const live = p => { const its = pq.items.filter(i => p.areas.includes(i.area)); const o = { done: 0, open: 0, weak: 0 };
+    its.forEach(i => { const x = st[i.id] || {}; if (x.st) o.done++; if (x.st === 'wip' || x.st === 'unsat') o.open++; if (x.st === 'sat' && pqSatWeak(i, st)) o.weak++; }); return o; };
+  sum.appendChild(table(['Ответственный', 'Области', 'Аудитор ИКАО', 'ВП', 'В работе / неудовл. (план)', '★ открытых', '⚠ без подтверждения (план)', 'Оценено сейчас', 'Открыто сейчас'], R.people, p => { const l = live(p);
+    return [`<b>${esc(p.name)}</b>`, p.areas.map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' '), `<span class="small">${esc(p.auditors.join('; '))}</span>`, p.stats.total, `${p.stats.wip + p.stats.unsat}`, p.stats.starOpen, p.stats.weak, `${l.done} <span class="dim small">(${pct(l.done, p.stats.total)}%)</span>`, `${l.open}${l.weak ? ` <span class="warn small">⚠ ${l.weak}</span>` : ''}`]; }, p => go('evplan', { t: 'resp', resp: p.id })));
+  m.appendChild(sum);
+  const f = S.f, people = R.people.filter(p => !f.resp || p.id === f.resp);
+  people.forEach((p, k) => {
+    const asks = p.asks.filter(x => has(f.s, x.text, x.pqs.join(' '), (x.gaps || []).join(' '))); if (f.s && !asks.length) return;
+    const c = el('div', 'card');
+    c.innerHTML = `<h2>${k + 1}. ${esc(p.name)} ${p.areas.map(a => `<span class="badge b-area">${esc(a)}</span>`).join(' ')} <span class="dim small">${esc(t('аудитор ИКАО'))}: ${esc(p.auditors.join('; '))}</span></h2>
+      <div class="row small"><a class="btn sm ghost" href="#pq?resp=${esc(p.id)}&st=wip">${esc(t('В работе'))} ${p.stats.wip}</a>${p.stats.unsat ? `<a class="btn sm ghost" href="#pq?resp=${esc(p.id)}&st=unsat">${esc(t('Не соответствует'))} ${p.stats.unsat}</a>` : ''}<a class="btn sm ghost" href="#pq?resp=${esc(p.id)}&weak=1">⚠ ${esc(t('без подтверждения'))} ${p.stats.weak}</a><a class="btn sm ghost" href="#pq?resp=${esc(p.id)}&star=1&st=wip">★ ${esc(t('открытых'))} ${p.stats.starOpen}</a></div>`;
+    c.appendChild(el('h3', 'mt', `${k + 1}.1. ${esc(t('Что запросить и представить'))} <span class="dim small">${asks.length}</span>`));
+    c.appendChild(table(['№', 'Что', 'ВП', 'Срок'], asks, (x, j) => [`${k + 1}.1.${asks.indexOf(x) + 1}`, `<div class="td-wrap">${esc(x.text)}${(x.gaps || []).length ? `<div class="small dim">${esc(t('Что ещё нужно'))}: ${esc(x.gaps.join('; '))}</div>` : ''}</div>`, `${x.star ? '<span class="star">★</span> ' : ''}${chips(x.pqs)}`, `<span class="small">${esc(((W[x.star ? '2' : '3'] || {}).d) || '')}</span>`], null, { w: ['6%', '58%', '24%', '12%'] }));
+    if (p.weak.length) { const d = el('details', 'mt'); d.innerHTML = `<summary><b>${k + 1}.2. ${esc(t('«Удовлетворительно» без подтверждения'))}</b> <span class="dim small">${p.weak.length} · ${esc(t('добавить запись о практике'))}</span></summary>`; d.appendChild(table(['ВП', 'КЭ', 'Почему'], p.weak, x => [`${x.star ? '<span class="star">★</span> ' : ''}${chips([x.pq])}`, `<span class="badge b-ce">${esc(x.ce)}</span>`, esc(x.why)])); c.appendChild(d); }
+    if (p.holder.length) { const d = el('details', 'mt'); d.innerHTML = `<summary><b>${k + 1}.3. ${esc(t('Позиции плана по держателям'))}</b> <span class="dim small">${p.holder.length} · ${esc(t('проконтролировать получение'))}</span></summary>`; d.appendChild(table(['№', 'Что', 'Держатель', 'ВП', 'Срок', 'Канал'], p.holder, x => [esc(x.no), `<div class="td-wrap">${esc(x.t)}</div>`, `<span class="small">${esc(x.holder)}</span>`, `<span class="small">${esc(x.pq)}</span>`, `<span class="small">${esc((W[x.w] || {}).d || '')}</span>`, `<span class="small">${esc((CH[x.ch] || {}).s || '')}</span>`])); c.appendChild(d); }
+    if (p.todo.length) { const d = el('details', 'mt'); d.innerHTML = `<summary><b>${k + 1}.4. ${esc(t('Задачи из ответов отдела'))}</b> <span class="dim small">${p.todo.length}</span></summary>`; d.appendChild(table(['ВП', 'Задача'], p.todo, x => [chips([x.pq]), `<div class="td-wrap">${esc(x.text)}</div>`])); c.appendChild(d); }
+    c.appendChild(el('p', 'small mt', `<b>${esc(t('Уже получено'))}</b> (${p.files.length}): ${p.files.length ? p.files.map(x => `${esc(x.id)} ${esc(x.name)}${x.draft ? ' ' + badge('draft', 'проект') : ''}${x.dsp ? ' ' + badge('none', 'ДСП') : ''}`).join('; ') : '—'}`));
+    m.appendChild(c);
+  });
 }
 function pJournal(m) {
   const u = U() || {}, a = u.audit || {};
