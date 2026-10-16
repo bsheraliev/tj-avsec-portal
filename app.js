@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '69';
+const APP_VERSION = '70';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Не догрузились': 'Not loaded', 'повторю при появлении сети': 'will retry when online', 'предварительная оценка и подсказки к ВП пока не видны': 'preliminary assessment and PQ hints are not shown yet', 'Догрузить': 'Load now', 'Догружаю…': 'Loading…',
   'Сохранить бланк': 'Save form', 'Telegram не даёт сохранить файл прямо из приложения. Выберите способ:': 'Telegram cannot save a file from the app. Choose a way:', 'Открыть в браузере и скачать .docx': 'Open in browser and download .docx', 'В браузере понадобится код доступа; откроется карточка сценария — нажмите «Бланк (Word)».': 'The browser will ask for the access code; the scenario card opens — tap "Form (Word)".', 'Скопировать текст бланка': 'Copy form text', 'Вставьте в Word, заметки или «Избранное» Telegram.': 'Paste into Word, notes or Telegram Saved Messages.', 'Текст бланка скопирован': 'Form text copied', 'Не удалось скопировать': 'Copy failed',
   'Бланк сценария': 'Scenario form', 'Посмотреть бланк': 'View form', 'заполнять и хранить офлайн': 'fill in and keep offline',
   'Детальный сценарий': 'Detailed scenario', 'Детальный сценарий и роли': 'Detailed scenario and roles', 'Хронология дня испытания': 'Test-day timeline', 'Роли': 'Roles', 'Заполняет руководитель испытания': 'To be filled in by the test leader', 'Скачать бланк сценария (Word)': 'Download scenario form (Word)', 'Бланк (Word)': 'Form (Word)', 'Шаг': 'Step',
@@ -127,7 +128,7 @@ const hex = buf => Array.from(new Uint8Array(buf), b => b.toString(16).padStart(
 const unhex = h => Uint8Array.from((h.match(/.{2}/g) || []), x => parseInt(x, 16));
 async function deriveKey(code) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(norm(code)), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unhex(S.cfg.salt), iterations: S.cfg.kdfIter || 200000, hash: 'SHA-256' }, base, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unhex(S.cfg.salt), iterations: S.cfg.kdfIter || 250000, hash: 'SHA-256' }, base, 256);
   return new Uint8Array(bits);
 }
 async function keyOk(raw) { return hex(await crypto.subtle.digest('SHA-256', raw)) === S.cfg.check; }
@@ -139,20 +140,30 @@ async function decryptEnc(bytes, raw) {
 }
 async function loadFile(name) {
   if (S.cfg.plain) { const r = await fetch('data/' + name, { cache: 'no-cache' }); if (!r.ok) throw new Error(`data/${name}: HTTP ${r.status}`); return r.json(); }
-  // зависший запрос на слабой сети раньше вешал вход навсегда: таймаут 20 с и до трёх попыток
+  return JSON.parse(await decryptEnc(await fetchBytes('data-enc/' + name + '.enc'), S.key));
+}
+/* Зависший запрос на слабой сети раньше вешал вход навсегда. Таймаут — по простою (20 с без единого байта), а не на всю
+   передачу: на медленном канале 21 файл качается параллельно, и большой файл целиком за 20 с не успевал, а каждый повтор
+   начинал с нуля. До трёх попыток; повторы только вокруг сети — ошибка расшифровки (битый файл, не тот ключ) от повтора не лечится. */
+async function fetchBytes(url, idle = 20000) {
   let last;
   for (let n = 0; n < 3; n++) {
-    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
+    const ac = new AbortController(); let tm;
+    const arm = () => { clearTimeout(tm); tm = setTimeout(() => ac.abort(), idle); };
     try {
-      const r = await fetch('data-enc/' + name + '.enc', { signal: ac.signal });
-      if (!r.ok) throw new Error(`data-enc/${name}.enc: HTTP ${r.status}`);
-      const buf = await r.arrayBuffer(); clearTimeout(tm);
-      return JSON.parse(await decryptEnc(buf, S.key));
+      arm();
+      const r = await fetch(url, { signal: ac.signal });
+      if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      if (!r.body) return await r.arrayBuffer();   // старый WebView без потоков — как раньше, одним куском
+      const rd = r.body.getReader(), parts = []; let size = 0;
+      for (;;) { const { done, value } = await rd.read(); if (done) break; arm(); parts.push(value); size += value.length; }
+      const out = new Uint8Array(size); let o = 0; parts.forEach(x => { out.set(x, o); o += x.length; });
+      return out.buffer;
     } catch (e) {
-      clearTimeout(tm); last = e.name === 'AbortError' ? new Error(`data-enc/${name}.enc: нет ответа за 20 с`) : e;
+      last = e.name === 'AbortError' ? new Error(`${url}: нет данных ${idle / 1000} с`) : e;
       if (/HTTP 404/.test(last.message)) break;
       await new Promise(res => setTimeout(res, 600 * (n + 1)));
-    }
+    } finally { clearTimeout(tm); }
   }
   throw last;
 }
@@ -161,17 +172,35 @@ S.loadErrors = [];
 /* Предварительная оценка и подсказки ВП — почти половина объёма (276 из 572 КБ). Нужны только в карточках и сводках ВП,
    везде читаются через D() с проверкой на пустоту, поэтому подгружаются после первого экрана (loadLazy). */
 const LAZY = ['pq_assess.json', 'pq_hints.json'];
+S.lazyErr = [];   // имена ленивых файлов, которые не догрузились (заметка в разделе ВП, повтор при появлении сети)
+S.lazyDone = false;
+let lazyBusy = false;
 async function loadLazy() {
-  const names = (S.cfg.files || []).filter(f => LAZY.includes(f)); if (!names.length) return;
-  await Promise.all(names.map(f => loadFile(f).then(r => { S.D[f.replace(/\.json$/, '')] = r; }).catch(e => console.warn(f, e))));
-  try { render(); } catch (e) { console.warn(e); }   // перерисовать текущую страницу уже с оценкой и подсказками
+  if (lazyBusy) return; lazyBusy = true;
+  const names = (S.cfg.files || []).filter(f => LAZY.includes(f) && !S.D[f.replace(/\.json$/, '')]);
+  const errs = [];
+  await Promise.all(names.map(f => loadFile(f).then(r => { S.D[f.replace(/\.json$/, '')] = r; }).catch(e => { console.warn(f, e); errs.push(f); })));
+  S.lazyErr = errs; S.lazyDone = true; lazyBusy = false;
+  if (errs.length) toast(t('Не догрузились') + ': ' + errs.map(f => f.replace(/\.json$/, '')).join(', ') + ' — ' + t('повторю при появлении сети'), 'err');
+  if (!names.length) return;
+  // перерисовать на месте уже с оценкой и подсказками — но не под открытой шторкой и не под курсором в поле (syRerender);
+  // открытая карточка ВП собиралась без этих данных — пересобрать её, сохранив прокрутку
+  try {
+    syRerender();
+    if (!$('#sheet').hidden && S.sheetPQ) { const it = D('pq') && D('pq').items.find(x => x.id === S.sheetPQ); const sc = $('.sheet-card'), y = sc ? sc.scrollTop : 0; if (it) { openPQ(it); if (sc) $('.sheet-card').scrollTop = y; } }
+  } catch (e) { console.warn(e); }
 }
+const lazyRetry = () => { if (S.lazyErr.length && navigator.onLine !== false) loadLazy(); };
+addEventListener('online', lazyRetry);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') lazyRetry(); });
+// заметка в разделе ВП, пока оценка/подсказки не догрузились
+const lazyNotice = () => S.lazyErr.length ? `<div class="callout warn mb small"><b>${esc(t('Не догрузились'))}:</b> ${S.lazyErr.map(f => esc(f.replace(/\.json$/, ''))).join(', ')} — ${esc(t('предварительная оценка и подсказки к ВП пока не видны'))}. <button class="btn sm ghost" type="button" data-lazyretry>${esc(t('Догрузить'))}</button></div>` : '';
 async function loadAll() {
-  const files = (S.cfg.files || []).filter(f => !LAZY.includes(f));
+  const files = (S.cfg.files || []).filter(f => !LAZY.includes(f) && !S.D[f.replace(/\.json$/, '')]);
   S.loadErrors = [];
   let done = 0;
-  const tick = () => { const b = $('#loadProg'); if (b) b.textContent = `Загружено ${done} из ${files.length}`; };
-  const got = await Promise.all(files.map(f => loadFile(f).catch(e => { console.warn(f, e); S.loadErrors.push(String(e && e.message || e)); return null; }).then(r => { done++; tick(); return r; })));
+  const tick = () => { const b = $('#loadProg'); if (b) b.textContent = `Загружено ${done} из ${files.length}` + (S.loadErrors.length ? `, ошибок ${S.loadErrors.length}` : ''); };
+  const got = await Promise.all(files.map(f => loadFile(f).then(r => { done++; tick(); return r; }).catch(e => { console.warn(f, e); S.loadErrors.push(String(e && e.message || e)); tick(); return null; })));
   files.forEach((f, i) => { if (got[i]) S.D[f.replace(/\.json$/, '')] = got[i]; });
 }
 const cryptoReady = () => !!(window.crypto && crypto.subtle && typeof DecompressionStream !== 'undefined');
@@ -182,12 +211,14 @@ async function enter() {
   $('#main').innerHTML = '<div class="loading">Расшифровываю данные…<div class="small mt" id="loadProg"></div><div class="dim small mt">Первый вход скачивает около 0,3 МБ, остальное докачивается фоном, дальше портал работает офлайн.</div></div>';
   await loadAll();
   pnoteMigrate();
-  if (!D('pq') && !D('registry')) {
+  // раньше портал открывался, если дошёл хоть один из pq/registry: без pq разделы ВП и «К работе» были пустыми или падали
+  if (S.loadErrors.length) {
     const missing = S.loadErrors.filter(e => /HTTP 404/.test(e)).length, total = (S.cfg.files || []).filter(f => !LAZY.includes(f)).length;
     const hint = missing === total && total
       ? `Папка <span class="mono">data-enc/</span> отсутствует или пуста (${missing} файлов не найдено). Скопируйте её из репозитория или соберите: <span class="mono">node tools/build.mjs --code "…"</span> при наличии <span class="mono">data/*.json</span>.`
-      : 'Проверьте код доступа, сеть и наличие файлов data-enc/*.enc.';
-    $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось загрузить данные.</b><p>${hint}</p>${S.loadErrors.length ? `<details><summary class="dim small">Подробности (${S.loadErrors.length})</summary><pre class="mono small" style="white-space:pre-wrap">${esc(S.loadErrors.join('\n'))}</pre></details>` : ''}<div class="row mt"><button class="btn sm ghost" onclick="location.reload()">Повторить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
+      : missing ? 'Проверьте код доступа, сеть и наличие файлов data-enc/*.enc.' : 'Связь прервалась. «Повторить» докачает только недостающие файлы — без перезагрузки страницы.';
+    $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось загрузить данные</b> (${S.loadErrors.length} из ${total}).<p>${hint}</p><details><summary class="dim small">Подробности (${S.loadErrors.length})</summary><pre class="mono small" style="white-space:pre-wrap">${esc(S.loadErrors.join('\n'))}</pre></details><div class="row mt"><button class="btn sm" id="errRetry">Повторить</button><button class="btn sm ghost" onclick="location.reload()">Перезагрузить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
+    const r = $('#errRetry'); if (r) r.onclick = () => enter().catch(enterFail);
     const b = $('#errLogout'); if (b) b.onclick = () => { LS.del(K.key); location.reload(); };
     return;
   }
@@ -212,7 +243,7 @@ function initGate() {
     try {
       const raw = await deriveKey(code);
       if (!(await keyOk(raw))) { err.textContent = 'Код не подошёл. Проверьте раскладку и попробуйте ещё раз.'; err.hidden = false; }
-      else { S.key = raw; LS.set(K.key, hex(raw)); showGate(false); await enter(); }
+      else { S.key = raw; LS.set(K.key, hex(raw)); showGate(false); try { await enter(); } catch (ex) { enterFail(ex); } }
     } catch (ex) { err.textContent = 'Ошибка: ' + ex.message; err.hidden = false; }
     btn.disabled = false; btn.textContent = t('Войти');
   };
@@ -317,7 +348,7 @@ function table(cols, rows, rowFn, onClick, opts = {}) {
   });
   tb.appendChild(body); w.appendChild(tb); return w;
 }
-function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; $('.sheet-card').focus(); document.body.style.overflow = 'hidden'; tgSync(); }
+function openSheet(html) { S.sheetPQ = null; $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; $('.sheet-card').focus(); document.body.style.overflow = 'hidden'; tgSync(); }
 function closeSheet() { $('#sheet').hidden = true; document.body.style.overflow = ''; tgSync(); if (SY.rerender) { SY.rerender = false; render(); } }
 const kv = pairs => `<div class="kv">${pairs.filter(p => p[1]).map(([k, v]) => `<div>${esc(t(k))}</div><div>${v}</div>`).join('')}</div>`;
 const links = arr => (arr || []).length ? `<ul class="list">${arr.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>${l.date ? ` <span class="dim small">${esc(l.date)}</span>` : ''}</li>`).join('')}</ul>` : '<span class="dim">—</span>';
@@ -761,6 +792,7 @@ function pPQ(m) {
   const d = D('pq'); if (!d) return m.appendChild(el('div', 'empty', 'Данные ВП не загружены'));
   head(m, 'Протокольные вопросы', `${esc(d.meta.title)} · опубликовано ${fmtDate(d.meta.published)} · ${d.items.length} ВП. Статус, ответственный, срок и доказательства — самооценка государства, ${D('sync') ? 'общая для всех устройств группы' : 'хранится на этом устройстве'}.`);
   const st = pqState();
+  if (S.lazyErr.length) m.insertAdjacentHTML('beforeend', lazyNotice());
   const tab = QTABS.some(x => x.id === S.f.t) ? S.f.t : 'list';
   const goTab = id => go('pq', { ...S.f, t: id === 'list' ? '' : id }, S.q);
   const all = d.items;
@@ -1097,7 +1129,8 @@ function assessCard(d, all, st) {
   }
   return c;
 }
-function openPQ(i) {
+function openPQ(i) { openPQBody(i); S.sheetPQ = i.id; }
+function openPQBody(i) {
   const d = D('pq'); const o = pqOf(i.id); const R = refsForPQ(i); const evl = Array.isArray(o.evl) ? o.evl : [];
   openSheet(`<h3><span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''} <span class="badge b-area">${i.area}</span> <span class="badge b-ce" title="${esc(d.meta.ce[i.ce] || '')}">${esc(i.ce)}</span> ${pqBadge(o.st)}</h3>
     <p><b>${esc(i.q)}</b></p>${capRef(i.id)}
@@ -2693,6 +2726,7 @@ async function boot() {
     const oact = e.target.closest('[data-openactivity]'); if (oact) { const it = QC() && QC().activities.find(x => x.ref_no === oact.dataset.openactivity); if (it) openActivity(it); return; }
     const ofin = e.target.closest('[data-openfinding]'); if (ofin) { const it = QC() && QC().findings.find(x => x.ref_no === ofin.dataset.openfinding); if (it) openFinding(it); return; }
     const oorg = e.target.closest('[data-openorg]'); if (oorg) { const it = subjOrgs().find(x => x.code === oorg.dataset.openorg); if (it) openOrg(it); return; }
+    if (e.target.closest('[data-lazyretry]')) { loadLazy(); toast(t('Догружаю…')); return; }
     const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it) openPQ(it); return; }
     const occ = e.target.closest('[data-opencc]'); if (occ) { const [a, id] = occ.dataset.opencc.split(':'); const it = D('cc') && D('cc').items.find(x => String(x.annex) === a && x.id === id); if (it) openCC(it); return; }
     const opn = e.target.closest('[data-open]'); if (opn) { window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
