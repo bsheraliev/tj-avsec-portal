@@ -298,6 +298,7 @@ details:not([open])>summary::after{content:" · нажмите";color:var(--dim)
   .tw table{min-width:0;width:100%}
   .tw table,.tw tbody{display:block;width:100%}   /* табличная раскладка на телефоне не нужна: иначе Chrome считает ширину таблицы по длине строки (КК → «Уровни несоответствия» 702 px) */
   .grid2>*{min-width:0}
+  @media (max-width:360px){.grid2{grid-template-columns:1fr}}   /* 320 px: одна колонка, без выезда — D7 */
   .tw table.fixedw{min-width:0;table-layout:auto}   /* на телефоне строки — карточки, ширины колонок и min-width не нужны: без этого горизонтальная прокрутка */
   .tw colgroup{display:none}
   .tw table thead{display:none}

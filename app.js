@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '74';
+const APP_VERSION = '75';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'дней до аудита': 'days to audit', 'ВП оценено': 'PQs assessed', 'CC: расхождения / частично': 'CC: differences / partial', 'SASAQ: вопросов заполнено': 'SASAQ: questions answered', 'Незакрыто': 'Open', 'субъектов надзора': 'regulated entities', 'уточнить наименование': 'name to be confirmed', 'программ без статуса': 'programmes without status', 'программ не отправлено в ИКАО': 'programmes not sent to ICAO', 'с категорией риска': 'with risk category', 'Документы для ИКАО': 'Documents for ICAO', 'просрочен на': 'overdue by', 'проверка': 'check', 'ПКД': 'CAP', 'Логистика аудита': 'Audit logistics', 'выполнено': 'done', 'подтверждено': 'confirmed', 'мероприятий (транспорт, питание, экскурсии)': 'items (transport, meals, excursions)', 'незакрытых рекомендаций': 'open recommendations', 'ВП': 'PQs', 'оценено': 'assessed', 'ВП с просроченным сроком': 'PQs past due', 'ВП «удовлетворительно» без подтверждения': 'PQs "satisfactory" without evidence of implementation', 'нужна запись о внедрении или утверждённый документ': 'needs a record of implementation or an approved document', 'этапов с просроченным сроком': 'stages past due', 'Рекомендации по рассмотрению / подтверждающие данные': 'Guidance for review / evidence of compliance', 'Приложение 9': 'Annex 9', 'Приложение 17': 'Annex 17', 'изменено': 'changed', 'Draft copy — ответ ещё не утверждён': 'Draft copy — answer not yet approved', 'перевод примечания и доказательств — аудиторы читают EN': 'translation of the note and evidence — auditors read EN', 'Personal note — только на этом устройстве': 'Personal note — this device only', 'Поиск: ВП, стандарт, документ, термин…': 'Search: PQ, standard, document, term…', 'Выйти из портала на этом устройстве': 'Sign out of the portal on this device', 'Версия портала': 'Portal version', 'Код доступа': 'Access code', 'авиационная безопасность · подготовка к USAP-CMA · АГА при ПРТ': 'aviation security · USAP-CMA preparation · CAA Tajikistan', 'Логистика: пунктов выполнено': 'Logistics: items done', 'Распределение и объём': 'Assignments and workload', 'По держателям': 'By holder', 'По ответственным': 'By responsible person', 'Что запросить и представить': 'What to request and provide', 'аудитор ИКАО': 'ICAO auditor', 'добавить запись о практике': 'add a record of practice', 'Позиции плана по держателям': 'Holder plan items', 'проконтролировать получение': 'check receipt', 'Задачи из ответов отдела': 'Tasks from department answers', 'Уже получено': 'Already received', 'открытых': 'open', 'Что ещё нужно': 'Still needed', 'По плану — из предварительной оценки на дату плана; сейчас — из самооценки портала (общей и этого устройства).': 'Plan figures come from the preliminary assessment on the plan date; current figures come from the portal self-assessment (shared and this device).', 'В работе / неудовл. (план)': 'In progress / unsat. (plan)', '⚠ без подтверждения (план)': '⚠ without evidence (plan)', 'Оценено сейчас': 'Assessed now', 'Открыто сейчас': 'Open now',
   'Надзор АБ': 'AVSEC oversight', 'Субъекты надзора': 'Regulated entities', 'Контроль качества': 'Quality control', 'Контроль качества АБ': 'AVSEC quality control', '№ ВП': 'PQ No.', 'Прил.': 'Annex', 'Удовл.': 'Sat.', 'Неудовл.': 'Unsat.', 'Наименование': 'Name', 'Пункт': 'Paragraph', 'Текст SARP': 'SARP text', 'Код': 'Code', 'Ответ (фрагмент)': 'Answer (excerpt)', 'Организация': 'Organisation', 'Тип': 'Type', 'Риск': 'Risk', 'Программы': 'Programmes', 'Основание': 'Basis', 'Уведомление': 'Notice', 'Акт / отчёт': 'Report', 'Субъект': 'Entity', 'Мероприятие': 'Activity', 'Месяц': 'Month', 'Несоответствие': 'Finding', 'Срок устранения': 'Closure due', 'Рекомендация ИКАО': 'ICAO recommendation', 'Корректирующее действие (ПКД 2020)': 'Corrective action (CAP 2020)', 'Сроки': 'Dates', 'Очень высокий': 'Critical', 'Документ ИКАО': 'ICAO document', 'Критический элемент': 'Critical element', 'Очистить': 'Clear', 'Пункт / страница': 'Paragraph / page', 'Поиск по тексту ВП': 'Search PQ text', 'Файл': 'File', 'Области': 'Areas', 'Ф.И.О.': 'Name', 'Название': 'Title', 'Этап': 'Stage', 'Распределение областей проверки': 'Audit area assignments', 'Состав': 'Team members', 'Инструктивный материал': 'Guidance material', 'Раздел / § НПАБГА РТ': 'NCASP section / §', 'Документ / программа': 'Document / programme', 'Требование ИКАО и НППБ': 'ICAO and NCASP requirement', 'Статус в АГА при ПРТ': 'Status at CAA', 'Аналог РК / КР': 'KZ / KG analogue', 'Тема': 'Topic', 'Реквизиты': 'Reference', 'Файл / источник': 'File / source', 'Зачем': 'Purpose', 'Окно · сроки': 'Window · dates', 'Субъект · объект': 'Entity · site', 'Сценарий': 'Scenario', 'Приор.': 'Prio.', 'Удовлетворительно без подтверждения': 'Satisfactory without evidence of implementation', 'нет доказательств: документ + пункт или файл': 'no evidence: document + paragraph or file', 'нужна запись о внедрении (акт, отчёт, журнал) — норма практику не доказывает': 'needs a record of implementation (report, log, minutes) — a rule does not prove practice', 'опирается только на неутверждённый документ или самодекларацию (SASAQ, CC, ПКД)': 'relies only on a draft document or self-declaration (SASAQ, CC, CAP)', 'файлы — проекты без реквизитов (подпись, номер, дата)': 'files are drafts without signature, number, date', 'у документов нет даты': 'documents have no date', 'рекомендация ПКД 2019 по этому ВП не закрыта': '2019 CAP recommendation for this PQ is still open', 'в оценке указано, что ещё нужно': 'preliminary assessment lists what is still needed', '«Удовлетворительно» без подтверждения': '"Satisfactory" without evidence of implementation', 'Из предварительной оценки': 'From preliminary assessment', 'из оценки': 'from assessment', 'подтверждённый': 'confirmed', 'без подтверждения внедрения': 'without evidence of implementation', 'подтверждённый EI — без ВП «удовлетворительно» без подтверждения': 'confirmed EI — excluding unsupported "satisfactory"', 'Аудитор ИКАО такой ВП не зачтёт. Сохранить всё равно?': 'An ICAO auditor will not accept this PQ. Save anyway?', 'Закрыть без сохранения?': 'Close without saving?', 'ВП изменён на другом устройстве, пока карточка была открыта. Сохранить вашу версию поверх? (Отмена — открыть свежую)': 'This PQ was changed on another device while the card was open. Overwrite with your version? (Cancel — reload the card)', 'Снять самооценку ВП': 'Clear self-assessment of PQ', 'Статус, доказательства и заметка удалятся на всех устройствах.': 'Status, evidence and note will be removed on all devices.', 'Статус, доказательства и заметка удалятся на этом устройстве.': 'Status, evidence and note will be removed on this device.', 'Перекрыто более поздней правкой с другого устройства': 'Overridden by a later change from another device', 'Не сохранено: хранилище браузера переполнено — выгрузите резервную копию (Данные) и очистите журнал': 'Not saved: browser storage is full — export a backup (Data) and clear the log', 'тип': 'type', 'норма': 'rule', 'запись / акт': 'record / report', 'Тип доказательства: норма (документ, пункт) или запись о внедрении (акт, отчёт, журнал, протокол)': 'Evidence type: rule (document, paragraph) or record of implementation (report, log, minutes)', 'документ · пункт или страница · дата · тип (норма или запись о внедрении) — как требует USAP': 'document · paragraph or page · date · type (rule or record) — as USAP requires', 'ВП получат «удовлетворительно» без подтверждения внедрения (только норма, проект документа или самодекларация) — они попадут в «К работе».': 'PQs will become "satisfactory" without evidence of implementation (rule, draft or self-declaration only) — they will be listed under "To do".', 'Отменить можно кнопкой «Отменить последнее» в списке ВП → «Выбрать» до перезагрузки страницы.': 'Undo with "Undo last" in the PQ list → "Select" until the page is reloaded.', 'ВП без единого доказательства получат «удовлетворительно» — аудитор ИКАО это не зачтёт.': 'PQs without any evidence will become "satisfactory" — an ICAO auditor will not accept this.', 'пропущено — изменены позже': 'skipped — changed later', 'Кто я': 'Who am I', 'Фамилия И. — автор правок на этом устройстве': 'Surname N. — author of changes on this device', 'Пишется в журнал изменений и в выгрузку OLF («Latest Modified By»); пусто — NCMC': 'Written to the change log and OLF export ("Latest Modified By"); empty — NCMC', 'Убрать': 'Remove',
   'С категорией риска': 'With risk category', 'Без категории': 'No category', 'Высокий': 'High', 'Средне-высокий': 'Medium-high', 'Средний': 'Medium', 'Средне-низкий': 'Medium-low', 'Низкий': 'Low', 'проверка состояния': 'security audit', 'инспекция': 'inspection', 'испытание': 'test', 'Ежегодная программа надзора 2026, прил. 4': 'Annual oversight programme 2026, Annex 4', 'предложение портала — вне программы 2026': 'portal proposal — outside the 2026 programme', 'Категория риска': 'Risk category', 'Периодичность': 'Periodicity', 'Источник': 'Source',
   'Документы по испытанию': 'Test documents', 'нет или проект': 'missing or draft', 'Шаг · документ': 'Step · document', 'Кто': 'Who', 'Статус': 'Status', 'Примечание': 'Note', 'До испытания': 'Before the test', 'День испытания': 'Test day', 'После испытания': 'After the test', 'Итог': 'Result', 'по сценарию; отчёт по Прил. 3 — см. чек-лист': 'per scenario; Appendix 3 report — see checklist', 'Документы по каждому испытанию': 'Documents for each test', 'чек-лист от рапорта до дела': 'checklist from internal memo to case file', 'Состояние по конкретному испытанию — в карточке пункта плана («План 2026» → строка). Гласное: все шаги; негласное: без уведомления субъекта (п. 34).': 'Status for a specific test is in the plan item card (“Plan 2026” → row). Overt: all steps; covert: without notifying the entity (para. 34).', 'обе': 'both', 'Документы': 'Documents',
@@ -703,20 +704,20 @@ function todoCard(m) {
   const add = (html, href) => rows.push({ html, href });
   if (u) {
     const a = auditState(); const n = u.requested.length, sent = u.requested.filter(r => docSent(r, a.docs)).length; const dl = u.audit.docsDeadline; const late = daysTo(dl) < 0 && sent < n;
-    add(`<b>Документы для ИКАО</b>: отправлено ${sent} из ${n} · срок ${fmtDate(dl)}${late ? ` <span class="warn">· просрочен на ${-daysTo(dl)} дн.</span>` : ''}`, '#audit?t=docs');
-    if (u.ccCheck && !docSent({ id: 'cc' }, a.docs)) add(`<b>CC</b>: проверка ${fmtDate(u.ccCheck.date)} — <span class="warn">${esc(u.ccCheck.verdict)}</span>`, '#audit?t=docs');
-    if (u.capCheck && !docSent({ id: 'cap' }, a.docs)) add(`<b>ПКД</b>: проверка ${fmtDate(u.capCheck.date)} — <span class="warn">${esc(u.capCheck.verdict)}</span>`, '#audit?t=docs');
-    const ld = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length; if (ld < u.logistics.length) add(`<b>Логистика аудита</b>: выполнено ${ld} из ${u.logistics.length}`, '#audit?t=log');
-    if (u.hospitality) { const h = hosStats(u.hospitality, a.hos); if (h.d < h.n) add(`<b>Приём группы</b>: подтверждено ${h.d} из ${h.n} мероприятий (транспорт, питание, экскурсии)`, '#audit?t=plan'); }
+    add(`<b>${esc(t('Документы для ИКАО'))}</b>: ${esc(t('отправлено'))} ${sent} ${esc(t('из'))} ${n} · ${esc(t('срок'))} ${fmtDate(dl)}${late ? ` <span class="warn">· ${esc(t('просрочен на'))} ${-daysTo(dl)} ${esc(t('дн.'))}</span>` : ''}`, '#audit?t=docs');
+    if (u.ccCheck && !docSent({ id: 'cc' }, a.docs)) add(`<b>CC</b>: ${esc(t('проверка'))} ${fmtDate(u.ccCheck.date)} — <span class="warn">${esc(u.ccCheck.verdict)}</span>`, '#audit?t=docs');
+    if (u.capCheck && !docSent({ id: 'cap' }, a.docs)) add(`<b>${esc(t('ПКД'))}</b>: ${esc(t('проверка'))} ${fmtDate(u.capCheck.date)} — <span class="warn">${esc(u.capCheck.verdict)}</span>`, '#audit?t=docs');
+    const ld = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length; if (ld < u.logistics.length) add(`<b>${esc(t('Логистика аудита'))}</b>: ${esc(t('выполнено'))} ${ld} ${esc(t('из'))} ${u.logistics.length}`, '#audit?t=log');
+    if (u.hospitality) { const h = hosStats(u.hospitality, a.hos); if (h.d < h.n) add(`<b>${esc(t('Приём группы'))}</b>: ${esc(t('подтверждено'))} ${h.d} ${esc(t('из'))} ${h.n} ${esc(t('мероприятий (транспорт, питание, экскурсии)'))}`, '#audit?t=plan'); }
   }
-  if (cap && cap.meta.update) { const s = capStats(cap); if (s.open) add(`<b>ПКД</b>: незакрытых рекомендаций ${s.open} из ${s.total}`, '#cap?st=open'); }
+  if (cap && cap.meta.update) { const s = capStats(cap); if (s.open) add(`<b>${esc(t('ПКД'))}</b>: ${esc(t('незакрытых рекомендаций'))} ${s.open} ${esc(t('из'))} ${s.total}`, '#cap?st=open'); }
   if (pq) {
-    const st = pqState(); const n = pq.items.filter(i => (st[i.id] || {}).st).length; add(`<b>ВП</b>: оценено ${n} из ${pq.items.length} (${pct(n, pq.items.length)}%)`, '#pq?st=none');
-    const od = pq.items.filter(i => { const o = st[i.id] || {}; return o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0; }).length; if (od) add(`<b>ВП с просроченным сроком</b>: <span class="warn">${od}</span>`, '#pq');
-    const wk = pq.items.filter(i => (st[i.id] || {}).st === 'sat' && pqSatWeak(i, st)).length; if (wk) add(`<b>ВП «удовлетворительно» без подтверждения</b>: <span class="warn">${wk}</span> — нужна запись о внедрении или утверждённый документ`, '#pq?weak=1');
+    const st = pqState(); const n = pq.items.filter(i => (st[i.id] || {}).st).length; add(`<b>${esc(t('ВП'))}</b>: ${esc(t('оценено'))} ${n} ${esc(t('из'))} ${pq.items.length} (${pct(n, pq.items.length)}%)`, '#pq?st=none');
+    const od = pq.items.filter(i => { const o = st[i.id] || {}; return o.due && o.st !== 'sat' && o.st !== 'na' && daysTo(o.due) < 0; }).length; if (od) add(`<b>${esc(t('ВП с просроченным сроком'))}</b>: <span class="warn">${od}</span>`, '#pq');
+    const wk = pq.items.filter(i => (st[i.id] || {}).st === 'sat' && pqSatWeak(i, st)).length; if (wk) add(`<b>${esc(t('ВП «удовлетворительно» без подтверждения'))}</b>: <span class="warn">${wk}</span> — ${esc(t('нужна запись о внедрении или утверждённый документ'))}`, '#pq?weak=1');
   }
   const late = STAGES.filter(s => { const o = planState()[s.id] || {}; const due = o.date || (typeof s.due === 'function' ? s.due() : s.due); return due && stageStatus(s) !== 'done' && daysTo(due) < 0; }).length;
-  if (late) add(`<b>Дорожная карта</b>: этапов с просроченным сроком — <span class="warn">${late}</span>`, '#plan');
+  if (late) add(`<b>${esc(t('Дорожная карта'))}</b>: ${esc(t('этапов с просроченным сроком'))} — <span class="warn">${late}</span>`, '#plan');
   if (!rows.length) return;
   const c = el('div', 'card'); c.innerHTML = `<h2>📌 ${esc(t('Что делать сейчас'))}</h2>`;
   rows.forEach(r => { const b = el('button', 'taskrow', r.html); b.onclick = () => { location.hash = r.href; }; c.appendChild(b); });
@@ -743,15 +744,15 @@ function dash(m) {
   // четыре числа состояния; показатели реестра и матрицы живут в своих разделах
   const tiles = el('div', 'tiles');
   const ad = settings().auditDate;
-  if (ad) tiles.appendChild(tile(daysTo(ad) < 30 ? 'miss' : 'info', daysTo(ad) >= 0 ? daysTo(ad) : '—', `дней до аудита · ${fmtDate(ad)}`, () => go('audit')));
+  if (ad) tiles.appendChild(tile(daysTo(ad) < 30 ? 'miss' : 'info', daysTo(ad) >= 0 ? daysTo(ad) : '—', `${t('дней до аудита')} · ${fmtDate(ad)}`, () => go('audit')));
   if (pq) {
     const cnt = { sat: 0, wip: 0, unsat: 0, na: 0 }; pq.items.forEach(i => { const x = (st[i.id] || {}).st; if (x) cnt[x]++; });
     const n = cnt.sat + cnt.wip + cnt.unsat + cnt.na;
-    tiles.appendChild(tile(n ? 'info' : 'miss', `${pct(n, pq.items.length)}%`, `ВП оценено (${n} из ${pq.items.length})`, () => go('pq', { t: 'sum' })));
+    tiles.appendChild(tile(n ? 'info' : 'miss', `${pct(n, pq.items.length)}%`, `${t('ВП оценено')} (${n} ${t('из')} ${pq.items.length})`, () => go('pq', { t: 'sum' })));
   }
   if (cc) {
     const sarps = cc.items.filter(i => i.kind === 'std' || i.kind === 'rp'); const bad = sarps.filter(i => ccOf(i).st !== 'ok');
-    tiles.appendChild(tile(bad.length ? 'draft' : 'ok', bad.length, `CC: расхождения / частично (из ${sarps.length})`, () => go('cc', { st: 'bad' })));
+    tiles.appendChild(tile(bad.length ? 'draft' : 'ok', bad.length, `${t('CC: расхождения / частично')} (${t('из')} ${sarps.length})`, () => go('cc', { st: 'bad' })));
   }
   if (sq) { const f = sq.items.filter(i => i.filled).length; tiles.appendChild(tile(f === sq.items.length ? 'ok' : 'draft', `${f}/${sq.items.length}`, 'SASAQ: вопросов заполнено', () => go('sasaq'))); }
   // журнал — на период аудита или когда в нём есть открытые записи
@@ -1176,8 +1177,8 @@ function openPQBody(i) {
   const gaps = pqGaps(i, o);
   openSheet(`<h3><span class="code">${esc(i.id)}</span>${i.star ? ' <span class="star">★</span>' : ''} <span class="badge b-area">${i.area}</span> <span class="badge b-ce" title="${esc(d.meta.ce[i.ce] || '')}">${esc(i.ce)}</span> ${pqBadge(o.st)}</h3>
     <p><b>${esc(i.q)}</b></p>${capRef(i.id)}
-    <h4>Рекомендации по рассмотрению / подтверждающие данные</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
-    ${kv([['Документ ИКАО', `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? 'Приложение 9' : 'Приложение 17'})`], ['Критический элемент', `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], ['Подраздел', esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
+    <h4>${esc(t('Рекомендации по рассмотрению / подтверждающие данные'))}</h4>${i.g.length ? `<ul class="list">${i.g.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : '<p class="dim">—</p>'}
+    ${kv([[t('Документ ИКАО'), `<span class="mono">${esc(i.doc)}</span> (${i.area === 'FAL' ? t('Приложение 9') : t('Приложение 17')})`], [t('Критический элемент'), `${esc(i.ce)} — ${esc(d.meta.ce[i.ce] || '')}`], [t('Подраздел'), esc((d.meta.subs.find(s => s.code === i.sub) || {}).name || '')]])}
     ${traceBlock(i)}
     ${jLinked('PQ:' + i.id)}
     ${refsBlock(R)}${evFilesBlock(i)}${planBlock(i)}${teamBlock(i)}${hintsBlock(i)}${assessBlock(i)}
@@ -1188,7 +1189,7 @@ function openPQBody(i) {
         <label>${esc(t('Статус'))}<select name="st">${Object.entries(PQST).map(([k, v]) => `<option value="${k}"${o.st === k ? ' selected' : ''}>${esc(t(v))}</option>`).join('')}</select></label>
         <label>${esc(t('Срок'))}<input type="date" name="due" value="${esc(o.due || '')}"></label>
       </div>
-      <label class="chk"><input type="checkbox" name="draft"${o.draft ? ' checked' : ''}> ${esc(t('Черновик ответа'))} <span class="dim small">(Draft copy — ответ ещё не утверждён)</span></label>
+      <label class="chk"><input type="checkbox" name="draft"${o.draft ? ' checked' : ''}> ${esc(t('Черновик ответа'))} <span class="dim small">(${esc(t('Draft copy — ответ ещё не утверждён'))})</span></label>
       <label>${esc(t('Ответственный'))}${(r => r && r.byArea ? ` <span class="dim">(${esc(t('по области'))}: ${esc(r.name)})</span>` : '')(respOfPQ(i))}${respSelect('resp', o.resp || '', true)}</label>
       <div class="evhead"><b>${esc(t('Доказательства'))}</b> <span class="dim small">${esc(t('документ · пункт или страница · дата · тип (норма или запись о внедрении) — как требует USAP'))}</span></div>
       <div id="evList"></div>
@@ -1197,9 +1198,9 @@ function openPQBody(i) {
       ${o.ev ? `<label class="mt">${esc(t('Ранее внесённый текст доказательств'))} <span class="dim small">(перенесите в список выше и очистите поле)</span><textarea name="ev">${esc(o.ev)}</textarea></label>` : ''}
       <label>${esc(t('Примечание'))}<textarea name="note">${esc(o.note || '')}</textarea></label>
       ${o.gap && !gaps.length ? `<p class="small dim">⚠ ${esc(t('Что нужно'))} (${esc(t('из оценки'))}): ${esc(o.gap)}</p>` : ''}
-      <label>English translation <span class="dim small">перевод примечания и доказательств — аудиторы читают EN</span><textarea name="en">${esc(o.en || '')}</textarea></label>
-      <label>${esc(t('Личная заметка'))} <span class="dim small">(Personal note — только на этом устройстве)</span><textarea name="pnote">${esc(o.pnote || '')}</textarea></label>
-      <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="pqClear">Очистить</button><span class="dim small grow">${o.at ? 'изменено ' + esc(o.at) : ''}</span></div>
+      <label>English translation <span class="dim small">${esc(t('перевод примечания и доказательств — аудиторы читают EN'))}</span><textarea name="en">${esc(o.en || '')}</textarea></label>
+      <label>${esc(t('Личная заметка'))} <span class="dim small">(${esc(t('Personal note — только на этом устройстве'))})</span><textarea name="pnote">${esc(o.pnote || '')}</textarea></label>
+      <div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button><button class="btn ghost" type="button" id="pqClear">${esc(t('Очистить'))}</button><span class="dim small grow">${o.at ? esc(t('изменено')) + ' ' + esc(o.at) : ''}</span></div>
     </form>${changeLog('pq', i.id)}`);
   const evBox = $('#evList');
   const evRow = (v = {}) => { const r = el('div', 'evrow', `<input class="inp" data-k="doc" list="evDocs" placeholder="${esc(t('Документ'))}" value="${esc(v.doc || '')}"><input class="inp" data-k="ref" placeholder="${esc(t('Пункт / страница'))}" value="${esc(v.ref || '')}"><input class="inp" data-k="date" type="date" value="${esc(v.date || '')}"><select class="sel" data-k="kind" title="${esc(t('Тип доказательства: норма (документ, пункт) или запись о внедрении (акт, отчёт, журнал, протокол)'))}"><option value="">${esc(t('тип'))}</option><option value="norm"${v.kind === 'norm' ? ' selected' : ''}>${esc(t('норма'))}</option><option value="rec"${v.kind === 'rec' ? ' selected' : ''}>${esc(t('запись / акт'))}</option></select><button type="button" class="btn sm ghost evdel" title="${esc(t('Убрать'))}">×</button>`);
@@ -1503,7 +1504,7 @@ function pAudit(m) {
 
   // Плитки — одной строкой: просрочка подачи ушла подписью к документам, а не отдельной плиткой
   const tiles = el('div', 'tiles');
-  tiles.appendChild(tile('info', daysTo(u.audit.start), `Дней до аудита · ${fmtDate(u.audit.start)}`, () => go('plan')));
+  tiles.appendChild(tile('info', daysTo(u.audit.start), `${t('Дней до аудита')} · ${fmtDate(u.audit.start)}`, () => go('plan')));
   tiles.appendChild(tile(sent === u.requested.length ? 'ok' : 'miss', `${sent}/${u.requested.length}`,
     dl < 0 && sent < u.requested.length ? `Документов в ИКАО · просрочка ${-dl} дн.` : 'Документов отправлено в ИКАО', () => goTab('docs')));
   tiles.appendChild(tile(done === u.logistics.length ? 'ok' : 'draft', `${done}/${u.logistics.length}`, 'Логистика: пунктов выполнено', () => goTab('log')));
@@ -1766,7 +1767,7 @@ function pCAP(m) {
     tiles.appendChild(tile('ok', s.done, 'Выполнено', () => go('cap', { st: 'done' })));
     tiles.appendChild(tile('draft', s.part, 'Частично', () => go('cap', { st: 'part' })));
     tiles.appendChild(tile('info', s.wip + s.ongoing, 'В работе / постоянно', () => go('cap', { st: 'wip' })));
-    tiles.appendChild(tile(s.open ? 'miss' : 'ok', s.open, `Незакрыто (из ${s.total})`, () => go('cap', { st: 'open' })));
+    tiles.appendChild(tile(s.open ? 'miss' : 'ok', s.open, `${t('Незакрыто')} (${t('из')} ${s.total})`, () => go('cap', { st: 'open' })));
     m.appendChild(tiles);
   }
   const list = c.findings.filter(f => (!S.f.area || f.area === S.f.area) && (!S.f.prio || f.priority === S.f.prio) && f.items.some(itOk));
@@ -1859,11 +1860,11 @@ function pSubjects(m) {
   const nOv = orgs.filter(o => orgKind(o) === 'oversight').length, nTbd = orgs.filter(o => o.tbd).length;
   const noSt = progs.filter(x => !x.p.status).length, noSent = progs.filter(x => progNotSent(x.p)).length;
   const tiles = el('div', 'tiles');
-  tiles.appendChild(tile('info', nOv, `субъектов надзора (из ${orgs.length})`, () => go('subjects', { kind: 'oversight' })));
+  tiles.appendChild(tile('info', nOv, `${t('субъектов надзора')} (${t('из')} ${orgs.length})`, () => go('subjects', { kind: 'oversight' })));
   tiles.appendChild(tile(nTbd ? 'draft' : 'ok', nTbd, 'уточнить наименование', () => go('subjects', { kind: 'tbd' })));
-  tiles.appendChild(tile(noSt ? 'draft' : 'ok', noSt, `программ без статуса (из ${progs.length})`, () => go('subjects', { pst: 'none' })));
+  tiles.appendChild(tile(noSt ? 'draft' : 'ok', noSt, `${t('программ без статуса')} (${t('из')} ${progs.length})`, () => go('subjects', { pst: 'none' })));
   tiles.appendChild(tile(noSent ? 'miss' : 'ok', noSent, 'программ не отправлено в ИКАО', () => go('subjects', { pst: 'nosent' })));
-  const nRisk = orgs.filter(o => o.risk).length; tiles.appendChild(tile(nRisk ? 'info' : 'draft', nRisk, `с категорией риска (из ${orgs.length})`, () => go('subjects', { risk: 'any' })));
+  const nRisk = orgs.filter(o => o.risk).length; tiles.appendChild(tile(nRisk ? 'info' : 'draft', nRisk, `${t('с категорией риска')} (${t('из')} ${orgs.length})`, () => go('subjects', { risk: 'any' })));
   m.appendChild(tiles);
   const tb = el('div', 'toolbar');
   tb.appendChild(selector('Все типы', 'type', d.entity_types.map(x => x.code), c => subjType(c).name_ru));
@@ -2815,7 +2816,14 @@ function applyTheme() {
   document.documentElement.dataset.theme = th;
   $('meta[name=theme-color]').content = th === 'dark' ? '#0d1b2a' : '#123b5e';
 }
-function applyLang() { $$('#lang button').forEach(b => b.classList.toggle('on', b.dataset.l === S.lang)); document.documentElement.lang = S.lang; }
+function applyLang() { $$('#lang button').forEach(b => b.classList.toggle('on', b.dataset.l === S.lang)); document.documentElement.lang = S.lang;
+  // статические строки index.html (шапка, вход): подписи и подсказки на текущем языке
+  const q = $('#q'); if (q) q.placeholder = t('Поиск: ВП, стандарт, документ, термин…');
+  const st = { '#qclear': 'Очистить', '#themeBtn': 'Тема', '#who': 'Выйти из портала на этом устройстве', '.appver': 'Версия портала' };
+  Object.entries(st).forEach(([sel, k]) => { const e = $(sel); if (e) e.title = t(k); });
+  const who = $('#who'); if (who) who.textContent = t('Выйти');
+  const gc = $('#gateCode'); if (gc) gc.placeholder = t('Код доступа');
+  const bs = $('.brand small'); if (bs) bs.textContent = t('авиационная безопасность · подготовка к USAP-CMA · АГА при ПРТ'); }
 /* ---------- Telegram Mini App ---------- */
 // Портал открывается из бота как Mini App (кнопка меню → URL GitHub Pages). Бэкенда нет, поэтому вход — тем же кодом,
 // ключ хранится в localStorage webview Telegram. Здесь только оболочка: ready/expand, чистка хеша, кнопка «Назад», тема.
