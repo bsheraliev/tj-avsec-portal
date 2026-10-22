@@ -374,3 +374,22 @@ details.card>summary::after{margin-left:auto}
 /* v99: инструктаж — липкий заголовок длинной таблицы вопросов (виден при прокрутке), подсказка организации */
 .brq>summary.stick{position:sticky;top:var(--top);z-index:3;background:var(--card);padding:6px 0;margin:0 -2px;border-bottom:1px solid var(--line)}
 .brq:not([open])>summary .brq-hint{display:none}
+/* ----- Сотая версия (v101, 22.10.2026): заставка, салют, плашка, баннер на обзоре, светящийся бейдж версии.
+   Золото, не акцент портала; живёт неделю и показывается один раз на устройство — JUBILEE в app.js. Образец — Рақам v100. */
+.jub-fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:95}
+.jub-toast{position:fixed;left:12px;right:12px;bottom:calc(74px + env(safe-area-inset-bottom));max-width:420px;margin:0 auto;z-index:96;background:var(--card);color:var(--ink);
+  border:1px solid #D8A657;border-radius:14px;padding:12px 14px;box-shadow:0 14px 34px -18px rgba(0,0,0,.6);transform:translateY(150%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2)}
+.jub-toast.on{transform:translateY(0)}
+.jub-toast .t{font:800 16px/1.2 Georgia,serif;color:#D8A657;margin-bottom:3px}
+.jub-toast .s{font-size:12.5px;color:var(--dim)}
+.jub-toast button{margin-top:10px;width:100%;font:inherit;font-size:13px;font-weight:800;padding:9px;border:0;border-radius:9px;background:#D8A657;color:#1a1206;cursor:pointer}
+.jub-splash{position:fixed;inset:0;z-index:97;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .45s}
+.jub-splash.on{opacity:1}
+.jub-splash .num{font:800 92px/1 Georgia,serif;color:#D8A657;letter-spacing:-.03em;transform:scale(.82);transition:transform .65s cubic-bezier(.2,.9,.3,1.3)}
+.jub-splash.on .num{transform:scale(1)}
+.jub-splash .cap{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+.jub-banner{border-left:3px solid #D8A657;border-radius:0 12px 12px 0}
+.jub-banner b{color:#D8A657}
+.appver.topver.jub{color:#D8A657;border-color:#D8A657;animation:jubPulse 1.8s ease-out infinite;cursor:pointer}
+@keyframes jubPulse{0%{box-shadow:0 0 0 0 rgba(216,166,87,.45)}70%{box-shadow:0 0 0 7px rgba(216,166,87,0)}100%{box-shadow:0 0 0 0 rgba(216,166,87,0)}}
+@media (prefers-reduced-motion: reduce){.jub-toast,.jub-splash,.jub-splash .num{transition:none}.appver.topver.jub{animation:none}}
