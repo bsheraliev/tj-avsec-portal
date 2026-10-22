@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '101';
+const APP_VERSION = '102';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -241,7 +241,7 @@ async function enter() {
    анимациях остаётся только баннер. Ничего не блокирует дольше двух секунд. */
 const JUBILEE = { from: 100, until: '2026-10-29', parts: { splash: true, burst: true, banner: true, badge: true } };
 function jubActive() { return Number(APP_VERSION) >= JUBILEE.from && today() <= JUBILEE.until; }
-const jubKey = s => `avsec-jub-${s}-${JUBILEE.from}`;
+const jubKey = s => `avsec-jub-${s}-${JUBILEE.from}-2`;   // «-2»: первый запуск (v101) обрывался перезагрузкой после смены service worker — показ повторяем
 const jubSeen = k => { try { return localStorage.getItem(jubKey(k)) === '1'; } catch (e) { return false; } };
 const jubMark = k => { try { localStorage.setItem(jubKey(k), '1'); } catch (e) {} };
 const jubQuiet = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
@@ -252,13 +252,15 @@ function jubBurst(n, yFrac) {
   const cv = el('canvas', 'jub-fx'); document.body.appendChild(cv);
   const dpr = Math.min(devicePixelRatio || 1, 2), W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr;
   const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const colors = ['#D8A657', '#EBD9B4', '#5aa7e8', '#F0F2F5', '#B98D3F'], p = [];
-  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * (i / n) + Math.random() * .5, sp = 2.2 + Math.random() * 3.4;
-    p.push({ x: W / 2, y: H * yFrac, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2.4, w: 3 + Math.random() * 4, h: 5 + Math.random() * 6, rot: Math.random() * 6.28, vr: (Math.random() - .5) * .35, c: colors[i % colors.length], life: 1 }); }
+  const colors = ['#D8A657', '#EBD9B4', '#5aa7e8', '#F0F2F5', '#B98D3F', '#e8c26b'], p = [];
+  // три очага (центр и две трети ширины), частицы крупнее и живут дольше — на телефоне первый салют v101 был едва заметен
+  const srcs = [[W / 2, H * yFrac], [W * .2, H * (yFrac + .08)], [W * .8, H * (yFrac + .08)]];
+  for (let i = 0; i < n; i++) { const a = Math.PI * 2 * (i / n) + Math.random() * .5, sp = 3 + Math.random() * 4.5, sx = srcs[i % 3];
+    p.push({ x: sx[0], y: sx[1], vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3.2, w: 5 + Math.random() * 5, h: 8 + Math.random() * 8, rot: Math.random() * 6.28, vr: (Math.random() - .5) * .35, c: colors[i % colors.length], life: 1 }); }
   let t0 = performance.now();
   (function frame(now) {
     const dt = Math.min((now - t0) / 16.7, 3); t0 = now; ctx.clearRect(0, 0, W, H); let alive = false;
-    for (const q of p) { if (q.life <= 0) continue; alive = true; q.vy += 0.13 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt; q.life -= 0.011 * dt;
+    for (const q of p) { if (q.life <= 0) continue; alive = true; q.vy += 0.11 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt; q.life -= 0.0075 * dt;
       ctx.save(); ctx.globalAlpha = Math.max(q.life, 0); ctx.translate(q.x, q.y); ctx.rotate(q.rot); ctx.fillStyle = q.c; ctx.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); ctx.restore(); }
     if (alive) requestAnimationFrame(frame); else cv.remove();
   })(t0);
@@ -271,10 +273,11 @@ function jubToast() {
 }
 function jubStart() {
   if (!jubActive()) return;
-  if (JUBILEE.parts.badge) $$('.appver.topver').forEach(v => { v.classList.add('jub'); v.title = t('Сотая версия портала'); v.onclick = () => { jubBurst(24, .12); jubHaptic(); }; });
+  if (JUBILEE.parts.badge) $$('.appver.topver').forEach(v => { v.classList.add('jub'); v.title = t('Сотая версия портала'); v.onclick = () => { jubBurst(90, .15); jubHaptic(); }; });
   if (jubSeen('enter')) return;
-  jubMark('enter');
-  const salute = () => { if (JUBILEE.parts.burst) { jubBurst(42, .42); jubHaptic(); setTimeout(jubToast, 420); } };
+  // отметку «видел» ставим только когда дошло до плашки: перезагрузка оболочки после смены service worker
+  // (controllerchange → reload) обрывала заставку v101 на первой секунде, а отметка уже стояла — и праздник пропадал
+  const salute = () => { jubMark('enter'); if (JUBILEE.parts.burst) { jubBurst(150, .4); jubHaptic(); setTimeout(() => jubBurst(90, .3), 700); setTimeout(jubToast, 420); } else jubToast(); };
   if (JUBILEE.parts.splash && !jubQuiet()) {
     const s = el('div', 'jub-splash', `<div class="num">100</div><div class="cap">${esc(t('сотая версия'))}</div>`);
     document.body.appendChild(s); setTimeout(() => s.classList.add('on'), 30);
