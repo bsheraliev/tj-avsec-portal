@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '98';
+const APP_VERSION = '99';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -2711,12 +2711,16 @@ function pBrief(m) {
     if (e.sessions.length) c.appendChild(el('div', 'mt small', `<b>${esc(t('Сессии аудита'))}:</b><ul class="list">${e.sessions.map(id => sess(id)).filter(Boolean).map(s => `<li>${sessLine(s)}</li>`).join('')}</ul>`));
     const d1 = el('details', 'mt'); d1.open = true; d1.innerHTML = `<summary><b>${esc(t('Иметь при себе'))}</b> <span class="dim small">${e.docs.length}</span></summary><ul class="list small">${e.docs.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; c.appendChild(d1);
     const d2 = el('details', 'mt'); d2.open = true; d2.innerHTML = `<summary><b>${esc(t('Памятка'))}</b> <span class="dim small">${e.brief.length}</span></summary><ul class="list small">${e.brief.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; c.appendChild(d2);
+    (e.focus || []).forEach(fx => { const d = el('details', 'mt'); d.open = true; d.innerHTML = `<summary><b>${esc(t('Особо'))}: ${esc(fx.t)}</b> <span class="dim small">${fx.items.length}</span></summary><ul class="list small">${fx.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`; c.appendChild(d); });
     if (e.questions.length) {
-      const d3 = el('details', 'mt'); d3.open = !!f.s; d3.innerHTML = `<summary><b>${esc(t('Вопросы для обсуждения'))}</b> <span class="dim small">${e.questions.length} ${esc(t('ВП'))}</span></summary>`;
+      // длинная таблица: заголовок-сводка липкий (виден при прокрутке), внизу — «свернуть и к началу организации»
+      const d3 = el('details', 'mt brq'); d3.open = !!f.s; d3.innerHTML = `<summary class="stick"><b>${esc(t('Вопросы для обсуждения'))}</b> <span class="dim small">${e.questions.length} ${esc(t('ВП'))}</span> <span class="dim small brq-hint">· ${esc(e.name)}</span></summary>`;
       d3.appendChild(table(['ВП', 'Вопрос', 'Что проверит аудитор', 'Оценка'], e.questions, q => { const x = st[q.pq] || {}, s = x.st || q.st || '';
         return [`<button class="idc clk" type="button" data-openpq="${esc(q.pq)}">${esc(q.pq)}</button>${q.star ? ' <span class="star">★</span>' : ''}<div class="small dim">${esc(q.ce)}</div>`, `<div class="td-wrap">${esc(q.q)}</div>`,
           `<div class="td-wrap small">${q.g.map(g => `• ${esc(g)}`).join('<br>')}${q.team ? `<div class="dim">${esc(t('Отдел'))}: ${esc(q.team)}</div>` : ''}</div>`, badge(BRST[s], PQST[s])]; }));
-      c.appendChild(d3);
+      const up = el('button', 'btn sm ghost mt', `↑ ${esc(t('Свернуть вопросы и к началу организации'))}`);
+      up.onclick = () => { d3.open = false; c.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      d3.appendChild(up); c.appendChild(d3);
     }
     m.appendChild(c);
   });

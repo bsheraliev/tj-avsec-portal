@@ -371,3 +371,6 @@ details.card>summary::after{margin-left:auto}
 .gleg{display:inline-block;width:12px;height:8px;border-radius:2px;margin:0 4px 0 10px;vertical-align:middle;background:var(--ok)}
 .gleg.cov,.gleg.pause{background:var(--miss)}.gleg.rep,.gleg.cap{background:var(--info)}.gleg.icao{background:var(--draft)}
 @media (max-width:640px){.gantt{grid-template-columns:1fr}.glab{margin-top:6px}.gtrack.ghead{margin-top:0}.evrow{grid-template-columns:auto 1fr}.evrow .badge{grid-column:2;justify-self:start}.evrow .evt{grid-column:1/3}}
+/* v99: инструктаж — липкий заголовок длинной таблицы вопросов (виден при прокрутке), подсказка организации */
+.brq>summary.stick{position:sticky;top:var(--top);z-index:3;background:var(--card);padding:6px 0;margin:0 -2px;border-bottom:1px solid var(--line)}
+.brq:not([open])>summary .brq-hint{display:none}
