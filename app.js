@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '103';
+const APP_VERSION = '104';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -386,7 +386,7 @@ function render() {
   else window.scrollTo(0, y);
   if (sel) { const n = m.querySelector(sel); if (n) n.focus({ preventScroll: true }); }
 }
-function head(m, title, sub) { m.appendChild(el('h1', '', esc(t(title)))); if (sub) m.appendChild(el('p', 'sub', sub)); }
+function pageHead(m, title, sub) { m.appendChild(el('h1', '', esc(t(title)))); if (sub) m.appendChild(el('p', 'sub', sub)); }
 
 /* ---------- общие виджеты ---------- */
 const TABLE_NA = new Set(['', '—', '-', '0', 'Н/П', 'н/п', 'Нет статуса', 'Не начато']);   // на телефоне такие ячейки в карточке скрыты (колонка на десктопе остаётся)
@@ -793,7 +793,7 @@ function suggest(text, href, label) {
 }
 /* ---------- Обзор ---------- */
 function dash(m) {
-  head(m, 'Обзор', 'Состояние подготовки к USAP-CMA и нормативной базы АБ · Агентство гражданской авиации при Правительстве Республики Таджикистан');
+  pageHead(m, 'Обзор', 'Состояние подготовки к USAP-CMA и нормативной базы АБ · Агентство гражданской авиации при Правительстве Республики Таджикистан');
   jubBanner(m);
   if (auditWindow()) todayCard(m);
   todoCard(m);
@@ -865,7 +865,7 @@ const QTABS = [{ id: 'list', t: 'Список' }, { id: 'sum', t: 'Сводка'
 const areaAuditor = code => { const u = U(); const x = u && (u.audit.areaAuditors || []).find(y => y.code === code); return x ? x.auditor : ''; };
 function pPQ(m) {
   const d = D('pq'); if (!d) return m.appendChild(el('div', 'empty', 'Данные ВП не загружены'));
-  head(m, 'Протокольные вопросы', `${esc(d.meta.title)} · опубликовано ${fmtDate(d.meta.published)} · ${d.items.length} ВП. Статус, ответственный, срок и доказательства — самооценка государства, ${D('sync') ? 'общая для всех устройств группы' : 'хранится на этом устройстве'}.`);
+  pageHead(m, 'Протокольные вопросы', `${esc(d.meta.title)} · опубликовано ${fmtDate(d.meta.published)} · ${d.items.length} ВП. Статус, ответственный, срок и доказательства — самооценка государства, ${D('sync') ? 'общая для всех устройств группы' : 'хранится на этом устройстве'}.`);
   const st = pqState();
   if (S.lazyErr.length) m.insertAdjacentHTML('beforeend', lazyNotice());
   const tab = QTABS.some(x => x.id === S.f.t) ? S.f.t : 'list';
@@ -1415,7 +1415,7 @@ function exportPQ(list) {
 /* ---------- Контрольный перечень соответствия ---------- */
 function pCC(m) {
   const d = D('cc'); if (!d) return m.appendChild(el('div', 'empty', 'Данные CC не загружены'));
-  head(m, 'Контрольный перечень (CC)', `${esc(d.meta.title)} · источник: ${esc(d.meta.source)}. Статус выводится автоматически из графы «Замечания» и может быть уточнён вручную.`);
+  pageHead(m, 'Контрольный перечень (CC)', `${esc(d.meta.title)} · источник: ${esc(d.meta.source)}. Статус выводится автоматически из графы «Замечания» и может быть уточнён вручную.`);
   const tb = el('div', 'toolbar');
   const annex = S.f.annex || '17';
   ['17', '9'].forEach(a => { const b = el('button', 'chip' + (annex === a ? ' on' : ''), `Приложение ${a}`); b.onclick = () => { S.f.annex = a; S.f.ch = ''; go('cc', S.f); }; tb.appendChild(b); });
@@ -1466,7 +1466,7 @@ function openCC(i) {
 /* ---------- SASAQ ---------- */
 function pSASAQ(m) {
   const d = D('sasaq'); if (!d) return m.appendChild(el('div', 'empty', 'Данные SASAQ не загружены'));
-  head(m, 'SASAQ', `${esc(d.meta.title)} · источник: ${esc(d.meta.source)}. «Заполнено» — в ответных ячейках есть текст; «Проверено» — отметка ответственного на этом устройстве.`);
+  pageHead(m, 'SASAQ', `${esc(d.meta.title)} · источник: ${esc(d.meta.source)}. «Заполнено» — в ответных ячейках есть текст; «Проверено» — отметка ответственного на этом устройстве.`);
   const st = sasaqState();
   const tb = el('div', 'toolbar');
   tb.appendChild(selector('Все области', 'area', d.meta.areas.map(a => a.code), c => `${c} — ${d.meta.areas.find(a => a.code === c).name}`));
@@ -1494,7 +1494,7 @@ function openSASAQ(i) {
 
 /* ---------- Дорожная карта ---------- */
 function pPlan(m) {
-  head(m, 'Дорожная карта', 'Этапы подготовки к аудиту USAP-CMA. Статус части этапов выводится из данных портала (SASAQ, CC, ВП); даты и статусы можно задать вручную — они хранятся на этом устройстве.');
+  pageHead(m, 'Дорожная карта', 'Этапы подготовки к аудиту USAP-CMA. Статус части этапов выводится из данных портала (SASAQ, CC, ВП); даты и статусы можно задать вручную — они хранятся на этом устройстве.');
   const ad = settings().auditDate;
   m.appendChild(el('div', 'card callout', ad ? `<b>${esc(t('Дней до аудита'))}: ${daysTo(ad)}</b> · ${fmtDate(ad)} · <a href="#data">${esc(t('Настройки'))}</a>` : `${esc(t('Дата аудита не задана'))} — <a href="#data">${esc(t('Настройки'))}</a>`));
   const c = el('div', 'card'); const ps = planState();
@@ -1579,7 +1579,7 @@ function segbar(items, cur, pick) {
 }
 function pAudit(m) {
   const u = U(); if (!u) return m.appendChild(el('div', 'empty', 'Данные об аудите не загружены'));
-  head(m, 'Аудит USAP-CMA 2026', `${esc(u.meta.title)} · обновлено ${fmtDate(u.meta.updated)} · факты — из переписки с ИКАО и SASAQ, статусы чек-листов — на этом устройстве`);
+  pageHead(m, 'Аудит USAP-CMA 2026', `${esc(u.meta.title)} · обновлено ${fmtDate(u.meta.updated)} · факты — из переписки с ИКАО и SASAQ, статусы чек-листов — на этом устройстве`);
   const a = auditState();
   const sent = u.requested.filter(r => docSent(r, a.docs)).length, done = u.logistics.filter(l => (a.log[l.id] || (l.done ? { done: true } : {})).done).length, dl = daysTo(u.audit.docsDeadline);
   const hs = u.hospitality ? hosStats(u.hospitality, a.hos) : null;
@@ -1834,7 +1834,7 @@ const capDue = i => { const d = i.status && i.status.due; if (!d) return i.statu
 function pCAP(m) {
   const c = D('cap2019'); if (!c) return m.appendChild(el('div', 'empty', 'Данные ПКД не загружены'));
   const up = c.meta.update;
-  head(m, 'Выводы аудита 2019 (CAP)', `${esc(c.meta.audit)} · ${esc(c.meta.cap)}${up ? ` · статусы — ${esc(up.title)}, ${esc(up.approved)}` : ''} · источник: ${esc(c.meta.source)}; ${esc(c.meta.report)}`);
+  pageHead(m, 'Выводы аудита 2019 (CAP)', `${esc(c.meta.audit)} · ${esc(c.meta.cap)}${up ? ` · статусы — ${esc(up.title)}, ${esc(up.approved)}` : ''} · источник: ${esc(c.meta.source)}; ${esc(c.meta.report)}`);
   const stOk = i => !S.f.st || (S.f.st === 'open' ? (capSt(i) !== 'done' && capSt(i) !== 'na') : capSt(i) === S.f.st);
   const itOk = i => stOk(i) && has(S.f.s, i.sarp, i.pq, i.rec, i.action, i.status && i.status.en);
   const tb = el('div', 'toolbar');
@@ -1939,7 +1939,7 @@ function openOrg(o) {
 function pSubjects(m) {
   const d = SUBJ(); if (!d) return m.appendChild(el('div', 'empty', 'Данные субъектов не загружены'));
   const orgs = d.orgs;
-  head(m, 'Субъекты надзора', `${esc(d.meta.title)} · ${orgs.length} ${esc(t('организаций'))} · ${esc(t('основание'))}: ${esc(d.meta.basis)}`);
+  pageHead(m, 'Субъекты надзора', `${esc(d.meta.title)} · ${orgs.length} ${esc(t('организаций'))} · ${esc(t('основание'))}: ${esc(d.meta.basis)}`);
   const progs = orgs.flatMap(o => (o.programmes || []).map(p => ({ o, p })));
   const nOv = orgs.filter(o => orgKind(o) === 'oversight').length, nTbd = orgs.filter(o => o.tbd).length;
   const noSt = progs.filter(x => !x.p.status).length, noSent = progs.filter(x => progNotSent(x.p)).length;
@@ -2015,7 +2015,7 @@ function openFinding(f) {
 }
 function pQC(m) {
   const d = QC(); if (!d) return m.appendChild(el('div', 'empty', 'Данные контроля качества не загружены'));
-  head(m, 'Контроль качества АБ', `${esc(d.meta.title)} · ${esc(t('основание'))}: ${esc((d.meta.basis || [])[0] || '')}`);
+  pageHead(m, 'Контроль качества АБ', `${esc(d.meta.title)} · ${esc(t('основание'))}: ${esc((d.meta.basis || [])[0] || '')}`);
   const tab = QCTABS.some(x => x.id === S.f.t) ? S.f.t : 'ref';
   const items = (d.plan || {}).items || [], acts = d.activities || [], fs = d.findings || [];
   m.appendChild(segbar(QCTABS.map(x => ({ ...x, n: x.id === 'plan' ? items.length : x.id === 'acts' ? acts.length : x.id === 'findings' ? fs.length : null })), tab, id => go('qc', { ...S.f, t: id === 'ref' ? '' : id }, S.q)));
@@ -2300,7 +2300,7 @@ function openTestPlanItem(x) {
 }
 function pTests(m) {
   const d = TS(); if (!d) return m.appendChild(el('div', 'empty', 'Данные об испытаниях не загружены'));
-  head(m, 'Испытания', `${esc(d.meta.title)} · ${esc(t('обновлено'))} ${fmtDate(d.meta.updated)}`);
+  pageHead(m, 'Испытания', `${esc(d.meta.title)} · ${esc(t('обновлено'))} ${fmtDate(d.meta.updated)}`);
   const tab = TESTTABS.some(x => x.id === S.f.t) ? S.f.t : 'sum';
   const items = d.plan.items, tests = items.filter(x => x.type === 'test');
   m.appendChild(segbar(TESTTABS.map(x => ({ ...x, n: x.id === 'plan' ? items.length : x.id === 'scen' ? d.scenarios.length : null })), tab, id => go('tests', { t: id === 'sum' ? '' : id }, S.q)));
@@ -2388,7 +2388,7 @@ function pTests(m) {
 }
 function pTeam(m) {
   const d = D('team') || { meta: {}, members: [] };
-  head(m, 'Ответственные', `${esc(d.meta.title || '')} · ${esc(d.meta.sub || '')} · источник: ${esc(d.meta.source || '')}`);
+  pageHead(m, 'Ответственные', `${esc(d.meta.title || '')} · ${esc(d.meta.sub || '')} · источник: ${esc(d.meta.source || '')}`);
   const pq = D('pq');
   // сводка
   m.appendChild(table(['Ответственный', 'Области', 'ВП', 'Оценено', 'Удовл.', 'Неудовл.', 'В работе', 'Просрочено'], teamStats(),
@@ -2423,7 +2423,7 @@ function pTeam(m) {
 /* ---------- Реестр документов ---------- */
 function pDocs(m) {
   const d = D('registry'); if (!d) return m.appendChild(el('div', 'empty', 'Реестр не загружен'));
-  head(m, 'Реестр документов', `${esc(d.meta.title)} · ${esc(d.meta.tj)} · ${esc(d.meta.en)} · обновлено ${fmtDate(d.meta.updated)} (${esc(d.meta.source)})`);
+  pageHead(m, 'Реестр документов', `${esc(d.meta.title)} · ${esc(d.meta.tj)} · ${esc(d.meta.en)} · обновлено ${fmtDate(d.meta.updated)} (${esc(d.meta.source)})`);
   const tb = el('div', 'toolbar');
   const L = S.f.l || S.lang; ['ru', 'tj', 'en'].forEach(l => { const b = el('button', 'chip' + (L === l ? ' on' : ''), l.toUpperCase()); b.onclick = () => { S.f.l = l; go('docs', S.f); }; tb.appendChild(b); });
   tb.appendChild(selector('Все статусы', 'b', ['ok', 'ready', 'draft', 'tbd'], c => t(BUCKET[c])));
@@ -2450,7 +2450,7 @@ function openDoc(x) {
 /* ---------- Матрица ИКАО ---------- */
 function pMatrix(m) {
   const d = D('matrix'); if (!d) return m.appendChild(el('div', 'empty', 'Матрица не загружена'));
-  head(m, 'Соответствие ИКАО', `${esc(d.meta.title)}. ${esc(d.meta.sub)} · обновлено ${fmtDate(d.meta.updated)}`);
+  pageHead(m, 'Соответствие ИКАО', `${esc(d.meta.title)}. ${esc(d.meta.sub)} · обновлено ${fmtDate(d.meta.updated)}`);
   const all = d.sections.flatMap(s => s.items.map(i => ({ ...i, sec: s.code + '. ' + s.title })));
   const tb = el('div', 'toolbar');
   tb.appendChild(selector('Все статусы', 'b', ['ok', 'part', 'draft', 'ready', 'missing', 'ext'], c => t(BUCKET[c])));
@@ -2470,7 +2470,7 @@ function pMatrix(m) {
 /* ---------- Инструктивные материалы ---------- */
 function pGM(m) {
   const d = D('gm'); if (!d) return m.appendChild(el('div', 'empty', 'Данные ИМ не загружены'));
-  head(m, 'Инструктивные материалы', `${esc(d.meta.title)}. ${esc(d.meta.sub)} · ${fmtDate(d.meta.updated)}`);
+  pageHead(m, 'Инструктивные материалы', `${esc(d.meta.title)}. ${esc(d.meta.sub)} · ${fmtDate(d.meta.updated)}`);
   const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск по ИМ')); m.appendChild(tb);
   const list = d.items.filter(i => has(S.f.s, i.code, i.title, i.ncasp, i.status));
   m.appendChild(el('div', 'card', `<div class="row">${d.meta.folders.map(l => `<a class="btn ghost sm" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join('')}</div>`));
@@ -2483,7 +2483,7 @@ function pGM(m) {
 /* ---------- Материалы (Drive) ---------- */
 function pDrive(m) {
   const d = D('drive'); if (!d) return m.appendChild(el('div', 'empty', 'Карта папки не загружена'));
-  head(m, 'Материалы (Drive)', `${esc(d.meta.title)} · локально: <span class="mono">${esc(d.meta.local)}</span> · <a href="${esc(d.meta.root)}" target="_blank" rel="noopener">открыть корень в Drive ↗</a>`);
+  pageHead(m, 'Материалы (Drive)', `${esc(d.meta.title)} · локально: <span class="mono">${esc(d.meta.local)}</span> · <a href="${esc(d.meta.root)}" target="_blank" rel="noopener">открыть корень в Drive ↗</a>`);
   const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск по папкам и файлам')); m.appendChild(tb);
   const g = el('div', 'grid2');
   d.folders.filter(f => has(S.f.s, f.title, f.desc, f.children.map(c => c.title).join(' '))).forEach(f => {
@@ -2498,7 +2498,7 @@ function pDrive(m) {
 /* ---------- Документы ИКАО ---------- */
 function pICAO(m) {
   const d = D('icao'); if (!d) return m.appendChild(el('div', 'empty', 'Нет данных'));
-  head(m, 'Документы ИКАО', esc(d.meta.title) + '. ' + esc(d.meta.note));
+  pageHead(m, 'Документы ИКАО', esc(d.meta.title) + '. ' + esc(d.meta.note));
   const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск')); m.appendChild(tb);
   const g = el('div', 'grid2');
   d.items.filter(i => has(S.f.s, i.code, i.title, i.ed, i.area)).forEach(i => g.appendChild(el('div', 'card', `<h2>${esc(i.code)} ${i.restricted ? badge('missing', 'RESTRICTED') : ''}</h2><div>${esc(i.title)}</div><div class="small dim">${esc(i.ed)}${i.area ? ' · ' + esc(i.area) : ''}</div>${links(i.links)}`)));
@@ -2508,7 +2508,7 @@ function pICAO(m) {
 /* ---------- Соседние страны ---------- */
 function pNB(m) {
   const d = D('neighbours'); if (!d) return m.appendChild(el('div', 'empty', 'Нет данных'));
-  head(m, 'Соседние страны', `${esc(d.meta.title)} · ${fmtDate(d.meta.updated)} · <a href="${esc(d.meta.folder)}" target="_blank" rel="noopener">папка «Сравнение — соседние страны» ↗</a>`);
+  pageHead(m, 'Соседние страны', `${esc(d.meta.title)} · ${fmtDate(d.meta.updated)} · <a href="${esc(d.meta.folder)}" target="_blank" rel="noopener">папка «Сравнение — соседние страны» ↗</a>`);
   d.countries.forEach(c => {
     m.appendChild(el('h2', 'mt', `${esc(c.name)} <span class="dim small">— ${esc(c.regulator)} · <a href="${esc(c.folder)}" target="_blank" rel="noopener">папка ↗</a></span>`));
     m.appendChild(table(['Документ', 'Тема', 'Реквизиты', 'Файл / источник'], c.docs, x => [`<b>${esc(x.title)}</b>`, esc(x.topic), esc(x.ref), [x.local && `<a href="${esc(x.local)}" target="_blank" rel="noopener">в папке ↗</a>`, x.local2 && `<a href="${esc(x.local2)}" target="_blank" rel="noopener">PDF ↗</a>`, x.src && `<span class="small dim">${esc(x.src)}</span>`].filter(Boolean).join(' · ')],
@@ -2519,7 +2519,7 @@ function pNB(m) {
 /* ---------- Словарь ---------- */
 function pGlossary(m) {
   const d = D('glossary'); if (!d) return m.appendChild(el('div', 'empty', 'Словарь не загружен'));
-  head(m, 'Словарь RU·TJ·EN', esc(d.meta.sub));
+  pageHead(m, 'Словарь RU·TJ·EN', esc(d.meta.sub));
   const tb = el('div', 'toolbar');
   tb.appendChild(selector('Все разделы', 'sec', uniq(d.terms.map(x => x.sec))));
   tb.appendChild(toggle('Только с английским', 'en'));
@@ -2637,12 +2637,12 @@ function planBlock(i) {
 }
 function pEvPlan(m) {
   const P = D('evidence_plan');
-  if (!P) { head(m, 'План доказательств'); m.appendChild(el('div', 'card', `<p>${esc(t('План ещё не загружен.'))}</p>`)); return; }
+  if (!P) { pageHead(m, 'План доказательств'); m.appendChild(el('div', 'card', `<p>${esc(t('План ещё не загружен.'))}</p>`)); return; }
   const M = P.meta, W = M.waves || {}, CH = M.channels || {};
   const tab = S.f.t === 'resp' && D('evidence_resp') ? 'resp' : 'holders';
   if (D('evidence_resp')) m.appendChild(segbar([{ id: 'holders', t: 'По держателям' }, { id: 'resp', t: 'По ответственным', n: D('evidence_resp').people.length }], tab, id => go('evplan', { t: id === 'holders' ? '' : id })));
   if (tab === 'resp') return pEvResp(m);
-  head(m, 'План доказательств', `${esc(M.title)} · ${esc(t('редакция'))} ${esc(M.ver)} ${esc(t('от'))} ${esc(fmtDate(M.date))}. ${esc(t('«Получено» — файл из группы или из папки ДСП привязан к позиции по ВП и держателю; «проверить» — есть подходящий файл, привязку подтверждает NCMC.'))}`);
+  pageHead(m, 'План доказательств', `${esc(M.title)} · ${esc(t('редакция'))} ${esc(M.ver)} ${esc(t('от'))} ${esc(fmtDate(M.date))}. ${esc(t('«Получено» — файл из группы или из папки ДСП привязан к позиции по ВП и держателю; «проверить» — есть подходящий файл, привязку подтверждает NCMC.'))}`);
   const all = epItems().map(x => ({ ...x, s: epStatus(x) })), cnt = (...k) => all.filter(x => k.includes(x.s.st)).length;
   const tiles = el('div', 'tiles');
   tiles.appendChild(tile('ok', cnt('got', 'ok'), 'получено', () => go('evplan', { st: 'got' })));
@@ -2692,7 +2692,7 @@ function pEvPlan(m) {
 function pEvResp(m) {
   const R = D('evidence_resp'), pq = D('pq'); if (!R || !pq) return;
   const M = R.meta, W = M.waves || {}, CH = M.channels || {}, st = pqState();
-  head(m, 'План доказательств', `${esc(M.title)} · ${esc(t('редакция'))} ${esc(M.ver)} ${esc(t('от'))} ${esc(fmtDate(M.date))}. ${esc(M.note || '')}`);
+  pageHead(m, 'План доказательств', `${esc(M.title)} · ${esc(t('редакция'))} ${esc(M.ver)} ${esc(t('от'))} ${esc(fmtDate(M.date))}. ${esc(M.note || '')}`);
   const chips = ids => ids.map(p => `<button class="idc clk" type="button" data-openpq="${esc(p)}">${esc(p)}</button>`).join(' ');
   const tb = el('div', 'toolbar');
   tb.appendChild(selector('Все ответственные', 'resp', R.people.map(p => p.id), id => (R.people.find(p => p.id === id) || {}).name || id));
@@ -2724,7 +2724,7 @@ const BRST = { '': 'none', wip: 'part', sat: 'ok', unsat: 'missing', na: 'na' };
 function briefSet(key, patch) { const st = auditState(); st.brief[key] = { ...(st.brief[key] || {}), ...patch }; saveAudit(st); }
 function pBrief(m) {
   const B = D('briefing');
-  head(m, 'Инструктаж ведомств', B ? `${esc(B.meta.title)} · ${esc(t('редакция'))} ${esc(B.meta.ver)} ${esc(t('от'))} ${esc(fmtDate(B.meta.date))}. ${esc(B.meta.note)}` : '');
+  pageHead(m, 'Инструктаж ведомств', B ? `${esc(B.meta.title)} · ${esc(t('редакция'))} ${esc(B.meta.ver)} ${esc(t('от'))} ${esc(fmtDate(B.meta.date))}. ${esc(B.meta.note)}` : '');
   if (!B) { m.appendChild(el('p', 'small dim', esc(t('Данные инструктажа не загружены.')))); return; }
   const M = B.meta, f = S.f, tab = f.t || 'ent', st = pqState(), br = auditState().brief, pq = D('pq');
   const ents = B.entities.filter(e => !e.host), done = ents.filter(e => (br[e.code] || {}).done), nq = ents.reduce((a, e) => a + e.questions.length, 0);
@@ -2788,7 +2788,7 @@ function pBrief(m) {
 }
 function pJournal(m) {
   const u = U() || {}, a = u.audit || {};
-  head(m, 'Журнал аудита', `${esc(t('Вопросы, запросы документов и наблюдения группы ИКАО'))}${a.start ? ` · ${fmtDate(a.start)}–${fmtDate(a.end)}` : ''}. ${esc(t(D('sync') ? 'Журнал общий: записи с телефонов группы сводятся сами.' : 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».'))}`);
+  pageHead(m, 'Журнал аудита', `${esc(t('Вопросы, запросы документов и наблюдения группы ИКАО'))}${a.start ? ` · ${fmtDate(a.start)}–${fmtDate(a.end)}` : ''}. ${esc(t(D('sync') ? 'Журнал общий: записи с телефонов группы сводятся сами.' : 'Записи хранятся на этом устройстве; журналы с нескольких телефонов сводятся кнопкой «Объединить журнал».'))}`);
   const live = jLive(), open = live.filter(x => x.st === 'open'), due = jDueToday();
   const tiles = el('div', 'tiles');
   tiles.appendChild(tile(open.length ? 'miss' : 'ok', open.length, 'открытых запросов', () => go('journal', { st: 'open' })));
@@ -2852,7 +2852,7 @@ function dirData() {
 }
 function pDirector(m) {
   const X = dirData(), ad = X.a.start;
-  head(m, 'Для директора', `${esc(t('Памятка к аудиту ИКАО USAP-CMA'))} ${fmtDate(X.a.start)}–${fmtDate(X.a.end)}${ad && daysTo(ad) >= 0 ? ` · ${esc(t('до начала'))} ${daysTo(ad)} ${esc(t('дн.'))}` : ''}${X.d.status ? ` · <span class="warn">${esc(X.d.status)}</span>` : ''}`);
+  pageHead(m, 'Для директора', `${esc(t('Памятка к аудиту ИКАО USAP-CMA'))} ${fmtDate(X.a.start)}–${fmtDate(X.a.end)}${ad && daysTo(ad) >= 0 ? ` · ${esc(t('до начала'))} ${daysTo(ad)} ${esc(t('дн.'))}` : ''}${X.d.status ? ` · <span class="warn">${esc(X.d.status)}</span>` : ''}`);
   const tb = el('div', 'toolbar');
   const wd = el('button', 'btn sm', esc(t('Скачать для Word'))); wd.onclick = () => download(dirDoc(X), `AvSec_Director_brief_USAP-CMA_${today()}.doc`, 'application/msword'); tb.appendChild(wd);
   const pr = el('button', 'btn ghost sm', esc(t('Печать'))); pr.onclick = () => window.print(); tb.appendChild(pr);
@@ -2903,7 +2903,7 @@ function todayCard(m) {
     + `<div class="row mt"><a class="btn sm" href="#journal">${esc(t('Журнал аудита'))}${o ? ` · ${o}` : ''}${due ? ` · ${esc(t('ответить сегодня'))} ${due}` : ''}</a><a class="btn sm ghost" href="#audit?t=docs">${esc(t('Документы'))}</a><a class="btn sm ghost" href="#director">${esc(t('Для директора'))}</a><a class="btn sm ghost" href="#audit?t=plan">${esc(t('План и приём'))}</a></div>`));
 }
 function pData(m) {
-  head(m, 'Данные и резервная копия', D('sync') ? 'Самооценка ВП, ответственные по областям и журнал аудита — общие для всех устройств (синхронизация). CC, SASAQ, дорожная карта и настройки хранятся в браузере этого устройства: перед сменой устройства или чисткой браузера выгрузите копию.' : 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
+  pageHead(m, 'Данные и резервная копия', D('sync') ? 'Самооценка ВП, ответственные по областям и журнал аудита — общие для всех устройств (синхронизация). CC, SASAQ, дорожная карта и настройки хранятся в браузере этого устройства: перед сменой устройства или чисткой браузера выгрузите копию.' : 'Самооценка (ВП, CC, SASAQ, дорожная карта, настройки) хранится в браузере этого устройства. Перед сменой устройства или чисткой браузера — выгрузите копию.');
   // в полях — только сохранённые переопределения: иначе «Сохранить» без правок заморозило бы текущие данные портала
   const s = settings(); const so = LS.get(K.set, {});
   const c = el('div', 'card', `<h2>${esc(t('Настройки'))}</h2><p class="small dim">Дата аудита и NCMC берутся из данных портала; здесь их можно переопределить на этом устройстве — пустое поле возвращает значение из данных.</p><form class="form" id="setForm"><div class="two"><label>Дата аудита на месте<input type="date" name="auditDate" value="${esc(so.auditDate || '')}"><span class="small dim">Из данных: ${s.auditDate ? fmtDate(s.auditDate) : '—'}</span></label><label>Национальный координатор (NCMC)<input name="ncmc" value="${esc(so.ncmc || '')}" placeholder="${esc(s.ncmc || 'Ф.И.О., должность')}"><span class="small dim">Из данных: ${esc(s.ncmc || '—')}</span></label><label>${esc(t('Кто я'))}<input name="me" value="${esc(so.me || '')}" placeholder="${esc(t('Фамилия И. — автор правок на этом устройстве'))}"><span class="small dim">${esc(t('Пишется в журнал изменений и в выгрузку OLF («Latest Modified By»); пусто — NCMC'))}</span></label></div><div class="row"><button class="btn" type="submit">${esc(t('Сохранить'))}</button></div></form>`);
@@ -2923,7 +2923,7 @@ function pData(m) {
 
 /* ---------- О портале ---------- */
 function pAbout(m) {
-  head(m, 'О портале', 'AvSec Portal v' + APP_VERSION);
+  pageHead(m, 'О портале', 'AvSec Portal v' + APP_VERSION);
   m.appendChild(el('p', 'small dim', 'Номер версии виден в шапке (на телефоне справа от поиска) и внизу меню. Если после обновления на телефоне или в Telegram номер другой — закройте и снова откройте мини-апп: при смене сборки портал перезагружается сам.'));
   if (S.cfg.site || S.cfg.tg) m.appendChild(el('div', 'card', `<h2>${esc(t('Где открыть'))}</h2>` + kv([
     ['Веб (GitHub Pages)', S.cfg.site ? `<a href="${esc(S.cfg.site)}" target="_blank" rel="noopener">${esc(S.cfg.site)}</a> — на телефоне «Добавить на экран „Домой“», работает офлайн` : ''],
@@ -2939,7 +2939,7 @@ function pAbout(m) {
 
 /* ---------- Глобальный поиск ---------- */
 function pFind(m) {
-  const q = S.q; head(m, 'Результаты поиска', `«${esc(q)}»`);
+  const q = S.q; pageHead(m, 'Результаты поиска', `«${esc(q)}»`);
   if (!q) return m.appendChild(el('div', 'empty', 'Введите запрос в строке поиска'));
   const out = el('div');
   const group = (title, arr, fn, onClick) => { if (!arr.length) return; out.appendChild(el('h2', 'mt', `${esc(title)} <span class="dim small">${arr.length}</span>`)); arr.slice(0, 40).forEach(x => { const c = el('div', 'card hit', fn(x)); c.tabIndex = 0; c.setAttribute('role', 'button'); c.onclick = () => onClick(x); c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(x); } }; out.appendChild(c); }); if (arr.length > 40) out.appendChild(el('div', 'dim small', `… и ещё ${arr.length - 40}. Уточните запрос.`)); };
