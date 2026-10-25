@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '106';
+const APP_VERSION = '107';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -1186,7 +1186,10 @@ function evReadyCard(d, all) {
 const evFor = id => evFiles().filter(x => evKind(x, id)).sort((a, b) => EVKORD[evKind(a, id)] - EVKORD[evKind(b, id)]);
 const evKindTag = (x, id) => { const k = evKind(x, id); if (k !== 'auto' && k !== 'maybe') return '';
   return ` <span class="badge b-${k === 'auto' ? 'draft' : 'none'}" title="${esc(x.auto.how || '')}">${esc(t(k === 'auto' ? 'авто — проверить' : 'возможно'))}</span>`; };
-const evLine = x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b></a> <span class="dim small">${esc(x.id)} · ${fmtDate((x.at || '').slice(0, 10))} · ${esc(x.from || '')}</span> ${x.dsp ? badge('none', 'ДСП') + ' ' : ''}${badge(EVSTB[x.st] || 'none', EVST[x.st] || x.st)}${x.caption ? `<div class="small">${esc(x.caption)}</div>` : ''}`;
+/* Имя отправителя файла: в таблице приёма — имя из Telegram («Sonya», «TJ»), людей называем полностью (решение NCMC 25.10.2026). */
+const EV_FROM = { Sonya: 'Исоева Саёхат', TJ: 'Пулатов Тахир', Odina: 'Одинаев Одина', 'S S': 'Салимов Фирдавс', 'Bakhtiyor @bsheraliev': 'Шералиев Бахтиёр' };
+const evFrom = x => EV_FROM[x.from] || x.from || '';
+const evLine = x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b></a> <span class="dim small">${esc(x.id)} · ${fmtDate((x.at || '').slice(0, 10))} · ${esc(evFrom(x))}</span> ${x.dsp ? badge('none', 'ДСП') + ' ' : ''}${badge(EVSTB[x.st] || 'none', EVST[x.st] || x.st)}${x.caption ? `<div class="small">${esc(x.caption)}</div>` : ''}`;
 function evFilesBlock(i) {
   const fs = evFor(i.id); if (!fs.length) return '';
   return `<details class="mt" open><summary><b>${esc(t('Файлы доказательств'))}</b> <span class="dim small">${fs.length} · ${esc(t('из группы Telegram «USAP 2026»'))}</span></summary><ul class="list small">`
@@ -1299,7 +1302,7 @@ function openPQBody(i) {
     evBox.appendChild(evRow({ doc: hintDoc(h.doc), ref: [h.ref, h.ctx].filter(Boolean).join(' · ') })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте по первоисточнику и сохраните'), 'ok'); }; });
   $$('#sheet [data-evfile]').forEach(b => { b.onclick = () => { const x = evFiles().find(y => y.id === b.dataset.evfile); if (!x) return;
     const empty = $$('.evrow', evBox).find(r => !r.querySelector('[data-k="doc"]').value && !r.querySelector('[data-k="ref"]').value); if (empty) empty.remove();
-    evBox.appendChild(evRow({ doc: x.name, ref: [x.id, x.from, x.caption].filter(Boolean).join(' · '), date: (x.at || '').slice(0, 10), kind: 'rec' })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте и сохраните'), 'ok'); }; });
+    evBox.appendChild(evRow({ doc: x.name, ref: [x.id, evFrom(x), x.caption].filter(Boolean).join(' · '), date: (x.at || '').slice(0, 10), kind: 'rec' })); b.disabled = true; b.textContent = t('добавлено'); toast(t('Добавлено в доказательства — проверьте и сохраните'), 'ok'); }; });
   const ab = $('#sheet [data-assessapply]'); if (ab) ab.onclick = async () => {
     const a = pqAssess(i.id); if (!a) return;
     if (SY.on) { ab.disabled = true; await syncNow(); ab.disabled = false; }   // чужая правка, ещё не полученная, важнее машинной оценки
