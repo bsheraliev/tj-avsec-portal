@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '121';
+const APP_VERSION = '122';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -105,7 +105,8 @@ const ROUTES = [
   { g: 'Надзор АБ', items: [
     { id: 'subjects', ic: '🏢', t: 'Субъекты надзора', short: 'Субъекты', cnt: () => D('subjects') ? D('subjects').orgs.length : '' },
     { id: 'qc', ic: '🔍', t: 'Контроль качества', short: 'КК', cnt: () => D('qc') ? (D('qc').findings.length || D('qc').activities.length || '') : '' } ,
-    { id: 'tests', ic: '🧪', t: 'Испытания', short: 'Исп.', cnt: () => D('tests') ? D('tests').scenarios.length : '' } ] },
+    { id: 'tests', ic: '🧪', t: 'Испытания', short: 'Исп.', cnt: () => D('tests') ? D('tests').scenarios.length : '' },
+    { id: 'insp', ic: '🎓', t: 'Портфолио инспекторов', short: 'Инспекторы', cnt: () => D('inspectors') ? D('inspectors').people.length : '' } ] },
   { g: 'Документы АБ', items: [
     { id: 'docs', ic: '📚', t: 'Реестр документов', cnt: () => D('registry') ? D('registry').docs.length : '' },
     { id: 'matrix', ic: '⊞', t: 'Соответствие ИКАО', cnt: () => D('matrix') ? D('matrix').sections.reduce((a, s) => a + s.items.length, 0) : '' },
@@ -688,7 +689,7 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
 const FILTER_LABELS = { tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
@@ -2421,6 +2422,44 @@ function pTeam(m) {
     if (e.target.id === 'tmReset') { LS.del(K.team); render(); }
   };
   m.appendChild(c2);
+}
+
+/* ---------- Портфолио инспекторов: приказ, список КК, курсы, OJT, замечания (data/inspectors.json, собрано из доказательств) ---------- */
+const INSP_COLS = [['inspector', 'Нац. инспектор'], ['instructor', 'Инструктор'], ['basic', 'Базовый'], ['manager', 'Руководитель'], ['covert', 'Негласные']];
+const inspEv = ids => (ids || []).map(id => { const x = (D('evidence') ? D('evidence').items : []).find(e => e.id === id); return x ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" class="code" title="${esc(x.name)}">${esc(id)}</a>` : `<span class="code">${esc(id)}</span>`; }).join(' ');
+const inspLast = (p, kind) => p.training.filter(c => c.kind === kind).sort((a, b) => (b.to || '').localeCompare(a.to || ''))[0];
+const inspCell = c => c ? `<span class="badge b-ok" title="${esc(c.course)}">${fmtDate((c.to || c.from || '').slice(0, 7) + '-01').slice(3)}</span>` : '<span class="badge b-missing">нет</span>';
+// Должность по первому слову (начальник / главный / ведущий / специалист): «Главный специалист» = «Главный специалист АБ Агентства».
+const inspRank = x => (x || '').trim().split(/\s+/)[0].toLowerCase();
+const inspGo = id => () => { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+function pInsp(m) {
+  const d = D('inspectors'); if (!d) return m.appendChild(el('div', 'empty', 'Портфолио не загружено'));
+  pageHead(m, 'Портфолио инспекторов', `${esc(d.meta.title)} · обновлено ${fmtDate(d.meta.updated)}`);
+  const ppl = d.people, gapsN = ppl.reduce((a, p) => a + p.gaps.length, 0);
+  const tiles = el('div', 'tiles');
+  tiles.appendChild(tile('info', ppl.length, 'Сотрудников отдела АБ', inspGo('insp-tab')));
+  tiles.appendChild(tile('info', ppl.filter(p => inspLast(p, 'inspector')).length + ' / ' + ppl.length, 'Курс национального инспектора', inspGo('insp-tab')));
+  tiles.appendChild(tile('info', ppl.filter(p => p.ojt).length + ' / ' + ppl.length, 'Лист OJT', inspGo('insp-tab')));
+  tiles.appendChild(tile(gapsN ? 'miss' : 'ok', gapsN, 'Замечаний', inspGo('insp-gaps')));
+  m.appendChild(tiles);
+  const c = el('div', 'card'); c.id = 'insp-tab'; c.innerHTML = `<h2>Квалификация по сотрудникам</h2><p class="small dim">В ячейке — месяц окончания последнего курса этого вида. Строка открывает портфолио: приказ, курсы с датами, OJT, замечания и ссылки на файлы.</p>`;
+  c.appendChild(table(['Ф.И.О.', 'Должность (приказ)', 'Приказ', 'Список КК'].concat(INSP_COLS.map(k => k[1])).concat(['OJT', 'Замечания']), ppl,
+    p => [`<b>${esc(p.name)}</b>`, esc(p.position), p.order ? `№ ${esc(p.order.no)} от ${fmtDate(p.order.date)}` : '<span class="badge b-missing">нет</span>', p.qc_list ? (!p.qc_position || inspRank(p.qc_position) === inspRank(p.position) ? `<span class="badge b-ok" title="${esc(p.qc_position || '')}">да</span>` : `<span class="badge b-part" title="${esc(p.qc_position)}">да, другая должность</span>`) : '<span class="badge b-missing">нет</span>']
+      .concat(INSP_COLS.map(k => inspCell(inspLast(p, k[0])))).concat([p.ojt ? `<span class="badge b-ok">${esc(p.ojt.year)}</span>` : '<span class="badge b-missing">нет</span>', p.gaps.length ? `<span class="warn">${p.gaps.length}</span>` : '0']),
+    p => inspSheet(p)));
+  m.appendChild(c);
+  const g = el('div', 'card'); g.id = 'insp-gaps'; g.innerHTML = `<h2>Что закрыть до аудита</h2><ul class="list">${ppl.filter(p => p.gaps.length).map(p => `<li><b>${esc(p.name)}</b><ul>${p.gaps.map(x => `<li>${esc(x)}</li>`).join('')}</ul></li>`).join('')}</ul>`;
+  m.appendChild(g);
+  const b = el('div', 'card'); const evIds = [...new Set(ppl.flatMap(p => [].concat(p.order ? p.order.ev : [], p.qc_list ? p.qc_list.ev : [], p.ojt ? p.ojt.ev : [], ...p.training.map(c => c.ev))))].sort();
+  b.innerHTML = `<h2>Основание</h2><p class="small">${esc(d.meta.basis)}</p><p class="small dim">${esc(d.meta.note)}</p><p>ВП: ${d.meta.pqs.map(x => `<a href="#pq?q=${esc(x)}" class="code" data-openpq="${esc(x)}">${esc(x)}</a>`).join(' ')}</p><p>Файлы: ${inspEv(evIds)}</p>`;
+  m.appendChild(b);
+}
+function inspSheet(p) {
+  const K = (D('inspectors').meta.kinds) || {};
+  const tr = p.training.slice().sort((a, b) => (a.from || '').localeCompare(b.from || ''));
+  openSheet(`<h3>${esc(p.full || p.name)}</h3>${kv([['Должность', esc(p.position)], ['Приказ о назначении', p.order ? `№ ${esc(p.order.no)} от ${fmtDate(p.order.date)} ${inspEv(p.order.ev)}<div class="small dim">${esc(p.order.text || '')}</div>` : '<span class="badge b-missing">нет в файле приказов</span>'], ['Список персонала КК', p.qc_list ? `${esc(p.qc_position || '')} ${inspEv(p.qc_list.ev)}` : ''], ['Лист OJT', p.ojt ? `${esc(p.ojt.year)} ${inspEv(p.ojt.ev)}` : '<span class="badge b-missing">нет</span>']])}
+    <h4>Подготовка</h4><div class="tw"><table><thead><tr><th>Вид</th><th>Курс</th><th>Где</th><th>Даты</th><th>Файл</th></tr></thead><tbody>${tr.map(c => `<tr><td>${esc(K[c.kind] || c.kind)}</td><td>${esc(c.course)}${c.note ? `<div class="small dim">${esc(c.note)}</div>` : ''}</td><td>${esc(c.provider || '')}</td><td>${fmtDate(c.from)} – ${fmtDate(c.to)}</td><td>${inspEv(c.ev)}</td></tr>`).join('')}</tbody></table></div>
+    ${p.gaps.length ? `<h4>Замечания</h4><ul class="list">${p.gaps.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`);
 }
 
 /* ---------- Реестр документов ---------- */
