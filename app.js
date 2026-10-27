@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '124';
+const APP_VERSION = '125';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -1188,7 +1188,7 @@ const evFor = id => evFiles().filter(x => evKind(x, id)).sort((a, b) => EVKORD[e
 const evKindTag = (x, id) => { const k = evKind(x, id); if (k !== 'auto' && k !== 'maybe') return '';
   return ` <span class="badge b-${k === 'auto' ? 'draft' : 'none'}" title="${esc(x.auto.how || '')}">${esc(t(k === 'auto' ? 'авто — проверить' : 'возможно'))}</span>`; };
 /* Имя отправителя файла: в таблице приёма — имя из Telegram («Sonya», «TJ»), людей называем полностью (решение NCMC 25.10.2026). */
-const EV_FROM = { Sonya: 'Исоева Саёхат', TJ: 'Пулатов Тахир', Odina: 'Одинаев Одина', 'S S': 'Салимов Фирдавс', 'Bakhtiyor @bsheraliev': 'Шералиев Бахтиёр', 'Bihishta @bihishtarahimova': 'Рахимова Бихишта' };
+const EV_FROM = { Sonya: 'Исоева Саёхат', TJ: 'Пулатов Тахир', Odina: 'Одинаев Одина', 'S S': 'Салимов Фирдавс', 'Bakhtiyor @bsheraliev': 'Шералиев Бахтиёр', 'Bihishta @bihishtarahimova': 'Рахимова Бихишта', '𝓝𝓲𝔂𝓪𝔃𝓲 @sabrinisso': 'Сабриниссо' };
 const evFrom = x => EV_FROM[x.from] || x.from || '';
 const evLine = x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b></a> <span class="dim small">${esc(x.id)} · ${fmtDate((x.at || '').slice(0, 10))} · ${esc(evFrom(x))}</span> ${x.dsp ? badge('none', 'ДСП') + ' ' : ''}${badge(EVSTB[x.st] || 'none', EVST[x.st] || x.st)}${x.caption ? `<div class="small">${esc(x.caption)}</div>` : ''}`;
 function evFilesBlock(i) {
