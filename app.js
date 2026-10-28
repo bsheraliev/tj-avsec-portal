@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '138';
+const APP_VERSION = '139';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -12,8 +12,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { try { toast(t('Не сохранено: хранилище браузера переполнено — выгрузите резервную копию (Данные) и очистите журнал'), 'err'); } catch (_) { /* до инициализации */ } return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
-const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev', sync: 'avsec-sync', areats: 'avsec-arearesp-ts', pnote: 'avsec-pnote' };
-const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.areats, K.audit, K.capi, K.log, K.journal, K.pnote];
+const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev', sync: 'avsec-sync', areats: 'avsec-arearesp-ts', pnote: 'avsec-pnote', tasks: 'avsec-tasks' };
+const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.areats, K.audit, K.capi, K.log, K.journal, K.pnote, K.tasks];
 
 const S = { cfg: null, key: null, D: {}, page: 'dash', q: '', f: {}, lang: LS.get(K.lang, 'ru'), pqSel: new Set() };
 
@@ -52,7 +52,7 @@ const TR = { en: {
   'Бланк сценария': 'Scenario form', 'Посмотреть бланк': 'View form', 'заполнять и хранить офлайн': 'fill in and keep offline',
   'Детальный сценарий': 'Detailed scenario', 'Детальный сценарий и роли': 'Detailed scenario and roles', 'Хронология дня испытания': 'Test-day timeline', 'Роли': 'Roles', 'Заполняет руководитель испытания': 'To be filled in by the test leader', 'Скачать бланк сценария (Word)': 'Download scenario form (Word)', 'Бланк (Word)': 'Form (Word)', 'Шаг': 'Step',
   'только': 'only',
-  'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
+  'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Календарь': 'Calendar', 'Всё в календарь (.ics)': 'All to calendar (.ics)', 'Добавить в Google Календарь': 'Add to Google Calendar', 'Карточка испытания': 'Test card', 'Задачи': 'Tasks', 'Новая задача': 'New task', 'К выполнению': 'To do', 'Испытание': 'Test', 'Ручная': 'Manual', 'Все источники': 'All sources', 'Все исполнители': 'All assignees', 'Исполнитель': 'Assignee', 'Источник': 'Source', 'Не назначен': 'Unassigned', 'Только просроченные и на 7 дней': 'Overdue and next 7 days only', 'Просроченные и на 7 дней': 'Overdue and next 7 days', 'Поиск по задачам': 'Search tasks', 'просрочено': 'overdue', 'пусто': 'empty', 'Колонка': 'Column', 'Вернуть авто': 'Reset to automatic', 'Открыть раздел': 'Open section', 'Удалить задачу?': 'Delete the task?', 'к работе из': 'to work on of', 'документы': 'documents', 'окно': 'window', 'Колонка изменена вручную; по данным портала': 'Column changed manually; portal data says', 'подтвердить, проводилось ли, и приложить акт': 'confirm whether it took place and attach the report', 'событий в этот день': 'events on this day', 'Нет предстоящих событий': 'No upcoming events', 'событий — откройте файл, чтобы добавить их в календарь': 'events — open the file to add them to your calendar', 'В Telegram файл не сохранить — откройте портал в браузере': 'Telegram cannot save the file — open the portal in a browser', 'Негласное испытание уходит в календарь только окном — без субъекта, объекта и сценария (ДСП).': 'A covert test goes to the calendar only as its window — no entity, site or scenario (restricted).', 'Фон дня: зелёный — окно испытаний, красный — пауза. Плашка — событие, нажмите для подробностей и ссылки в Google Календарь. Файл .ics — все события с сегодняшнего дня с напоминанием за день; в Google Календаре: Настройки → Импорт. Негласные испытания выгружаются только окном (ДСП).': 'Day background: green — test window, red — pause. A chip is an event; click it for details and a Google Calendar link. The .ics file holds all events from today with a reminder one day before; in Google Calendar: Settings → Import. Covert tests are exported only as their window (restricted).', 'Пн': 'Mon', 'Вт': 'Tue', 'Ср': 'Wed', 'Чт': 'Thu', 'Пт': 'Fri', 'Сб': 'Sat', 'Вс': 'Sun', 'январь': 'January', 'февраль': 'February', 'март': 'March', 'апрель': 'April', 'май': 'May', 'июнь': 'June', 'июль': 'July', 'август': 'August', 'сентябрь': 'September', 'октябрь': 'October', 'ноябрь': 'November', 'декабрь': 'December', 'В Google Календарь уйдёт': 'Goes to Google Calendar as', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
   'Испытания': 'Security tests', 'План 2026': '2026 plan', 'Сценарии': 'Scenarios', 'Порядок': 'Procedure', 'Что проверяется': 'What is tested', 'Испытаний в плане': 'Tests in plan', 'Сценариев': 'Scenarios', 'Форма': 'Type', 'Все формы': 'All types', 'Все окна': 'All windows', 'Окна': 'Windows', 'Негласное': 'Covert', 'Гласное': 'Overt', 'Цели испытаний': 'Purposes of tests', 'Меры безопасности при испытании': 'Safeguards during a test', 'Отчёт об испытании': 'Test report', 'Порядок проведения испытания': 'Test procedure', 'План испытаний': 'Test plan', 'Уведомить до': 'Notify by',
   'Обзор': 'Overview', 'USAP-CMA': 'USAP-CMA', 'Протокольные вопросы': 'Protocol Questions', 'Контрольный перечень (CC)': 'Compliance Checklist',
   'SASAQ': 'SASAQ', 'Дорожная карта': 'Roadmap', 'Документы АБ': 'AVSEC documents', 'Реестр документов': 'Document register',
@@ -93,6 +93,7 @@ const ROUTES = [
   { g: 'USAP-CMA', items: [
     { id: 'audit', ic: '🛡', t: 'Аудит USAP-CMA 2026', short: 'Аудит' },
     { id: 'journal', ic: '📝', t: 'Журнал аудита', short: 'Журнал', cnt: () => jOpen().length || '' },
+    { id: 'tasks', ic: '🗂', t: 'Задачи', short: 'Задачи' },
     { id: 'director', ic: '🎖', t: 'Для директора', short: 'Директору' },
     { id: 'evplan', ic: '📋', t: 'План доказательств', short: 'Доказательства', cnt: () => D('evidence_plan') ? epItems().filter(x => epStatus(x).st !== 'got' && epStatus(x).st !== 'ok').length || '' : '' },
     { id: 'pq', ic: '❔', t: 'Протокольные вопросы', short: 'ВП', cnt: () => D('pq') ? D('pq').items.length : '' },
@@ -537,7 +538,7 @@ const SY = { on: false, url: '', token: '', key: null, busy: false, again: false
 let syMemo = null;   // JSON.parse всего кэша на каждый вызов (areaResp — по 3 раза на строку списка ВП) слишком дорог
 const syCache = () => { let raw = null; try { raw = localStorage.getItem(K.sync); } catch (e) { /* без хранилища */ }
   if (!syMemo || syMemo.raw !== raw) { let c = {}; try { c = (raw && JSON.parse(raw)) || {}; } catch (e) { c = {}; }
-    syMemo = { raw, c: { seq: c.seq || 0, pq: c.pq || {}, area: (c.area && !c.area.map && c.area) || {}, j: c.j || {} } }; }
+    syMemo = { raw, c: { seq: c.seq || 0, pq: c.pq || {}, area: (c.area && !c.area.map && c.area) || {}, j: c.j || {}, task: c.task || {} } }; }
   return syMemo.c; };
 const syCopy = () => JSON.parse(JSON.stringify(syCache()));   // для правки с последующим LS.set — кэш не трогаем
 const syB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -580,13 +581,16 @@ async function syPush() {
     if (!ts) { if (x) return; ts = '2026-09-17T00:00:00.000Z'; }   // правка без метки (до v52): общее назначение главнее; без него — самая старая метка
     if ((!x || ts >= (x.ts || '')) && (ad[a] || '') !== (sh[a] || '')) out.push({ k: 'area', id: a, rec: { v: ad[a] || '', ts }, ts }); });
   jAll().forEach(x => { const u = x.upd || x.ts || 0; if (u > (c.j[x.id] || 0)) out.push({ k: 'j', id: x.id, rec: x, ts: new Date(u).toISOString() }); });
+  if (!SY.noTask) Object.entries(tkAll()).forEach(([id, rec]) => { if (rec.ts && rec.ts > (c.task[id] || '')) out.push({ k: 'task', id, rec, ts: rec.ts }); });   // задачи канбана (v139)
   for (let i = 0; i < out.length; i += 150) {
     const part = out.slice(i, i + 150), rows = [];
     for (const m of part) rows.push({ k: m.k, id: m.id, ts: m.ts, c: await syEnc(m.rec) });
     const res = await syCall({ op: 'push', rows });
+    const tk = part.map((m, j) => [m, (res.applied || [])[j]]).filter(([m]) => m.k === 'task');
+    if (tk.length && tk.every(([, ok]) => !ok)) SY.noTask = true;                   // сервер ещё без типа task (до setup.ps1 -Update) — до перезапуска не слать
     (res.applied || []).forEach((ok, j) => { const m = part[j]; if (!ok) return;
-      if (m.k === 'pq') c.pq[m.id] = m.rec; else if (m.k === 'area') c.area[m.id] = m.rec; else c.j[m.id] = m.rec.upd || m.rec.ts || 0; });
-    LS.set(K.sync, { ...syCache(), pq: c.pq, area: c.area, j: c.j });
+      if (m.k === 'pq') c.pq[m.id] = m.rec; else if (m.k === 'area') c.area[m.id] = m.rec; else if (m.k === 'task') c.task[m.id] = m.ts; else c.j[m.id] = m.rec.upd || m.rec.ts || 0; });
+    LS.set(K.sync, { ...syCache(), pq: c.pq, area: c.area, j: c.j, task: c.task });
   }
   syPrune(syCache());
 }
@@ -598,9 +602,11 @@ async function syPull() {
     if (r.k === 'pq') { const cur = c.pq[r.id]; if (!cur || stampOf(rec) >= stampOf(cur)) { changed = changed || JSON.stringify(cur) !== JSON.stringify(rec); c.pq[r.id] = rec; } }
     else if (r.k === 'area' && rec && typeof rec.v === 'string') { const cur = c.area[r.id]; if (!cur || (rec.ts || '') >= (cur.ts || '')) { changed = changed || JSON.stringify(cur) !== JSON.stringify(rec); c.area[r.id] = rec; } }
     else if (r.k === 'j' && rec && rec.id) jIn.push(rec);
+    else if (r.k === 'task' && rec && typeof rec.ts === 'string') { const all = tkAll(), cur = all[r.id];
+      if (!cur || rec.ts > (cur.ts || '')) { all[r.id] = rec; LS.set(K.tasks, all); changed = true; } c.task[r.id] = rec.ts > (c.task[r.id] || '') ? rec.ts : c.task[r.id]; }
   }
   if (jIn.length) { const m = jMerge(jIn, true); if (m.add || m.upd) changed = true; jIn.forEach(x => { c.j[x.id] = Math.max(c.j[x.id] || 0, x.upd || x.ts || 0); }); }
-  LS.set(K.sync, { seq: res.seq || c.seq, pq: c.pq, area: c.area, j: c.j });
+  LS.set(K.sync, { seq: res.seq || c.seq, pq: c.pq, area: c.area, j: c.j, task: c.task });
   syPrune(syCache());
   return changed;
 }
@@ -689,13 +695,15 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, journal: pJournal, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, tasks: pTasks, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
-const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1, pre: 1 };
+const FILTER_LABELS = { src: 'Источник', who: 'Исполнитель', soon: 'Просроченные и на 7 дней', tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
+const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1, pre: 1, soon: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
+  if (k === 'src') return TSRC[v] || v;
+  if (k === 'who') return v === '—' ? 'Не назначен' : nameOf(v);
   if (k === 'team') return ({ none: 'нет', noref: 'без документа', na: '«не применимо»', todo: 'с задачей' })[v] || v;
   if (k === 'b') return BUCKET[v] || v;
   if (k === 'prio') return CAPP[v] || v;
@@ -712,7 +720,7 @@ function filterVal(k, v) {
 }
 function injectActiveFilters(m) {
   // `t` — вкладка раздела, а не фильтр: чипа «убрать» у неё быть не должно
-  const act = Object.entries(S.f).filter(([k, v]) => v && k !== 't'); if (!act.length) return;
+  const act = Object.entries(S.f).filter(([k, v]) => v && k !== 't' && k !== 'cm'); if (!act.length) return;   // cm — месяц календаря, тоже не фильтр
   const bar = el('div', 'activebar');
   act.forEach(([k, v]) => {
     const b = el('button', 'activechip', `${esc(t(FILTER_LABELS[k] || k))}${FILTER_BOOL[k] ? '' : ': ' + esc(t(String(filterVal(k, v))))} <span class="x" aria-hidden="true">✕</span>`);
@@ -2123,26 +2131,91 @@ function tsScenCard(s) {
     <p class="mt small"><b>${esc(t('В плане 2026'))}:</b> ${its.length ? its.map(x => `<button class="idc clk" data-go="tests?t=plan&tw=${esc(x.window)}">${esc(x.id)}</button> <span class="dim">${esc(x.window)} · ${tsPeriod(x)}</span>`).join(' · ') : `<span class="dim">${esc(t('нет'))}</span>`}</p>`;
   return c;
 }
-// события хронологии 2026: уведомления, испытания, отчёты и ПКД (расчёт по Правилам КК), окна, аудит ИКАО
+// события хронологии 2026: уведомления, испытания, отчёты и ПКД (расчёт по Правилам КК), окна, аудит ИКАО.
+// У каждого события есть `cal` — версия для Google Календаря: туда текст уходит открытым, поэтому негласные испытания
+// и их сроки отчёта и ПКД выгружаются только окном (без субъекта, объекта и сценария — ДСП).
+const tsOrgN = c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; };
 function tsEvents() {
   const d = TS(), u = U(), ev = [];
-  const orgN = c => { const o = subjOrgs().find(z => z.code === c); return o ? orgName(o) : c; };
-  d.windows.forEach(w => ev.push({ date: w.start, end: w.end, kind: w.kind === 'blackout' ? 'pause' : 'win', text: `${t('Окно')} ${w.code}: ${w.name}` }));
+  const P = (e, c) => ev.push({ ...e, cal: { date: c.date || e.date, end: 'end' in c ? c.end : e.end, kind: e.kind, title: c.title, details: c.details || '' } });
+  d.windows.forEach(w => P({ date: w.start, end: w.end, kind: w.kind === 'blackout' ? 'pause' : 'win', wcode: w.code, text: `${t('Окно')} ${w.code}: ${w.name}` },
+    { title: `АБ: ${w.kind === 'blackout' ? 'пауза испытаний' : 'окно испытаний'} ${w.code} — ${w.name}`, details: w.why }));
   d.plan.items.forEach(x => {
-    const s = tsScen(x.scenario); const nm = s ? `${s.id} ${s.title} — ${orgN(x.org)}${x.site ? ' / ' + x.site : ''}` : x.note;
-    if (x.type === 'admin') { ev.push({ date: x.end, kind: 'admin', text: x.note, ref: x.id }); return; }
-    if (x.notice_by) ev.push({ date: x.notice_by, kind: 'notice', text: `${t('Уведомить субъект')} (${t('гласное')}, п. 32): ${nm}`, ref: x.id });
-    ev.push({ date: x.start, end: x.end, kind: x.kind === 'covert' ? 'covert' : 'test', text: `${x.kind === 'covert' ? t('Негласное (окно)') : t('Гласное')}: ${nm}`, ref: x.id });
-    const rep = tsAdd(x.end, 5), cap = tsAdd(rep, 10);
-    ev.push({ date: rep, kind: 'report', text: `${t('Отчёт по Прил. 3 готов')} (5 дн., п. 102): ${s ? s.id : ''} ${orgN(x.org)}`, ref: x.id });
-    ev.push({ date: cap, kind: 'cap', text: `${t('ПКД субъекта')} (10 кал. дн., п. 47): ${s ? s.id : ''} ${orgN(x.org)}`, ref: x.id });
+    const s = tsScen(x.scenario); const nm = s ? `${s.id} ${s.title} — ${tsOrgN(x.org)}${x.site ? ' / ' + x.site : ''}` : x.note;
+    if (x.type === 'admin') { P({ date: x.end, kind: 'admin', text: x.note, ref: x.id }, { title: `АБ: ${x.note}` }); return; }
+    const cov = x.kind === 'covert', w = tsWin(x.window) || x, pub = `${x.id} · ${tsOrgN(x.org)}${x.site ? ' / ' + x.site : ''}`;
+    if (x.notice_by) P({ date: x.notice_by, kind: 'notice', text: `${t('Уведомить субъект')} (${t('гласное')}, п. 32): ${nm}`, ref: x.id },
+      { title: `АБ: уведомить субъект о гласном испытании — ${pub}`, details: `Не позднее 10 рабочих дней до начала (${fmtDate(x.start)}), Правила КК п. 32.` });
+    P({ date: x.start, end: x.end, kind: cov ? 'covert' : 'test', text: `${cov ? t('Негласное (окно)') : t('Гласное')}: ${nm}`, ref: x.id },
+      cov ? { date: w.start, end: w.end, title: `АБ: негласные испытания — окно ${x.window}`, details: 'Субъект, объект и сценарий не указываются (ДСП) — у руководителя испытания.' }
+        : { title: `АБ: гласное испытание ${pub}`, details: `Сценарий ${x.scenario}.` });
+    const rep = tsAdd(x.end, 5), cap = tsAdd(rep, 10), wrep = tsAdd(w.end, 5), wcap = tsAdd(wrep, 10);
+    P({ date: rep, kind: 'report', text: `${t('Отчёт по Прил. 3 готов')} (5 дн., п. 102): ${s ? s.id : ''} ${tsOrgN(x.org)}`, ref: x.id },
+      cov ? { date: wrep, title: `АБ: отчёты по испытаниям окна ${x.window} (Прил. 3, п. 102)` } : { title: `АБ: отчёт по испытанию ${pub} (Прил. 3, п. 102)` });
+    P({ date: cap, kind: 'cap', text: `${t('ПКД субъекта')} (10 кал. дн., п. 47): ${s ? s.id : ''} ${tsOrgN(x.org)}`, ref: x.id },
+      cov ? { date: wcap, title: `АБ: ПКД субъектов по испытаниям окна ${x.window} (п. 47)` } : { title: `АБ: ПКД субъекта по испытанию ${pub} (п. 47)` });
   });
-  (d.milestones || []).forEach(m => ev.push({ date: m.date, kind: 'admin', text: m.text }));
+  (d.milestones || []).forEach(m => P({ date: m.date, kind: 'admin', text: m.text }, { title: `АБ: ${m.text}` }));
   if (u) {
-    if (u.audit.docsApprovedDeadline) ev.push({ date: u.audit.docsApprovedDeadline, kind: 'icao', text: `${t('Крайний срок документов для ИКАО')} (14:00)` });
-    ev.push({ date: u.audit.start, end: u.audit.end, kind: 'icao', text: t('Аудит ИКАО USAP-CMA') });
+    if (u.audit.docsApprovedDeadline) P({ date: u.audit.docsApprovedDeadline, kind: 'icao', text: `${t('Крайний срок документов для ИКАО')} (14:00)` }, { title: 'АБ: крайний срок документов для ИКАО (14:00)' });
+    P({ date: u.audit.start, end: u.audit.end, kind: 'icao', text: t('Аудит ИКАО USAP-CMA') }, { title: 'Аудит ИКАО USAP-CMA' });
   }
   return ev.sort((a, b) => a.date.localeCompare(b.date) || (a.kind > b.kind ? 1 : -1));
+}
+// выгрузка в календарь: одна ссылка Google (событие на весь день) или .ics на все события с сегодняшнего дня
+function tsCalEvents() { const seen = new Set(); return tsEvents().map(e => e.cal).filter(c => { const k = `${c.date}|${c.end || ''}|${c.title}`; if (seen.has(k)) return false; seen.add(k); return true; }); }
+const tsYMD = iso => iso.replace(/-/g, '');
+const tsGcal = c => `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(c.title)}&dates=${tsYMD(c.date)}/${tsYMD(tsAdd(c.end || c.date, 1))}&details=${encodeURIComponent((c.details ? c.details + '\n' : '') + 'Портал АБ АГА РТ, раздел «Испытания».')}`;
+function tsIcs(list) {
+  const enc = new TextEncoder(), x = v => String(v || '').replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const fold = l => { const parts = []; let cur = '', n = 0, lim = 75; for (const ch of l) { const k = enc.encode(ch).length; if (n + k > lim) { parts.push(cur); cur = ''; n = 0; lim = 74; } cur += ch; n += k; } parts.push(cur); return parts.join('\r\n '); };
+  const h = v => { let a = 5381; for (const ch of v) a = ((a * 33) ^ ch.codePointAt(0)) >>> 0; return a.toString(36); };
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AGA RT//AvSec Portal//RU', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Испытания АБ 2026'];
+  list.forEach(c => L.push('BEGIN:VEVENT', `UID:tests-${h(c.date + c.title)}@avsec-portal`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${tsYMD(c.date)}`, `DTEND;VALUE=DATE:${tsYMD(tsAdd(c.end || c.date, 1))}`,
+    `SUMMARY:${x(c.title)}`, `DESCRIPTION:${x((c.details ? c.details + '\n' : '') + 'Портал АБ АГА РТ, раздел «Испытания».')}`, 'TRANSP:TRANSPARENT',
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-P1D', `DESCRIPTION:${x(c.title)}`, 'END:VALARM', 'END:VEVENT'));
+  L.push('END:VCALENDAR');
+  return L.map(fold).join('\r\n') + '\r\n';
+}
+async function tsDownloadIcs() {
+  const list = tsCalEvents().filter(c => (c.end || c.date) >= today()); if (!list.length) { toast(t('Нет предстоящих событий')); return; }
+  const name = 'avsec-tests-2026.ics', text = tsIcs(list), tg = TG();
+  if (!tg) { download(text, name, 'text/calendar;charset=utf-8'); toast(`${list.length} ${t('событий — откройте файл, чтобы добавить их в календарь')}`, 'ok'); return; }
+  try { const f = new File([text], name, { type: 'text/calendar' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: name }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  toast(t('В Telegram файл не сохранить — откройте портал в браузере'), 'err');
+}
+// месячная сетка: окна — фоном дня, остальные события — плашками (клик — карточка события)
+const TS_MON = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const tsMonAdd = (ym, n) => { const d = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+function tsMonth(ym) {
+  const ev = tsEvents(), y = +ym.slice(0, 4), mo = +ym.slice(5), now = today();
+  const lead = (new Date(Date.UTC(y, mo - 1, 1)).getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  const cells = Array.from({ length: lead }, () => '<div class="mc-day out"></div>');
+  for (let dd = 1; dd <= days; dd++) {
+    const iso = `${ym}-${String(dd).padStart(2, '0')}`;
+    const on = ev.map((e, i) => [e, i]).filter(([e]) => iso >= e.date && iso <= (e.end || e.date));
+    const bg = on.some(([e]) => e.kind === 'pause') ? ' pause' : on.some(([e]) => e.kind === 'win') ? ' win' : '';
+    const wins = on.filter(([e]) => (e.kind === 'win' || e.kind === 'pause') && iso === e.date).map(([e, i]) => `<button type="button" class="mc-ev mc-w" data-tsev="${i}" title="${esc(e.text)}">${esc(t(TSEVL[e.kind]))} ${esc(e.wcode)}</button>`);
+    const byKind = {}; on.filter(([e]) => e.kind !== 'win' && e.kind !== 'pause').forEach(([e, i]) => (byKind[e.kind] = byKind[e.kind] || []).push([e, i]));
+    const chips = wins.concat(Object.entries(byKind).map(([k, L]) => L.length === 1
+      ? `<button type="button" class="mc-ev b-${TSEVB[k]}" data-tsev="${L[0][1]}" title="${esc(L[0][0].text)}">${esc(t(TSEVL[k]))}${L[0][0].ref ? ' ' + esc(L[0][0].ref.replace(/^TP-\d{4}-/, '')) : ''}</button>`
+      : `<button type="button" class="mc-ev b-${TSEVB[k]}" data-tsday="${iso}|${k}" title="${esc(L.map(([e]) => e.text).join('\n'))}">${esc(t(TSEVL[k]))} ×${L.length}</button>`)).join('');
+    cells.push(`<div class="mc-day${bg}${iso === now ? ' now' : ''}"><span class="mc-n">${dd}</span>${chips}</div>`);
+  }
+  return `<div class="mcal">${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(x => `<div class="mc-h">${esc(t(x))}</div>`).join('')}${cells.join('')}</div>`;
+}
+function tsDaySheet(key) {
+  const [iso, k] = key.split('|'), L = tsEvents().map((e, i) => [e, i]).filter(([e]) => e.kind === k && iso >= e.date && iso <= (e.end || e.date));
+  openSheet(`<div class="sheet-head"><div class="small dim">${badge(TSEVB[k], TSEVL[k])} ${fmtDate(iso)}</div><h2>${L.length} ${esc(t('событий в этот день'))}</h2></div>
+    ${L.map(([e, i]) => `<div class="evrow"><span class="evd">${tsDay(e.date)}${e.end && e.end !== e.date ? ' – ' + fmtDate(e.end).slice(0, 5) : ''}</span><span>${e.ref ? idChip(e.ref) : ''}</span><span class="evt"><button type="button" class="linkbtn" data-tsev="${i}">${esc(e.text)}</button></span></div>`).join('')}`);
+}
+function tsEventSheet(i) {
+  const e = tsEvents()[i]; if (!e) return; const x = e.ref ? TS().plan.items.find(z => z.id === e.ref) : null;
+  openSheet(`<div class="sheet-head"><div class="small dim">${badge(TSEVB[e.kind], TSEVL[e.kind])} ${e.ref ? idChip(e.ref) : ''}</div><h2>${esc(e.text)}</h2></div>
+    ${kv([['Дата', e.end && e.end !== e.date ? `${fmtDate(e.date)} – ${fmtDate(e.end)}` : fmtDate(e.date)], ['В Google Календарь уйдёт', `<b>${esc(e.cal.title)}</b>${e.cal.date !== e.date || (e.cal.end || '') !== (e.end || '') ? ` <span class="small dim">(${fmtDate(e.cal.date)}${e.cal.end && e.cal.end !== e.cal.date ? ' – ' + fmtDate(e.cal.end) : ''})</span>` : ''}${e.cal.details ? `<div class="small dim">${esc(e.cal.details)}</div>` : ''}`]])}
+    <p class="mt"><a class="btn sm" href="${esc(tsGcal(e.cal))}" target="_blank" rel="noopener">📅 ${esc(t('Добавить в Google Календарь'))}</a>${x ? ` <button class="btn sm ghost" type="button" data-tsitem="${esc(x.id)}">${esc(t('Карточка испытания'))}</button>` : ''}</p>
+    ${e.kind === 'covert' || (x && x.kind === 'covert') ? `<p class="small dim">${esc(t('Негласное испытание уходит в календарь только окном — без субъекта, объекта и сценария (ДСП).'))}</p>` : ''}`);
 }
 const TSEVL = { win: 'окно', pause: 'пауза', notice: 'уведомление', test: 'гласное', covert: 'негласное', report: 'отчёт', cap: 'ПКД', admin: 'срок', icao: 'ИКАО' };
 const TSEVB = { win: 'ok', pause: 'unsat', notice: 'draft', test: 'ok', covert: 'unsat', report: 'info', cap: 'info', admin: 'draft', icao: 'part' };
@@ -2356,10 +2429,17 @@ function pTests(m) {
   if (tab === 'chrono') {
     const ev = tsEvents(); const c = el('div', 'card'); c.innerHTML = `<h2>${esc(t('Хронология 2026'))} <span class="dim small">${esc(t('12.10 — 31.12; расчётные даты отчётов и ПКД — по Правилам КК п. 102 и 47'))}</span></h2>${tsGantt()}`;
     m.appendChild(c);
+    const ym0 = /^\d{4}-\d{2}$/.test(S.f.cm || '') ? S.f.cm : (today() >= '2026-10-01' && today() <= '2026-12-31' ? today().slice(0, 7) : '2026-11');
+    const cm = el('div', 'card'); cm.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">${esc(t('Календарь'))} · ${esc(t(TS_MON[+ym0.slice(5) - 1]))} ${ym0.slice(0, 4)}</h2>
+      <span><button class="btn sm ghost" type="button" data-go="tests?t=chrono&cm=${tsMonAdd(ym0, -1)}">◀</button> <button class="btn sm ghost" type="button" data-go="tests?t=chrono&cm=${today().slice(0, 7)}">${esc(t('Сегодня'))}</button> <button class="btn sm ghost" type="button" data-go="tests?t=chrono&cm=${tsMonAdd(ym0, 1)}">▶</button>
+      <button class="btn sm" type="button" data-tsics="1">📅 ${esc(t('Всё в календарь (.ics)'))}</button></span></div>
+      <div class="mt">${tsMonth(ym0)}</div>
+      <p class="small dim mt">${esc(t('Фон дня: зелёный — окно испытаний, красный — пауза. Плашка — событие, нажмите для подробностей и ссылки в Google Календарь. Файл .ics — все события с сегодняшнего дня с напоминанием за день; в Google Календаре: Настройки → Импорт. Негласные испытания выгружаются только окном (ДСП).'))}</p>`;
+    m.appendChild(cm);
     const L = el('div', 'card'); let cur = ''; let html = `<h2>${esc(t('Лента событий'))} <span class="dim small">${ev.length}</span></h2>`;
     ev.forEach(e => { const mo = e.date.slice(0, 7); if (mo !== cur) { cur = mo; html += `<h3 class="mt">${esc(['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][+mo.slice(5) - 1])} ${mo.slice(0, 4)}</h3>`; }
       const past = e.date < today();
-      html += `<div class="evrow${past ? ' past' : ''}"><span class="evd">${tsDay(e.date)}${e.end && e.end !== e.date ? ' – ' + fmtDate(e.end).slice(0, 5) : ''}</span><span class="badge b-${TSEVB[e.kind]}">${esc(t(TSEVL[e.kind]))}</span><span class="evt">${esc(e.text)}${e.ref ? ` ${idChip(e.ref)}` : ''}</span></div>`; });
+      html += `<div class="evrow${past ? ' past' : ''}"><span class="evd">${tsDay(e.date)}${e.end && e.end !== e.date ? ' – ' + fmtDate(e.end).slice(0, 5) : ''}</span><span class="badge b-${TSEVB[e.kind]}">${esc(t(TSEVL[e.kind]))}</span><span class="evt">${esc(e.text)}${e.ref ? ` ${idChip(e.ref)}` : ''} <a class="gcal" href="${esc(tsGcal(e.cal))}" target="_blank" rel="noopener" title="${esc(t('Добавить в Google Календарь'))}">📅</a></span></div>`; });
     L.innerHTML = html; m.appendChild(L);
     m.appendChild(el('p', 'small dim', esc(t('Даты уведомлений — не позднее чем за 10 рабочих дней до начала гласного испытания (п. 32). Отчёт — 5 дней после проверки (п. 102), ПКД — 10 календарных дней после получения отчёта (п. 47); даты рассчитаны от конца окна и сдвигаются вместе с ним.'))));
   }
@@ -2892,6 +2972,99 @@ function dirData() {
     [a.end, '09:00–12:00', 'Заключительный разбор с NCMC (09:00–11:00) и итоговый разбор с директором (11:00–12:00)']].filter(x => x[0]);
   return { u, a, d: u.director || {}, areas, capOpen, capLate, req, sent, dates, team: a.team || [] };
 }
+/* ---------- Задачи — канбан (v139) ----------
+   Карточки собираются сами из данных портала: испытания плана 2026 (статус и документы), этапы дорожной карты,
+   ВП по областям («к работе»), записи журнала аудита; плюс ручные задачи. Колонку, исполнителя и срок карточки
+   можно поменять — правка хранится поверх авто-значения (avsec-tasks, запись {col, who, due, ts}) и уходит в общую
+   синхронизацию (тип task). Ручная задача — запись с man: true и title; удаление — отметка del. */
+const TCOLS = [{ id: 'todo', t: 'К выполнению' }, { id: 'doing', t: 'В работе' }, { id: 'done', t: 'Готово' }];
+const TSRC = { test: 'Испытание', plan: 'Дорожная карта', pq: 'ВП', j: 'Журнал', man: 'Ручная' };
+const TSRCB = { test: 'unsat', plan: 'info', pq: 'area', j: 'draft', man: 'na' };
+const tkAll = () => { const o = LS.get(K.tasks, {}); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; };
+function tkSet(id, patch) { const all = tkAll(); all[id] = { ...(all[id] || {}), ...patch, ts: new Date().toISOString() }; LS.set(K.tasks, all); syncSoon(); }
+function tasksAuto() {
+  const out = [], u = U(), d = TS(), ps = planState();
+  if (d) d.plan.items.filter(x => x.type === 'test' && x.status !== 'cancelled').forEach(x => {
+    const ds = tsDocsStat(x), done = x.status === 'done';
+    out.push({ id: 'T:' + x.id, src: 'test', title: `${x.id} · ${t(TKIND[x.kind])} · ${tsOrgN(x.org)}${x.site ? ' / ' + x.site : ''}`,
+      sub: `${t(TPST[x.status])}${x.status === 'unconfirmed' ? ' — ' + t('подтвердить, проводилось ли, и приложить акт') : ''} · ${t('документы')} ${ds.ok}/${ds.n}${x.window ? ' · ' + t('окно') + ' ' + x.window : ''}`,
+      due: x.status === 'unconfirmed' ? '' : done ? tsAdd(x.end, 15) : (x.notice_by && x.notice_by >= today() ? x.notice_by : x.start),
+      col: done && !ds.bad ? 'done' : done || x.status === 'agreed' || x.status === 'notified' ? 'doing' : 'todo', item: x.id });
+  });
+  STAGES.forEach((s, i) => { const o = ps[s.id] || {}, st = stageStatus(s);
+    out.push({ id: 'S:' + s.id, src: 'plan', title: `${i + 1}. ${s.t}`, sub: o.note || '', due: o.date || (typeof s.due === 'function' ? s.due() : s.due) || '',
+      col: st === 'done' ? 'done' : st === 'wip' ? 'doing' : 'todo', who: o.resp || '', hash: 'plan' }); });
+  const pq = D('pq'); if (pq) { const st = pqState(), ar = areaResp();
+    pq.meta.areas.forEach(a => { const L = pq.items.filter(i => i.area === a.code);
+      const left = L.filter(i => { const v = (st[i.id] || {}).st; return v !== 'na' && (v !== 'sat' || pqSatWeak(i, st)); }).length;
+      out.push({ id: 'A:' + a.code, src: 'pq', title: `${t('ВП')} ${a.code} — ${a.name}`, sub: `${left} ${t('к работе из')} ${L.length}`, due: u ? u.audit.start : '',
+        col: !left ? 'done' : left < L.length ? 'doing' : 'todo', who: ar[a.code] || '', hash: `pq?area=${a.code}` }); }); }
+  jLive().forEach(x => out.push({ id: 'J:' + x.id, src: 'j', title: `${t(JKIND[x.kind] || 'Запись')}${x.auditor ? ' · ' + x.auditor : ''}${x.area ? ' · ' + x.area : ''}`, sub: String(x.text || '').slice(0, 140),
+    due: x.due || '', col: x.st === 'closed' ? 'done' : x.st === 'ans' ? 'doing' : 'todo', hash: 'journal' }));
+  return out;
+}
+function tasksAll() {
+  const ov = tkAll(), auto = tasksAuto();
+  const list = auto.map(x => { const o = ov[x.id]; return o ? { ...x, auto: x.col, col: TCOLS.some(c => c.id === o.col) ? o.col : x.col, who: o.who !== undefined ? o.who : x.who, due: o.due || x.due, note: o.note || '', ts: o.ts } : { ...x, auto: x.col }; });
+  Object.entries(ov).filter(([id, o]) => o.man && !o.del).forEach(([id, o]) => list.push({ id, src: 'man', title: o.title || t('Задача'), sub: o.note || '', note: o.note || '', due: o.due || '', col: TCOLS.some(c => c.id === o.col) ? o.col : 'todo', who: o.who || '', ts: o.ts, man: true }));
+  return list;
+}
+function tkCard(x) {
+  const late = x.col !== 'done' && x.due && x.due < today(), soon = x.col !== 'done' && x.due && !late && daysTo(x.due) <= 7;
+  const i = TCOLS.findIndex(c => c.id === x.col);
+  return `<div class="kb-card${x.col === 'done' ? ' done' : ''}" draggable="true" data-tk="${esc(x.id)}">
+    <div class="small">${badge(TSRCB[x.src], TSRC[x.src])}${x.auto && x.col !== x.auto ? ` <span class="badge b-na" title="${esc(t('Колонка изменена вручную; по данным портала'))}: ${esc(t(TCOLS.find(c => c.id === x.auto).t))}">✋</span>` : ''}</div>
+    <div class="kb-t">${esc(x.title)}</div>${x.sub ? `<div class="small dim">${esc(x.sub)}</div>` : ''}
+    <div class="kb-f small"><span>${x.due ? `<span class="${late ? 'late' : soon ? 'exp' : 'dim'}">📅 ${fmtDate(x.due)}${late ? ' · ' + esc(t('просрочено')) : ''}</span>` : ''}${x.who ? ` <span>👤 ${esc(nameOf(x.who))}</span>` : ''}</span>
+      <span class="kb-mv">${i > 0 ? `<button type="button" class="btn sm ghost" data-tkmv="${esc(x.id)}|${TCOLS[i - 1].id}" title="${esc(t(TCOLS[i - 1].t))}">◀</button>` : ''}${i < 2 ? `<button type="button" class="btn sm ghost" data-tkmv="${esc(x.id)}|${TCOLS[i + 1].id}" title="${esc(t(TCOLS[i + 1].t))}">▶</button>` : ''}</span></div></div>`;
+}
+function pTasks(m) {
+  pageHead(m, 'Задачи', esc(t('Канбан: испытания, дорожная карта, ВП по областям, журнал аудита и ручные задачи. Карточки собираются из данных портала; колонку, исполнителя и срок можно поменять — правка общая для всех устройств.')));
+  const all = tasksAll();
+  const tb = el('div', 'toolbar');
+  tb.appendChild(selector('Все источники', 'src', Object.keys(TSRC), k => t(TSRC[k])));
+  tb.appendChild(selector('Все исполнители', 'who', ['—'].concat(team().map(x => x.id)), id => id === '—' ? t('Не назначен') : nameOf(id)));
+  tb.appendChild(toggle('Только просроченные и на 7 дней', 'soon'));
+  tb.appendChild(inputFilter('Поиск по задачам'));
+  const nb = el('button', 'btn sm', '＋ ' + esc(t('Задача'))); nb.onclick = () => tkOpen(null); tb.appendChild(nb);
+  m.appendChild(tb);
+  const list = all.filter(x => (!S.f.src || x.src === S.f.src) && (!S.f.who || (S.f.who === '—' ? !x.who : x.who === S.f.who))
+    && (!S.f.soon || (x.col !== 'done' && x.due && daysTo(x.due) <= 7)) && has(S.f.s, x.title, x.sub, x.note, x.id));
+  const late = all.filter(x => x.col !== 'done' && x.due && x.due < today()).length;
+  const tiles = el('div', 'tiles');
+  TCOLS.forEach(c => tiles.appendChild(tile(c.id === 'done' ? 'ok' : c.id === 'doing' ? 'draft' : 'info', all.filter(x => x.col === c.id).length, c.t, null)));
+  tiles.appendChild(tile(late ? 'miss' : 'ok', late, 'просрочено', () => go('tasks', { ...S.f, soon: '1' }, S.q)));
+  m.appendChild(tiles);
+  const order = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title);
+  const board = el('div', 'kb');
+  board.innerHTML = TCOLS.map(c => { const L = list.filter(x => x.col === c.id).sort(order);
+    return `<div class="kb-col" data-tkcol="${c.id}"><div class="kb-h"><b>${esc(t(c.t))}</b> <span class="badge b-none">${L.length}</span></div>${L.map(tkCard).join('') || `<div class="small dim kb-empty">${esc(t('пусто'))}</div>`}</div>`; }).join('');
+  let drag = null;
+  board.addEventListener('dragstart', e => { const c = e.target.closest('[data-tk]'); if (!c) return; drag = c.dataset.tk; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', drag); } catch (er) {} });
+  board.addEventListener('dragover', e => { const col = e.target.closest('[data-tkcol]'); if (col && drag) { e.preventDefault(); col.classList.add('over'); } });
+  board.addEventListener('dragleave', e => { const col = e.target.closest('[data-tkcol]'); if (col) col.classList.remove('over'); });
+  board.addEventListener('drop', e => { const col = e.target.closest('[data-tkcol]'); if (!col || !drag) return; e.preventDefault(); tkMove(drag, col.dataset.tkcol); drag = null; });
+  m.appendChild(board);
+  m.appendChild(el('p', 'small dim', esc(t('Карточку можно перетащить мышью или сдвинуть кнопками ◀ ▶; нажатие — подробности, исполнитель и срок. ✋ — колонка изменена вручную и расходится с данными портала. Испытания: срок — уведомление или начало, после проведения — ПКД субъекта (+15 дн.).'))));
+}
+function tkMove(id, col) { const x = tasksAll().find(z => z.id === id); if (!x || x.col === col) return; tkSet(id, { col }); render(); }
+function tkOpen(id) {
+  const x = id ? tasksAll().find(z => z.id === id) : null; const isNew = !x;
+  const go2 = x && x.item ? `<button type="button" class="btn sm ghost" data-tsitem="${esc(x.item)}">${esc(t('Карточка испытания'))}</button>` : x && x.hash ? `<button type="button" class="btn sm ghost" data-go="${esc(x.hash)}">${esc(t('Открыть раздел'))} →</button>` : '';
+  openSheet(`<h3>${esc(t(isNew ? 'Новая задача' : 'Задача'))} ${x ? badge(TSRCB[x.src], TSRC[x.src]) : ''}</h3>
+    <form id="tkForm" class="form">
+      ${isNew || x.man ? `<label>${esc(t('Задача'))}<input name="title" required maxlength="200" value="${esc(x ? x.title : '')}"></label>` : `<p><b>${esc(x.title)}</b>${x.sub ? `<br><span class="small dim">${esc(x.sub)}</span>` : ''}</p>`}
+      <label>${esc(t('Колонка'))}<select name="col">${TCOLS.map(c => `<option value="${c.id}"${(x ? x.col : 'todo') === c.id ? ' selected' : ''}>${esc(t(c.t))}</option>`).join('')}</select></label>
+      <label>${esc(t('Исполнитель'))}<select name="who"><option value="">— ${esc(t('Не назначен'))} —</option>${team().map(p => `<option value="${esc(p.id)}"${x && x.who === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+      <label>${esc(t('Срок'))}<input type="date" name="due" value="${esc(x ? x.due || '' : '')}"></label>
+      <label>${esc(t('Примечание'))}<textarea name="note" rows="2" maxlength="600">${esc(x ? x.note || '' : '')}</textarea></label>
+      <div class="row mt"><button class="btn" type="submit">${esc(t('Сохранить'))}</button>${go2}${x && x.man ? ` <button type="button" class="btn sm ghost" data-tkdel="${esc(x.id)}">${esc(t('Удалить'))}</button>` : ''}${x && !x.man && x.ts ? ` <button type="button" class="btn sm ghost" data-tkreset="${esc(x.id)}">${esc(t('Вернуть авто'))}</button>` : ''}</div>
+    </form>`);
+  $('#tkForm').onsubmit = e => { e.preventDefault(); const f = new FormData(e.target), v = k => String(f.get(k) || '').trim();
+    if (isNew) tkSet(`M-${devTag()}-${Date.now().toString(36)}`, { man: true, title: v('title'), col: v('col'), who: v('who'), due: v('due'), note: v('note') });
+    else tkSet(x.id, { ...(x.man ? { man: true, title: v('title') } : {}), col: v('col'), who: v('who'), due: v('due') === (x.man ? '' : tasksAuto().find(z => z.id === x.id)?.due) ? '' : v('due'), note: v('note') });
+    closeSheet(); render(); toast(t('Сохранено'), 'ok'); };
+}
 function pDirector(m) {
   const X = dirData(), ad = X.a.start;
   pageHead(m, 'Для директора', `${esc(t('Памятка к аудиту ИКАО USAP-CMA'))} ${fmtDate(X.a.start)}–${fmtDate(X.a.end)}${ad && daysTo(ad) >= 0 ? ` · ${esc(t('до начала'))} ${daysTo(ad)} ${esc(t('дн.'))}` : ''}${X.d.status ? ` · <span class="warn">${esc(X.d.status)}</span>` : ''}`);
@@ -3050,6 +3223,14 @@ async function boot() {
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheetAsk();
     const gto = e.target.closest('[data-go]'); if (gto) { closeSheet(); location.hash = gto.dataset.go; return; }   // кнопки перехода в карточках
     // переходы по трассировке внутри карточки: ВП ↔ пункт CC (лист перерисовывается, раздел не меняется)
+    const tkm = e.target.closest('[data-tkmv]'); if (tkm) { const [id, col] = tkm.dataset.tkmv.split('|'); tkMove(id, col); return; }
+    const tkd = e.target.closest('[data-tkdel]'); if (tkd) { if (confirm(t('Удалить задачу?'))) { tkSet(tkd.dataset.tkdel, { del: true }); closeSheet(); render(); } return; }
+    const tkr = e.target.closest('[data-tkreset]'); if (tkr) { tkSet(tkr.dataset.tkreset, { col: '', who: undefined, due: '', note: '' }); closeSheet(); render(); return; }
+    const tkc = e.target.closest('[data-tk]'); if (tkc && !e.target.closest('button')) { tkOpen(tkc.dataset.tk); return; }
+    const tsd = e.target.closest('[data-tsday]'); if (tsd) { tsDaySheet(tsd.dataset.tsday); return; }
+    const tse = e.target.closest('[data-tsev]'); if (tse) { tsEventSheet(+tse.dataset.tsev); return; }
+    const tsi = e.target.closest('[data-tsics]'); if (tsi) { tsDownloadIcs(); return; }
+    const tsit = e.target.closest('[data-tsitem]'); if (tsit) { const x = TS().plan.items.find(z => z.id === tsit.dataset.tsitem); if (x) openTestPlanItem(x); return; }
     const tsb = e.target.closest('[data-tsblank]'); if (tsb) { const sc = tsScen(tsb.dataset.tsblank); if (sc) tsDownloadBlank(sc); return; }
     const tsx = e.target.closest('[data-tsext]'); if (tsx) { const u = tsBlankUrl(tsx.dataset.tsext); const tg = TG(); if (tg && tg.openLink) tg.openLink(u); else window.open(u, '_blank', 'noopener'); return; }
     const tsc = e.target.closest('[data-tscopy]'); if (tsc) { const sc = tsScen(tsc.dataset.tscopy); if (sc) { const txt = tsBlankText(sc); const ok = () => toast(t('Текст бланка скопирован')); const fb = () => { const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (_) { toast(t('Не удалось скопировать')); } ta.remove(); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb(); } return; }
