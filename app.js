@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '144';
+const APP_VERSION = '145';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -41,6 +41,7 @@ function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == n
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
+  'Угрозы и риски': 'Threats and risks', 'Угрозы': 'Threats', 'Требований закрыто': 'Requirements closed', 'Частично (есть проекты)': 'Partial (drafts only)', 'Видов угроз оценено (реестр)': 'Threat types assessed (register)', 'ВП со звёздочкой в цепочке': 'Starred PQs in the chain', 'Что проверят аудиторы и что должно быть': 'What auditors will check and what must exist', 'Национальный реестр рисков по видам угроз': 'National risk register by threat type', 'Методика и сроки': 'Methodology and review', 'Цепочка управления угрозами': 'Threat management chain', 'Что должно быть': 'What must exist', 'образец': 'sample', 'Образцы — в файле': 'Samples are in the file', 'Что спросят': 'What auditors ask', 'Самооценка ВП': 'PQ self-assessment',
   'Инструктаж ведомств': 'Stakeholder briefing', 'Инструктаж': 'Briefing', 'По организациям': 'By organisation', 'График инструктажей': 'Briefing schedule', 'По дням аудита': 'By audit day', 'Правила ответов': 'Answering rules', 'организаций и ведомств': 'organisations and agencies', 'проинструктировано': 'briefed', 'вопросов для обсуждения': 'questions for discussion', 'сессий аудита с участием': 'audit sessions with stakeholders', 'Все волны': 'All waves', 'волна': 'wave', 'Все организации': 'All organisations', 'не проинструктированы': 'not briefed', 'Поиск по организациям и вопросам': 'Search organisations and questions', 'Кто отвечает': 'Who answers', 'Представитель': 'Representative', 'ФИО, должность, телефон — хранится на этом устройстве': 'name, position, phone — stored on this device', 'проинструктирован': 'briefed', 'Сессии аудита': 'Audit sessions', 'Иметь при себе': 'Have at hand', 'Памятка': 'Memo', 'Вопросы для обсуждения': 'Questions for discussion', 'Вопрос': 'Question', 'Что проверит аудитор': 'What the auditor will check', 'Оценка': 'Assessment', 'Отдел': 'Department', 'координатор от АГА': 'CAA coordinator', 'аудиторы ИКАО': 'ICAO auditors', 'Кого': 'Whom', 'Когда': 'When', 'Где': 'Where', 'Координаторы от АГА': 'CAA coordinators', 'Как': 'How', 'Что': 'What', 'Кто участвует': 'Participants', 'Группа': 'Group', 'список': 'list', 'Данные инструктажа не загружены.': 'Briefing data not loaded.', 'Представителей и даты инструктажей вносит NCMC; отметки хранятся на устройстве.': 'The NCMC enters representatives and briefing dates; marks are stored on the device.', 'Инструктаж ведомств и предприятий': 'Stakeholder briefings', 'из': 'of',
   'Сотая версия портала': 'The portal’s 100th release', 'сотая версия': '100th release', 'Спасибо!': 'Thank you!', 'Скрыть': 'Hide', 'Сто выпусков — от реестра документов до плана инструктажей. Спасибо отделу АБ за документы и правки. Дальше — аудит 9–18 ноября.': 'One hundred releases, from the document register to the briefing plan. Thanks to the AVSEC department for the documents and feedback. Next: the audit on 9–18 November.', 'Сто выпусков: 493 ВП с самооценкой, доказательства из Telegram, план инструктажей. Спасибо всем, кто присылает документы.': 'One hundred releases: 493 PQs with self-assessment, evidence from Telegram, the briefing plan. Thanks to everyone who sends documents.',
   'дней до аудита': 'days to audit', 'ВП оценено': 'PQs assessed', 'CC: расхождения / частично': 'CC: differences / partial', 'SASAQ: вопросов заполнено': 'SASAQ: questions answered', 'Незакрыто': 'Open', 'субъектов надзора': 'regulated entities', 'уточнить наименование': 'name to be confirmed', 'программ без статуса': 'programmes without status', 'программ не отправлено в ИКАО': 'programmes not sent to ICAO', 'с категорией риска': 'with risk category', 'Документы для ИКАО': 'Documents for ICAO', 'просрочен на': 'overdue by', 'проверка': 'check', 'ПКД': 'CAP', 'Логистика аудита': 'Audit logistics', 'выполнено': 'done', 'подтверждено': 'confirmed', 'мероприятий (транспорт, питание, экскурсии)': 'items (transport, meals, excursions)', 'незакрытых рекомендаций': 'open recommendations', 'ВП': 'PQs', 'оценено': 'assessed', 'ВП с просроченным сроком': 'PQs past due', 'ВП «удовлетворительно» без подтверждения': 'PQs "satisfactory" without evidence of implementation', 'нужна запись о внедрении или утверждённый документ': 'needs a record of implementation or an approved document', 'этапов с просроченным сроком': 'stages past due', 'Рекомендации по рассмотрению / подтверждающие данные': 'Guidance for review / evidence of compliance', 'Приложение 9': 'Annex 9', 'Приложение 17': 'Annex 17', 'изменено': 'changed', 'Draft copy — ответ ещё не утверждён': 'Draft copy — answer not yet approved', 'перевод примечания и доказательств — аудиторы читают EN': 'translation of the note and evidence — auditors read EN', 'Personal note — только на этом устройстве': 'Personal note — this device only', 'Поиск: ВП, стандарт, документ, термин…': 'Search: PQ, standard, document, term…', 'Выйти из портала на этом устройстве': 'Sign out of the portal on this device', 'Версия портала': 'Portal version', 'Код доступа': 'Access code', 'авиационная безопасность · подготовка к USAP-CMA · АГА при ПРТ': 'aviation security · USAP-CMA preparation · CAA Tajikistan', 'Логистика: пунктов выполнено': 'Logistics: items done', 'Распределение и объём': 'Assignments and workload', 'По держателям': 'By holder', 'По ответственным': 'By responsible person', 'Что запросить и представить': 'What to request and provide', 'аудитор ИКАО': 'ICAO auditor', 'добавить запись о практике': 'add a record of practice', 'Позиции плана по держателям': 'Holder plan items', 'проконтролировать получение': 'check receipt', 'Задачи из ответов отдела': 'Tasks from department answers', 'Уже получено': 'Already received', 'открытых': 'open', 'Что ещё нужно': 'Still needed', 'По плану — из предварительной оценки на дату плана; сейчас — из самооценки портала (общей и этого устройства).': 'Plan figures come from the preliminary assessment on the plan date; current figures come from the portal self-assessment (shared and this device).', 'В работе / неудовл. (план)': 'In progress / unsat. (plan)', '⚠ без подтверждения (план)': '⚠ without evidence (plan)', 'Оценено сейчас': 'Assessed now', 'Открыто сейчас': 'Open now',
@@ -107,6 +108,7 @@ const ROUTES = [
     { id: 'subjects', ic: '🏢', t: 'Субъекты надзора', short: 'Субъекты', cnt: () => D('subjects') ? D('subjects').orgs.length : '' },
     { id: 'qc', ic: '🔍', t: 'Контроль качества', short: 'КК', cnt: () => D('qc') ? (D('qc').findings.length || D('qc').activities.length || '') : '' } ,
     { id: 'tests', ic: '🧪', t: 'Испытания', short: 'Исп.', cnt: () => D('tests') ? D('tests').scenarios.length : '' },
+    { id: 'threat', ic: '⚠', t: 'Угрозы и риски', short: 'Угрозы', cnt: () => D('threat') ? D('threat').chain.filter(c => thrLight(c) !== 'ok').length || '' : '' },
     { id: 'insp', ic: '🎓', t: 'Портфолио инспекторов', short: 'Инспекторы', cnt: () => D('inspectors') ? D('inspectors').people.length : '' } ] },
   { g: 'Документы АБ', items: [
     { id: 'docs', ic: '📚', t: 'Реестр документов', cnt: () => D('registry') ? D('registry').docs.length : '' },
@@ -695,7 +697,7 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, journal: pJournal, tasks: pTasks, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, tasks: pTasks, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, threat: pThreat, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
 const FILTER_LABELS = { src: 'Источник', who: 'Исполнитель', soon: 'Просроченные и на 7 дней', tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
@@ -806,6 +808,7 @@ function dash(m) {
   jubBanner(m);
   if (auditWindow()) todayCard(m);
   todoCard(m);
+  thrDashCard(m);
   const pq = D('pq'), cc = D('cc'), sq = D('sasaq'), reg = D('registry'), mx = D('matrix'), cap = D('cap2019'), u = U();
   const st = pqState();
   // единственное предупреждение, которого нет в списке дел: срок для документов, требующих утверждения (НПАБГА)
@@ -2096,6 +2099,91 @@ function riskCard() {
   c.appendChild(el('p', 'small dim', esc(t('T — угроза, C — последствия, V — уязвимость (10-балльная шкала); R — коэффициент остаточного риска. Выгрузка — книга Excel: лист «Реестр» и лист «Категории».'))));
   return c;
 }
+/* ---------- Угрозы и риски (v145): цепочка требований ВП ↔ доказательства, национальный реестр рисков по видам угроз a–k ---------- */
+// threat.json: chain[].need[] — что должно быть ({t, st:'ok'|'draft'|'missing', ev[], sample}); types[] — RR-01…12 (только статус, баллы — в ДСП-экземпляре)
+const THR = () => D('threat');
+const THRST = { ok: 'есть', draft: 'проект', missing: 'нет' }, THRB = { ok: 'ok', draft: 'draft', missing: 'missing' };
+const THRTB = { none: 'missing', tpl: 'tbd', draft: 'draft', gknb: 'part', ok: 'ok' };
+// подписанный файл → «есть»; только проект (draft в evidence.json) → «проект», что бы ни стояло в данных
+const thrNeedSt = n => { if (n.st !== 'ok' || !(n.ev || []).length) return n.st; const E = D('evidence') ? D('evidence').items : []; return n.ev.some(id => { const x = E.find(e => e.id === id); return x && x.st === 'ok' && !x.draft; }) ? 'ok' : 'draft'; };
+const thrScore = c => { const s = c.need.map(thrNeedSt); return { s, ok: s.filter(x => x === 'ok').length, dr: s.filter(x => x === 'draft').length, n: s.length, pct: Math.round(100 * (s.filter(x => x === 'ok').length + 0.5 * s.filter(x => x === 'draft').length) / Math.max(1, s.length)) }; };
+const thrLight = c => { const r = thrScore(c); return r.ok === r.n ? 'ok' : r.ok || r.dr ? 'part' : 'missing'; };
+const thrLightL = { ok: 'закрыто', part: 'частично', missing: 'нет' };
+const thrPqs = c => (c.pq || []).map(p => `<button class="idc clk" data-openpq="${esc(p)}">${esc(p)}${(c.star || []).includes(p) ? '★' : ''}</button>`).join(' ') + (c.cc ? ` ${idChip(c.cc)}` : '');
+const thrNeedHtml = c => `<ul class="list small">${c.need.map(n => { const s = thrNeedSt(n); return `<li>${badge(THRB[s], THRST[s])} ${esc(n.t)}${(n.ev || []).length ? ' ' + inspEv(n.ev) : ''}${n.sample ? ` <span class="dim">· ${esc(t('образец'))} ${n.sample}</span>` : ''}</li>`; }).join('')}</ul>`;
+function thrSheet(c) {
+  const st = pqState(), r = thrScore(c);
+  openSheet(`<div class="sheet-head"><div class="small dim">${esc(c.id)} ${badge(thrLight(c), thrLightL[thrLight(c)])} ${r.pct}%</div><h2>${esc(c.title)}</h2></div>
+    ${kv([['Что спросят', esc(c.ask)], ['Норма', esc(c.norm)], ['ВП', thrPqs(c)], ['Самооценка ВП', (c.pq || []).map(p => `${esc(p)} ${pqBadge((st[p] || {}).st || '')}`).join(' · ')], ['Ответственный', `${esc(nameOf(c.who))}${c.ext ? ` <span class="small dim">· ${esc(c.ext)}</span>` : ''}`]])}
+    <h4 class="mt">${esc(t('Что должно быть'))}</h4>${thrNeedHtml(c)}
+    <p class="small dim">${esc(t('Образцы — в файле'))} «${esc((THR().meta.samples || '').replace(/^docs\//, ''))}».</p>`);
+}
+function thrXlsx() {
+  const d = THR(), st = pqState();
+  const c1 = [6, 34, 16, 30, 46, 22, 12, 9, 16];
+  const r1 = [{ h: 22, c: [{ v: 'Управление угрозами и рисками АБ — что должно быть к аудиту USAP-CMA', s: XS.title }] }, { c: [{ v: d.meta.owner, s: XS.sub }] },
+    { c: [{ v: `Выгрузка из портала АБ ${fmtDate(today())}. «есть» — подписанный документ принят; «проект» — только проект или черновик; «нет» — не получен.`, s: XS.note }] }, { c: [] },
+    { h: 30, c: ['№', 'Требование', 'ВП', 'Норма', 'Что должно быть (статус)', 'Ответственный', 'Готовность', 'Образец', 'Самооценка ВП'].map(v => ({ v, s: XS.head })) }];
+  d.chain.forEach((c, i) => { const r = thrScore(c), L = thrLight(c);
+    const cells = [{ v: c.id, s: XS.code }, { v: `${c.title}\n${c.ask}`, s: XS.txt }, { v: (c.pq || []).map(p => p + ((c.star || []).includes(p) ? '★' : '')).join(', ') + (c.cc ? ` ${c.cc}` : ''), s: XS.txt }, { v: c.norm, s: XS.txt },
+      { v: c.need.map((n, k) => `${THRST[r.s[k]]} — ${n.t}${(n.ev || []).length ? ` (${n.ev.join(', ')})` : ''}`).join('\n'), s: XS.txt }, { v: nameOf(c.who) + (c.ext ? `; ${c.ext}` : ''), s: XS.txt },
+      { v: `${r.pct}% · ${thrLightL[L]}`, s: L === 'ok' ? XS.low : L === 'part' ? XS.mid : XS.high }, { v: [...new Set(c.need.map(n => n.sample).filter(Boolean))].join(', '), s: XS.num },
+      { v: (c.pq || []).map(p => `${p}: ${PQST[(st[p] || {}).st || '']}`).join('\n'), s: XS.txt }];
+    r1.push({ h: Math.max(xlsxH(cells, c1), 12.75 * (c.need.length + 1)), c: cells }); });
+  const c2 = [8, 30, 34, 5, 5, 5, 9, 14, 26, 26, 26, 10, 16, 11, 11, 14];
+  const r2 = [{ h: 22, c: [{ v: 'Национальный реестр рисков по видам угроз (ВП 1.155) — форма для заполнения', s: XS.title }] }, { c: [{ v: d.meta.method, s: XS.sub }] },
+    { c: [{ v: `${d.meta.review} ${d.meta.note} Заполненный экземпляр — с грифом ДСП, утверждается, в портал не вносится.`, s: XS.note }] }, { c: [] },
+    { h: 30, c: ['№', 'Вид угрозы (ВП 1.155)', 'Сценарий угрозы', 'T', 'C', 'V', 'R =\n(T+C+V)/3', 'Уровень остаточного риска', 'Основание оценки вероятности', 'Существующие меры', 'Дополнительные меры', 'Риск приемлем?', 'Ответственный', 'Дата оценки', 'Срок пересмотра', 'Статус'].map(v => ({ v, s: XS.head })) }];
+  d.types.forEach(x => { const cells = [{ v: x.rr, s: XS.code }, { v: `${x.code !== '—' ? x.code + ') ' : ''}${x.name}${x.sub.length ? ': ' + x.sub.join('; ') : ''}`, s: XS.txt }, { v: '', s: XS.fill }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.rbold }, { v: '', s: XS.none },
+    { v: '', s: XS.fill }, { v: '', s: XS.fill }, { v: '', s: XS.fill }, { v: '', s: XS.num }, { v: x.lead || '', s: XS.txt }, { v: x.date || '', s: XS.txt }, { v: x.review || '', s: XS.txt }, { v: (d.meta.statuses || {})[x.st] || x.st, s: x.st === 'ok' ? XS.low : XS.fill }];
+    r2.push({ h: xlsxH(cells, c2), c: cells }); });
+  const c3 = [22, 10, 10, 10, 12, 50];
+  const L3 = [['Высокий', '9–10', 'high', 'неприемлемый — дополнительные меры'], ['Средне-высокий', '7–8', 'mid_high', 'неприемлемый — дополнительные меры'], ['Средний', '5–6', 'mid', 'неприемлемый — дополнительные меры'], ['Средне-низкий', '3–4', 'mid_low', 'приемлемый — мониторинг'], ['Низкий', '1–2', 'low', 'приемлемый — мониторинг']];
+  const r3 = [{ h: 22, c: [{ v: 'Шкала остаточного риска — ИМ РТ-SEC-ИМ-0022, гл. 12', s: XS.title }] }, { c: [{ v: d.meta.method, s: XS.sub }] }, { c: [] },
+    { h: 30, c: ['Уровень', 'T', 'C', 'V', 'R', 'Решение'].map(v => ({ v, s: XS.head })) },
+    ...L3.map(([n, b, k, a]) => ({ c: [{ v: n, s: XS[k] }, { v: b, s: XS.num }, { v: b, s: XS.num }, { v: b, s: XS.num }, { v: b, s: XS.rbold }, { v: a, s: XS.txt }] })),
+    { c: [] }, { c: [{ v: 'Требует решения', s: XS.rbold }] }, ...(d.meta.issues || []).map(x => ({ h: xlsxH([{ v: x }], [110]), c: [{ v: x, s: XS.txt }] }))];
+  const blob = xlsxBook([{ name: 'Что должно быть', cols: c1, rows: r1, merges: ['A1:I1', 'A2:I2', 'A3:I3'], freeze: 5 }, { name: 'Реестр угроз', cols: c2, rows: r2, merges: ['A1:P1', 'A2:P2', 'A3:P3'], freeze: 5 },
+    { name: 'Шкала', cols: c3, rows: r3, merges: ['A1:F1', 'A2:F2', ...(d.meta.issues || []).map((_, i) => `A${L3.length + 7 + i}:F${L3.length + 7 + i}`)] }]);
+  download(blob, `AvSec_Threat_risk_${today()}.xlsx`, blob.type);
+}
+function pThreat(m) {
+  const d = THR(); if (!d) return m.appendChild(el('div', 'empty', 'Данные по угрозам и рискам не загружены'));
+  pageHead(m, 'Угрозы и риски', `${esc(d.meta.title)} · ${esc(t('обновлено'))} ${fmtDate(d.meta.updated)}`);
+  const L = d.chain.map(thrLight), stars = [...new Set(d.chain.flatMap(c => c.star || []))];
+  const tiles = el('div', 'tiles'), goId = id => () => { const e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  tiles.appendChild(tile(L.every(x => x === 'ok') ? 'ok' : 'miss', `${L.filter(x => x === 'ok').length} / ${L.length}`, 'Требований закрыто', goId('thr-chain')));
+  tiles.appendChild(tile('draft', L.filter(x => x === 'part').length, 'Частично (есть проекты)', goId('thr-chain')));
+  tiles.appendChild(tile(d.types.some(x => x.st !== 'ok') ? 'miss' : 'ok', `${d.types.filter(x => x.st === 'ok').length} / ${d.types.length}`, 'Видов угроз оценено (реестр)', goId('thr-reg')));
+  tiles.appendChild(tile('info', stars.length, 'ВП со звёздочкой в цепочке', goId('thr-chain')));
+  m.appendChild(tiles);
+  const c = el('div', 'card'); c.id = 'thr-chain';
+  c.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">${esc(t('Что проверят аудиторы и что должно быть'))}</h2><button class="btn sm" type="button" data-thrxlsx="1">⬇ ${esc(t('Выгрузить в Excel'))}</button></div>
+    <p class="small dim">${esc(t('«есть» — принят подписанный документ; «проект» — только проект; «нет» — не получен. Номер образца — раздел файла образцов для коллег.'))}</p>`;
+  c.appendChild(table(['№', 'Требование', 'ВП', 'Что должно быть', 'Ответственный', 'Готовность'], d.chain,
+    x => { const r = thrScore(x), l = thrLight(x); return [`<span class="code">${esc(x.id)}</span>`, `<b>${esc(x.title)}</b><div class="small dim">${esc(x.norm)}</div>`, thrPqs(x), thrNeedHtml(x), `${esc(nameOf(x.who))}${x.ext ? `<div class="small dim">${esc(x.ext)}</div>` : ''}`, `${badge(l, thrLightL[l])}<div class="small">${r.pct}%</div>`]; },
+    thrSheet, { w: ['5%', '22%', '12%', '37%', '13%', '11%'] }));
+  m.appendChild(c);
+  const r = el('div', 'card'); r.id = 'thr-reg';
+  r.innerHTML = `<h2>${esc(t('Национальный реестр рисков по видам угроз'))} <span class="dim small">ВП 1.155★</span></h2><p class="small dim">${esc(d.meta.note)}</p>`;
+  r.appendChild(table(['№', 'Вид угрозы', 'Статус', 'Дата оценки', 'Пересмотр', 'Ведёт'], d.types,
+    x => [`<span class="code">${esc(x.rr)}</span>`, `<b>${x.code !== '—' ? esc(x.code) + ') ' : ''}${esc(x.name)}</b>${x.sub.length ? `<div class="small dim">${x.sub.map(esc).join(' · ')}</div>` : ''}${x.note ? `<div class="small dim">${esc(x.note)}</div>` : ''}`,
+      badge(THRTB[x.st] || 'none', (d.meta.statuses || {})[x.st] || x.st), fmtDate(x.date) || '—', fmtDate(x.review) || '—', esc(x.lead || '—')]));
+  m.appendChild(r);
+  const k = el('div', 'card');
+  k.innerHTML = `<h2>${esc(t('Методика и сроки'))}</h2>${kv([['Расчёт', esc(d.meta.method)], ['Пересмотр', esc(d.meta.review)], ['Кто', esc(d.meta.owner)], ['Основание', (d.meta.basis || []).map(esc).join('<br>')]])}
+    ${(d.meta.issues || []).length ? `<h3 class="mt">${esc(t('Требует решения'))} <span class="dim small">${d.meta.issues.length}</span></h3><ul class="list">${d.meta.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`;
+  m.appendChild(k);
+}
+// обзор: светофор по 11 требованиям цепочки
+function thrDashCard(m) {
+  const d = THR(); if (!d) return;
+  const L = d.chain.map(thrLight), ok = L.filter(x => x === 'ok').length;
+  const c = el('div', 'card'); c.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">⚠ ${esc(t('Цепочка управления угрозами'))}</h2><a href="#threat" class="small">${esc(t('закрыто'))} ${ok} ${esc(t('из'))} ${L.length} →</a></div>`;
+  const w = el('div', 'thr-dots');
+  d.chain.forEach((x, i) => { const b = el('button', `thr-dot b-${L[i]}`, `<span class="code">${esc(x.id)}</span> ${esc(x.title)}`); b.title = `${thrLightL[L[i]]} · ${thrScore(x).pct}%`; b.onclick = () => { location.hash = '#threat'; setTimeout(() => thrSheet(x), 50); }; w.appendChild(b); });
+  c.appendChild(w); m.appendChild(c);
+}
 function openActivity(a) {
   const d = QC(); const fs = (d.findings || []).filter(f => f.activity === a.ref_no);
   openSheet(`<div class="sheet-head"><div class="small dim">${idChip(a.ref_no)} ${badge(ACTSB[a.status] || 'none', ACTST[a.status] || a.status)}</div><h2>${esc(qcType(a.activity_type).name_ru)}</h2></div>
@@ -3320,6 +3408,7 @@ async function boot() {
     const tkc = e.target.closest('[data-tk]'); if (tkc && !e.target.closest('button')) { tkOpen(tkc.dataset.tk); return; }
     const rcsv = e.target.closest('[data-riskcsv]'); if (rcsv) { riskCsv(); return; }
     const rx = e.target.closest('[data-riskxlsx]'); if (rx) { riskXlsx(); return; }
+    if (e.target.closest('[data-thrxlsx]')) { thrXlsx(); return; }
     const tsd = e.target.closest('[data-tsday]'); if (tsd) { tsDaySheet(tsd.dataset.tsday); return; }
     const tse = e.target.closest('[data-tsev]'); if (tse) { tsEventSheet(+tse.dataset.tsev); return; }
     const tsi = e.target.closest('[data-tsics]'); if (tsi) { tsDownloadIcs(); return; }

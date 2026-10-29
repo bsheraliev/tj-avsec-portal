@@ -419,3 +419,10 @@ details.card>summary::after{margin-left:auto}
 .kb-empty{text-align:center;padding:14px 0}
 @media (max-width:820px){.kb{grid-template-columns:1fr}}
 .kb-f .exp{color:var(--exp)} .kb-f .late{color:var(--miss);font-weight:600}
+/* v145: цепочка управления угрозами на обзоре */
+.thr-dots { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; margin-top: 8px; }
+.thr-dot { text-align: left; border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 6px 8px; background: var(--card); color: var(--ink); font: inherit; font-size: .88em; cursor: pointer; }
+.thr-dot.b-ok { border-left-color: var(--ok); }
+.thr-dot.b-part { border-left-color: var(--draft); }
+.thr-dot.b-missing { border-left-color: var(--miss); }
+.thr-dot:hover, .thr-dot:focus-visible { background: var(--accent-soft); }
