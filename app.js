@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '145';
+const APP_VERSION = '146';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -2130,21 +2130,21 @@ function thrXlsx() {
       { v: `${r.pct}% · ${thrLightL[L]}`, s: L === 'ok' ? XS.low : L === 'part' ? XS.mid : XS.high }, { v: [...new Set(c.need.map(n => n.sample).filter(Boolean))].join(', '), s: XS.num },
       { v: (c.pq || []).map(p => `${p}: ${PQST[(st[p] || {}).st || '']}`).join('\n'), s: XS.txt }];
     r1.push({ h: Math.max(xlsxH(cells, c1), 12.75 * (c.need.length + 1)), c: cells }); });
-  const c2 = [8, 30, 34, 5, 5, 5, 9, 14, 26, 26, 26, 10, 16, 11, 11, 14];
+  const c2 = [8, 30, 34, 5, 5, 5, 8, 9, 14, 26, 26, 26, 10, 16, 11, 11, 14];
   const r2 = [{ h: 22, c: [{ v: 'Национальный реестр рисков по видам угроз (ВП 1.155) — форма для заполнения', s: XS.title }] }, { c: [{ v: d.meta.method, s: XS.sub }] },
     { c: [{ v: `${d.meta.review} ${d.meta.note} Заполненный экземпляр — с грифом ДСП, утверждается, в портал не вносится.`, s: XS.note }] }, { c: [] },
-    { h: 30, c: ['№', 'Вид угрозы (ВП 1.155)', 'Сценарий угрозы', 'T', 'C', 'V', 'R =\n(T+C+V)/3', 'Уровень остаточного риска', 'Основание оценки вероятности', 'Существующие меры', 'Дополнительные меры', 'Риск приемлем?', 'Ответственный', 'Дата оценки', 'Срок пересмотра', 'Статус'].map(v => ({ v, s: XS.head })) }];
-  d.types.forEach(x => { const cells = [{ v: x.rr, s: XS.code }, { v: `${x.code !== '—' ? x.code + ') ' : ''}${x.name}${x.sub.length ? ': ' + x.sub.join('; ') : ''}`, s: XS.txt }, { v: '', s: XS.fill }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.rbold }, { v: '', s: XS.none },
+    { h: 30, c: ['№', 'Вид угрозы (ВП 1.155)', 'Сценарий угрозы', 'T', 'C', 'V', 'Σ =\nT+C+V', 'R =\nΣ / 3', 'Уровень остаточного риска', 'Основание оценки вероятности', 'Существующие меры', 'Дополнительные меры', 'Риск приемлем?', 'Ответственный', 'Дата оценки', 'Срок пересмотра', 'Статус'].map(v => ({ v, s: XS.head })) }];
+  d.types.forEach(x => { const cells = [{ v: x.rr, s: XS.code }, { v: `${x.code !== '—' ? x.code + ') ' : ''}${x.name}${x.sub.length ? ': ' + x.sub.join('; ') : ''}`, s: XS.txt }, { v: '', s: XS.fill }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.rbold }, { v: '', s: XS.none },
     { v: '', s: XS.fill }, { v: '', s: XS.fill }, { v: '', s: XS.fill }, { v: '', s: XS.num }, { v: x.lead || '', s: XS.txt }, { v: x.date || '', s: XS.txt }, { v: x.review || '', s: XS.txt }, { v: (d.meta.statuses || {})[x.st] || x.st, s: x.st === 'ok' ? XS.low : XS.fill }];
     r2.push({ h: xlsxH(cells, c2), c: cells }); });
-  const c3 = [22, 10, 10, 10, 12, 50];
-  const L3 = [['Высокий', '9–10', 'high', 'неприемлемый — дополнительные меры'], ['Средне-высокий', '7–8', 'mid_high', 'неприемлемый — дополнительные меры'], ['Средний', '5–6', 'mid', 'неприемлемый — дополнительные меры'], ['Средне-низкий', '3–4', 'mid_low', 'приемлемый — мониторинг'], ['Низкий', '1–2', 'low', 'приемлемый — мониторинг']];
-  const r3 = [{ h: 22, c: [{ v: 'Шкала остаточного риска — ИМ РТ-SEC-ИМ-0022, гл. 12', s: XS.title }] }, { c: [{ v: d.meta.method, s: XS.sub }] }, { c: [] },
-    { h: 30, c: ['Уровень', 'T', 'C', 'V', 'R', 'Решение'].map(v => ({ v, s: XS.head })) },
-    ...L3.map(([n, b, k, a]) => ({ c: [{ v: n, s: XS[k] }, { v: b, s: XS.num }, { v: b, s: XS.num }, { v: b, s: XS.num }, { v: b, s: XS.rbold }, { v: a, s: XS.txt }] })),
+  const c3 = [22, 14, 12, 14, 50];
+  const L3 = [['Высокий', '9–10', '26–30', '> 8,5', 'high', 'неприемлемый — дополнительные меры'], ['Средне-высокий', '7–8', '20–25', '> 6,5 … 8,5', 'mid_high', 'неприемлемый — дополнительные меры'], ['Средний', '5–6', '14–19', '> 4,5 … 6,5', 'mid', 'неприемлемый — дополнительные меры'], ['Средне-низкий', '3–4', '8–13', '> 2,5 … 4,5', 'mid_low', 'приемлемый — мониторинг'], ['Низкий', '1–2', '3–7', '1 … 2,5', 'low', 'приемлемый — мониторинг']];
+  const r3 = [{ h: 22, c: [{ v: 'Шкала остаточного риска — Doc 10108 (прил. A), НПАБГА п. 66–69, ИМ РТ-SEC-ИМ-0022 гл. 12', s: XS.title }] }, { h: 52, c: [{ v: d.meta.method, s: XS.note }] }, { c: [] },
+    { h: 30, c: ['Уровень', 'T, C, V (балл)', 'Σ = T+C+V', 'R = Σ / 3', 'Решение (ИМ-0022 гл. 12)'].map(v => ({ v, s: XS.head })) },
+    ...L3.map(([n, b, s, r, k, a]) => ({ c: [{ v: n, s: XS[k] }, { v: b, s: XS.num }, { v: s, s: XS.rbold }, { v: r, s: XS.rbold }, { v: a, s: XS.txt }] })),
     { c: [] }, { c: [{ v: 'Требует решения', s: XS.rbold }] }, ...(d.meta.issues || []).map(x => ({ h: xlsxH([{ v: x }], [110]), c: [{ v: x, s: XS.txt }] }))];
-  const blob = xlsxBook([{ name: 'Что должно быть', cols: c1, rows: r1, merges: ['A1:I1', 'A2:I2', 'A3:I3'], freeze: 5 }, { name: 'Реестр угроз', cols: c2, rows: r2, merges: ['A1:P1', 'A2:P2', 'A3:P3'], freeze: 5 },
-    { name: 'Шкала', cols: c3, rows: r3, merges: ['A1:F1', 'A2:F2', ...(d.meta.issues || []).map((_, i) => `A${L3.length + 7 + i}:F${L3.length + 7 + i}`)] }]);
+  const blob = xlsxBook([{ name: 'Что должно быть', cols: c1, rows: r1, merges: ['A1:I1', 'A2:I2', 'A3:I3'], freeze: 5 }, { name: 'Реестр угроз', cols: c2, rows: r2, merges: ['A1:Q1', 'A2:Q2', 'A3:Q3'], freeze: 5 },
+    { name: 'Шкала', cols: c3, rows: r3, merges: ['A1:E1', 'A2:E2', ...(d.meta.issues || []).map((_, i) => `A${L3.length + 7 + i}:E${L3.length + 7 + i}`)] }]);
   download(blob, `AvSec_Threat_risk_${today()}.xlsx`, blob.type);
 }
 function pThreat(m) {
