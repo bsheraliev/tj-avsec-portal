@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '143';
+const APP_VERSION = '144';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -52,7 +52,7 @@ const TR = { en: {
   'Бланк сценария': 'Scenario form', 'Посмотреть бланк': 'View form', 'заполнять и хранить офлайн': 'fill in and keep offline',
   'Детальный сценарий': 'Detailed scenario', 'Детальный сценарий и роли': 'Detailed scenario and roles', 'Хронология дня испытания': 'Test-day timeline', 'Роли': 'Roles', 'Заполняет руководитель испытания': 'To be filled in by the test leader', 'Скачать бланк сценария (Word)': 'Download scenario form (Word)', 'Бланк (Word)': 'Form (Word)', 'Шаг': 'Step',
   'только': 'only',
-  'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Календарь': 'Calendar', 'Всё в календарь (.ics)': 'All to calendar (.ics)', 'Добавить в Google Календарь': 'Add to Google Calendar', 'Карточка испытания': 'Test card', 'Оценка риска субъектов надзора': 'Risk assessment of regulated entities', 'Выгрузить в Excel (CSV)': 'Export to Excel (CSV)', 'Не оценены (нет в протоколе)': 'Not assessed (not in the protocol)', 'Таблица оценки риска': 'Risk assessment table', 'T — угроза, C — последствия, V — уязвимость (10-балльная шкала); R — коэффициент остаточного риска. Файл CSV открывается в Excel; в нём также категории и периодичность.': 'T — threat, C — consequences, V — vulnerability (10-point scale); R — residual risk coefficient. The CSV file opens in Excel and also contains the categories and frequencies.', 'Задачи': 'Tasks', 'Новая задача': 'New task', 'К выполнению': 'To do', 'Испытание': 'Test', 'Ручная': 'Manual', 'Все источники': 'All sources', 'Все исполнители': 'All assignees', 'Исполнитель': 'Assignee', 'Источник': 'Source', 'Не назначен': 'Unassigned', 'Только просроченные и на 7 дней': 'Overdue and next 7 days only', 'Просроченные и на 7 дней': 'Overdue and next 7 days', 'Поиск по задачам': 'Search tasks', 'просрочено': 'overdue', 'пусто': 'empty', 'Колонка': 'Column', 'Вернуть авто': 'Reset to automatic', 'Открыть раздел': 'Open section', 'Удалить задачу?': 'Delete the task?', 'к работе из': 'to work on of', 'документы': 'documents', 'окно': 'window', 'Колонка изменена вручную; по данным портала': 'Column changed manually; portal data says', 'подтвердить, проводилось ли, и приложить акт': 'confirm whether it took place and attach the report', 'событий в этот день': 'events on this day', 'Нет предстоящих событий': 'No upcoming events', 'событий — откройте файл, чтобы добавить их в календарь': 'events — open the file to add them to your calendar', 'В Telegram файл не сохранить — откройте портал в браузере': 'Telegram cannot save the file — open the portal in a browser', 'Негласное испытание уходит в календарь только окном — без субъекта, объекта и сценария (ДСП).': 'A covert test goes to the calendar only as its window — no entity, site or scenario (restricted).', 'Фон дня: зелёный — окно испытаний, красный — пауза. Плашка — событие, нажмите для подробностей и ссылки в Google Календарь. Файл .ics — все события с сегодняшнего дня с напоминанием за день; в Google Календаре: Настройки → Импорт. Негласные испытания выгружаются только окном (ДСП).': 'Day background: green — test window, red — pause. A chip is an event; click it for details and a Google Calendar link. The .ics file holds all events from today with a reminder one day before; in Google Calendar: Settings → Import. Covert tests are exported only as their window (restricted).', 'Пн': 'Mon', 'Вт': 'Tue', 'Ср': 'Wed', 'Чт': 'Thu', 'Пт': 'Fri', 'Сб': 'Sat', 'Вс': 'Sun', 'январь': 'January', 'февраль': 'February', 'март': 'March', 'апрель': 'April', 'май': 'May', 'июнь': 'June', 'июль': 'July', 'август': 'August', 'сентябрь': 'September', 'октябрь': 'October', 'ноябрь': 'November', 'декабрь': 'December', 'В Google Календарь уйдёт': 'Goes to Google Calendar as', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
+  'Хронология': 'Timeline', 'Хронология испытания': 'Test timeline', 'Хронология 2026': '2026 timeline', 'Лента событий': 'Event feed', 'Календарь': 'Calendar', 'Всё в календарь (.ics)': 'All to calendar (.ics)', 'Добавить в Google Календарь': 'Add to Google Calendar', 'Карточка испытания': 'Test card', 'Оценка риска субъектов надзора': 'Risk assessment of regulated entities', 'Выгрузить в Excel (CSV)': 'Export to Excel (CSV)', 'Выгрузить в Excel': 'Export to Excel', 'Не оценены (нет в протоколе)': 'Not assessed (not in the protocol)', 'Таблица оценки риска': 'Risk assessment table', 'T — угроза, C — последствия, V — уязвимость (10-балльная шкала); R — коэффициент остаточного риска. Выгрузка — книга Excel: лист «Реестр» и лист «Категории».': 'T — threat, C — consequences, V — vulnerability (10-point scale); R — residual risk coefficient. Export — an Excel workbook with the «Реестр» (register) and «Категории» (categories) sheets.', 'Задачи': 'Tasks', 'Новая задача': 'New task', 'К выполнению': 'To do', 'Испытание': 'Test', 'Ручная': 'Manual', 'Все источники': 'All sources', 'Все исполнители': 'All assignees', 'Исполнитель': 'Assignee', 'Источник': 'Source', 'Не назначен': 'Unassigned', 'Только просроченные и на 7 дней': 'Overdue and next 7 days only', 'Просроченные и на 7 дней': 'Overdue and next 7 days', 'Поиск по задачам': 'Search tasks', 'просрочено': 'overdue', 'пусто': 'empty', 'Колонка': 'Column', 'Вернуть авто': 'Reset to automatic', 'Открыть раздел': 'Open section', 'Удалить задачу?': 'Delete the task?', 'к работе из': 'to work on of', 'документы': 'documents', 'окно': 'window', 'Колонка изменена вручную; по данным портала': 'Column changed manually; portal data says', 'подтвердить, проводилось ли, и приложить акт': 'confirm whether it took place and attach the report', 'событий в этот день': 'events on this day', 'Нет предстоящих событий': 'No upcoming events', 'событий — откройте файл, чтобы добавить их в календарь': 'events — open the file to add them to your calendar', 'В Telegram файл не сохранить — откройте портал в браузере': 'Telegram cannot save the file — open the portal in a browser', 'Негласное испытание уходит в календарь только окном — без субъекта, объекта и сценария (ДСП).': 'A covert test goes to the calendar only as its window — no entity, site or scenario (restricted).', 'Фон дня: зелёный — окно испытаний, красный — пауза. Плашка — событие, нажмите для подробностей и ссылки в Google Календарь. Файл .ics — все события с сегодняшнего дня с напоминанием за день; в Google Календаре: Настройки → Импорт. Негласные испытания выгружаются только окном (ДСП).': 'Day background: green — test window, red — pause. A chip is an event; click it for details and a Google Calendar link. The .ics file holds all events from today with a reminder one day before; in Google Calendar: Settings → Import. Covert tests are exported only as their window (restricted).', 'Пн': 'Mon', 'Вт': 'Tue', 'Ср': 'Wed', 'Чт': 'Thu', 'Пт': 'Fri', 'Сб': 'Sat', 'Вс': 'Sun', 'январь': 'January', 'февраль': 'February', 'март': 'March', 'апрель': 'April', 'май': 'May', 'июнь': 'June', 'июль': 'July', 'август': 'August', 'сентябрь': 'September', 'октябрь': 'October', 'ноябрь': 'November', 'декабрь': 'December', 'В Google Календарь уйдёт': 'Goes to Google Calendar as', 'Как проходит (Т0)': 'How it runs (T0)', 'Фиксируем': 'Record', 'Показано': 'Shown', 'из': 'of', 'Показать все': 'Show all', 'нет': 'none', 'Уведомить субъект': 'Notify entity', 'Сегодня': 'Today', 'Окно': 'Window', 'пауза': 'pause', 'гласное': 'overt', 'негласное (окно)': 'covert (window)',
   'Испытания': 'Security tests', 'План 2026': '2026 plan', 'Сценарии': 'Scenarios', 'Порядок': 'Procedure', 'Что проверяется': 'What is tested', 'Испытаний в плане': 'Tests in plan', 'Сценариев': 'Scenarios', 'Форма': 'Type', 'Все формы': 'All types', 'Все окна': 'All windows', 'Окна': 'Windows', 'Негласное': 'Covert', 'Гласное': 'Overt', 'Цели испытаний': 'Purposes of tests', 'Меры безопасности при испытании': 'Safeguards during a test', 'Отчёт об испытании': 'Test report', 'Порядок проведения испытания': 'Test procedure', 'План испытаний': 'Test plan', 'Уведомить до': 'Notify by',
   'Обзор': 'Overview', 'USAP-CMA': 'USAP-CMA', 'Протокольные вопросы': 'Protocol Questions', 'Контрольный перечень (CC)': 'Compliance Checklist',
   'SASAQ': 'SASAQ', 'Дорожная карта': 'Roadmap', 'Документы АБ': 'AVSEC documents', 'Реестр документов': 'Document register',
@@ -1981,7 +1981,7 @@ function pSubjects(m) {
       (o.programmes || []).map(p => `<span class="badge b-${p.status ? PGSB[p.status] || 'none' : 'tbd'}" title="${esc(subjProg(p.programme_type).name_ru)}">${esc(p.programme_type)}</span>`).join(' ') || '<span class="dim">—</span>',
       kindBadge(o)], openOrg));
   if (d.meta.risk_note) m.appendChild(el('div', 'callout warn mb small', esc(d.meta.risk_note)));
-  if (subjOrgs().some(o => o.risk)) m.appendChild(el('p', 'small', `<a href="#qc">${esc(t('Таблица оценки риска'))} →</a> · <button class="btn sm ghost" type="button" data-riskcsv="1">⬇ ${esc(t('Выгрузить в Excel (CSV)'))}</button>`));
+  if (subjOrgs().some(o => o.risk)) m.appendChild(el('p', 'small', `<a href="#qc">${esc(t('Таблица оценки риска'))} →</a> · <button class="btn sm ghost" type="button" data-riskxlsx="1">⬇ ${esc(t('Выгрузить в Excel'))}</button>`));
   const c = el('div', 'card mt'); c.innerHTML = `<h2>${esc(t('Типы субъектов по НПАБГА'))}</h2><p class="small dim">${esc(d.meta.note || '')}</p>`;
   c.appendChild(table(['Тип', 'НПАБГА', 'Программа', 'Организаций'], d.entity_types,
     x => [esc(x.name_ru) + (x.note ? ` <div class="small dim">${esc(x.note)}</div>` : ''), esc(x.ncasp || ''),
@@ -2018,11 +2018,74 @@ function riskCsv() {
   download(csv([head, ...rows, ...none, [], ['Категории риска и периодичность'], ['Категория', 'R', 'Проверка состояния', 'Инспекционная проверка', 'Испытание', 'Приемлемость', 'Основание'], ...cats]),
     `AvSec_Risk_subjects_${today()}.csv`, 'text/csv;charset=utf-8');
 }
+// минимальная книга .xlsx без библиотек (zip через tsZip): листы {name, cols:[ширина], rows:[{h?, c:[{v, s}]}], merges:[], freeze}; стили — xlsxStyles
+const XS = { def: 0, title: 1, sub: 2, note: 3, head: 4, txt: 5, num: 6, rbold: 7, high: 8, mid_high: 9, mid: 10, mid_low: 11, low: 12, none: 13, code: 14, fill: 15 };
+function xlsxStyles() {
+  const fills = ['none', 'gray125', '1F3864', 'FFF2CC', 'C00000', 'ED7D31', 'FFC000', 'A9D08E', 'C6E0B4', 'D9D9D9', 'FCE4D6']
+    .map(c => c === 'none' || c === 'gray125' ? `<fill><patternFill patternType="${c}"/></fill>` : `<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`).join('');
+  const fonts = '<font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="13"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFC00000"/><name val="Arial"/></font>'
+    + '<font><i/><sz val="9"/><color rgb="FF404040"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font>';
+  const bd = '<border/><border><left style="thin"><color rgb="FFA6A6A6"/></left><right style="thin"><color rgb="FFA6A6A6"/></right><top style="thin"><color rgb="FFA6A6A6"/></top><bottom style="thin"><color rgb="FFA6A6A6"/></bottom><diagonal/></border>';
+  const x = (font, fill, border, h, v = 'top', wrap = 1) => `<xf numFmtId="0" fontId="${font}" fillId="${fill}" borderId="${border}" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="${v}"${wrap ? ' wrapText="1"' : ''}/></xf>`;
+  const xfs = [x(0, 0, 0, 'general', 'bottom', 0), x(1, 0, 0, 'left', 'center', 0), x(2, 0, 0, 'left', 'center', 0), x(3, 0, 0, 'left', 'center', 0), x(4, 2, 1, 'center', 'center'),
+    x(0, 0, 1, 'left'), x(0, 3, 1, 'center'), x(5, 0, 1, 'center'), x(4, 4, 1, 'center'), x(5, 5, 1, 'center'), x(5, 6, 1, 'center'), x(5, 7, 1, 'center'), x(5, 8, 1, 'center'), x(0, 9, 1, 'center'),
+    x(5, 0, 1, 'left'), x(0, 10, 1, 'left')];
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="6">${fonts}</fonts><fills count="11">${fills}</fills><borders count="2">${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+}
+function xlsxBook(sheets) {
+  const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', X = tsX;
+  const col = i => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = (i - m - 1) / 26; } return s; };
+  const sheetXml = sh => {
+    const rows = sh.rows.map((r, ri) => `<row r="${ri + 1}"${r.h ? ` ht="${r.h}" customHeight="1"` : ''}>${(r.c || []).map((c, ci) => { if (c == null) return ''; const ref = col(ci) + (ri + 1), st = c.s || 0;
+      if (c.v === '' || c.v == null) return `<c r="${ref}" s="${st}"/>`;
+      return typeof c.v === 'number' ? `<c r="${ref}" s="${st}"><v>${c.v}</v></c>` : `<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${X(c.v)}</t></is></c>`; }).join('')}</row>`).join('');
+    const pane = sh.freeze ? `<pane ySplit="${sh.freeze}" topLeftCell="A${sh.freeze + 1}" activePane="bottomLeft" state="frozen"/>` : '';
+    return `${H}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetViews><sheetView workbookViewId="0" zoomScale="90">${pane}</sheetView></sheetViews>`
+      + `<cols>${sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rows}</sheetData>`
+      + (sh.merges && sh.merges.length ? `<mergeCells count="${sh.merges.length}">${sh.merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '')
+      + `<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup orientation="landscape" paperSize="9" fitToHeight="0"/></worksheet>`;
+  };
+  const files = [
+    { name: '[Content_Types].xml', data: `${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+    { name: '_rels/.rels', data: `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: 'xl/workbook.xml', data: `${H}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((sh, i) => `<sheet name="${X(sh.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', data: `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: 'xl/styles.xml', data: xlsxStyles() },
+    ...sheets.map((sh, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(sh) }))];
+  return tsZip(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+// высота строки под перенос текста: самая длинная ячейка / ширина столбца (≈ символов в строке) × 12,75 пт
+const xlsxH = (cells, cols) => Math.max(15, ...cells.map((c, i) => Math.ceil(String((c && c.v) || '').length / Math.max(1, (cols[i] || 10) * 1.1)) * 12.75));
+function riskXlsx() {
+  const L = riskRows(), none = subjOrgs().filter(o => !o.risk), q = QC() || {}, src = (L[0] || {}).risk ? L[0].risk.src : '';
+  const cols = [8, 10, 30, 26, 5, 5, 5, 9, 15, 16, 24, 24, 36, 18, 11, 11, 14];
+  const head = ['№', 'Код', 'Субъект надзора', 'Тип субъекта', 'T', 'C', 'V', 'R =\n(T+C+V)/3', 'Категория риска', 'Проверка состояния', 'Инспекционная проверка', 'Испытание', 'Основание оценки', 'Ответственный', 'Дата оценки', 'Срок пересмотра', 'Статус'];
+  const rows = [
+    { h: 22, c: [{ v: 'Оценка риска субъектов надзора авиационной безопасности Республики Таджикистан (протокол 2026)', s: XS.title }] },
+    { c: [{ v: 'Методика: R = (T + C + V) / 3, 10-балльная шкала (ИМ по определению коэффициента остаточного риска, проект 2026). Периодичность — ИМ 1523 гл. 4 (отечественные) и гл. 6 (иностранные а/к).', s: XS.sub }] },
+    { c: [{ v: `Выгрузка из портала АБ ${fmtDate(today())}. Источник баллов: ${src}. Пустые столбцы «Ответственный», «Дата оценки», «Срок пересмотра» — для заполнения.`, s: XS.note }] },
+    { c: [] },
+    { h: 30, c: head.map(v => ({ v, s: XS.head })) }];
+  L.forEach((o, i) => { const r = o.risk, c = [{ v: `RS-${String(i + 1).padStart(2, '0')}`, s: XS.code }, { v: o.code, s: XS.txt }, { v: orgName(o), s: XS.txt }, { v: subjType(o.entity_type).name_ru, s: XS.txt },
+    { v: +r.T, s: XS.num }, { v: +r.C, s: XS.num }, { v: +r.V, s: XS.num }, { v: +r.R, s: XS.rbold }, { v: RISKL[r.level] || r.level, s: XS[r.level] || XS.none },
+    { v: r.audit || '', s: XS.txt }, { v: r.inspection || '', s: XS.txt }, { v: r.test || '', s: XS.txt }, { v: r.src || '', s: XS.txt }, { v: '', s: XS.txt }, { v: '', s: XS.txt }, { v: '', s: XS.txt }, { v: 'проект протокола', s: XS.fill }];
+    rows.push({ h: xlsxH(c, cols), c }); });
+  none.forEach((o, i) => { const c = [{ v: `RS-${String(L.length + i + 1).padStart(2, '0')}`, s: XS.code }, { v: o.code, s: XS.txt }, { v: orgName(o), s: XS.txt }, { v: subjType(o.entity_type).name_ru, s: XS.txt },
+    { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.num }, { v: '', s: XS.rbold }, { v: 'не оценён', s: XS.none }, { v: '', s: XS.txt }, { v: '', s: XS.txt }, { v: '', s: XS.txt },
+    { v: 'нет в протоколе оценки риска', s: XS.txt }, { v: '', s: XS.txt }, { v: '', s: XS.txt }, { v: '', s: XS.txt }, { v: 'ОЦЕНИТЬ', s: XS.fill }];
+    rows.push({ h: xlsxH(c, cols), c }); });
+  const ccols = [16, 8, 16, 30, 30, 30, 28];
+  const crow = [{ c: [{ v: 'Категории риска и периодичность надзора', s: XS.title }] }, { c: [{ v: q.risk_basis || '', s: XS.note }] }, { c: [] },
+    { h: 30, c: ['Категория', 'R', 'Проверка состояния', 'Инспекционная проверка', 'Испытание', 'Приемлемость', 'Основание'].map(v => ({ v, s: XS.head })) },
+    ...(q.risk_categories || []).map(x => { const c = [{ v: x.name_ru, s: XS[x.code] || XS.none }, { v: x.range || '', s: XS.num }, { v: x.audit || '', s: XS.txt }, { v: x.inspection || '', s: XS.txt }, { v: x.test || '', s: XS.txt }, { v: x.acceptable || '', s: XS.txt }, { v: x.basis || '', s: XS.txt }]; return { h: xlsxH(c, ccols), c }; })];
+  const blob = xlsxBook([{ name: 'Реестр', cols, rows, merges: ['A1:Q1', 'A2:Q2', 'A3:Q3'], freeze: 5 }, { name: 'Категории', cols: ccols, rows: crow, merges: ['A1:G1', 'A2:G2'], freeze: 4 }]);
+  download(blob, `AvSec_Risk_subjects_${today()}.xlsx`, blob.type);
+}
 function riskCard() {
   const c = el('div', 'card'), L = riskRows(), none = subjOrgs().filter(o => !o.risk);
   const cnt = RISK_ORDER.map(k => [k, L.filter(o => o.risk.level === k).length]).filter(([, n]) => n);
   c.innerHTML = `<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">${esc(t('Оценка риска субъектов надзора'))} <span class="dim small">${L.length} ${esc(t('из'))} ${subjOrgs().length}</span></h2>
-    <button class="btn sm" type="button" data-riskcsv="1">⬇ ${esc(t('Выгрузить в Excel (CSV)'))}</button></div>
+    <span><button class="btn sm" type="button" data-riskxlsx="1">⬇ ${esc(t('Выгрузить в Excel'))}</button> <button class="btn sm ghost" type="button" data-riskcsv="1">CSV</button></span></div>
     <p class="small dim">${esc((L[0] || {}).risk ? L[0].risk.src : '')}</p>
     <p>${cnt.map(([k, n]) => `${badge(RISKB[k], RISKL[k])} ${n}`).join(' · ')}</p>`;
   c.appendChild(table(['Субъект', 'T', 'C', 'V', 'R', 'Категория', 'Проверка состояния', 'Инспекция', 'Испытание'], L,
@@ -2030,7 +2093,7 @@ function riskCard() {
       `<span class="small">${esc(o.risk.audit || '')}</span>`, `<span class="small">${esc(o.risk.inspection || '')}</span>`, `<span class="small">${esc(o.risk.test || '')}</span>`],
     null, { w: ['25%', '4%', '4%', '4%', '4%', '17%', '14%', '14%', '14%'] }));
   if (none.length) c.appendChild(el('p', 'small dim mt', `${esc(t('Не оценены (нет в протоколе)'))}: ${none.map(o => esc(o.code)).join(', ')}`));
-  c.appendChild(el('p', 'small dim', esc(t('T — угроза, C — последствия, V — уязвимость (10-балльная шкала); R — коэффициент остаточного риска. Файл CSV открывается в Excel; в нём также категории и периодичность.'))));
+  c.appendChild(el('p', 'small dim', esc(t('T — угроза, C — последствия, V — уязвимость (10-балльная шкала); R — коэффициент остаточного риска. Выгрузка — книга Excel: лист «Реестр» и лист «Категории».'))));
   return c;
 }
 function openActivity(a) {
@@ -3256,6 +3319,7 @@ async function boot() {
     const tkr = e.target.closest('[data-tkreset]'); if (tkr) { tkSet(tkr.dataset.tkreset, { col: '', who: undefined, due: '', note: '' }); closeSheet(); render(); return; }
     const tkc = e.target.closest('[data-tk]'); if (tkc && !e.target.closest('button')) { tkOpen(tkc.dataset.tk); return; }
     const rcsv = e.target.closest('[data-riskcsv]'); if (rcsv) { riskCsv(); return; }
+    const rx = e.target.closest('[data-riskxlsx]'); if (rx) { riskXlsx(); return; }
     const tsd = e.target.closest('[data-tsday]'); if (tsd) { tsDaySheet(tsd.dataset.tsday); return; }
     const tse = e.target.closest('[data-tsev]'); if (tse) { tsEventSheet(+tse.dataset.tsev); return; }
     const tsi = e.target.closest('[data-tsics]'); if (tsi) { tsDownloadIcs(); return; }
