@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '182';
+const APP_VERSION = '183';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -542,7 +542,7 @@ const SY = { on: false, url: '', token: '', key: null, busy: false, again: false
 let syMemo = null;   // JSON.parse всего кэша на каждый вызов (areaResp — по 3 раза на строку списка ВП) слишком дорог
 const syCache = () => { let raw = null; try { raw = localStorage.getItem(K.sync); } catch (e) { /* без хранилища */ }
   if (!syMemo || syMemo.raw !== raw) { let c = {}; try { c = (raw && JSON.parse(raw)) || {}; } catch (e) { c = {}; }
-    syMemo = { raw, c: { seq: c.seq || 0, pq: c.pq || {}, area: (c.area && !c.area.map && c.area) || {}, j: c.j || {}, task: c.task || {} } }; }
+    syMemo = { raw, c: { seq: c.seq || 0, pq: c.pq || {}, area: (c.area && !c.area.map && c.area) || {}, j: c.j || {}, task: c.task || {}, proc: c.proc || {} } }; }
   return syMemo.c; };
 const syCopy = () => JSON.parse(JSON.stringify(syCache()));   // для правки с последующим LS.set — кэш не трогаем
 const syB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -586,15 +586,18 @@ async function syPush() {
     if ((!x || ts >= (x.ts || '')) && (ad[a] || '') !== (sh[a] || '')) out.push({ k: 'area', id: a, rec: { v: ad[a] || '', ts }, ts }); });
   jAll().forEach(x => { const u = x.upd || x.ts || 0; if (u > (c.j[x.id] || 0)) out.push({ k: 'j', id: x.id, rec: x, ts: new Date(u).toISOString() }); });
   if (!SY.noTask) Object.entries(tkAll()).forEach(([id, rec]) => { if (rec.ts && rec.ts > (c.task[id] || '')) out.push({ k: 'task', id, rec, ts: rec.ts }); });   // задачи канбана (v139)
+  if (!SY.noProc) Object.entries(procState()).forEach(([pid, rec]) => { if (rec && rec.ts && rec.by) { const id = pid + '|' + rec.by; if (rec.ts > ((c.proc[id] || {}).ts || '')) out.push({ k: 'proc', id, rec: { ...rec, pid }, ts: rec.ts }); } });   // отметки чек-листов процессов (v182)
   for (let i = 0; i < out.length; i += 150) {
     const part = out.slice(i, i + 150), rows = [];
     for (const m of part) rows.push({ k: m.k, id: m.id, ts: m.ts, c: await syEnc(m.rec) });
     const res = await syCall({ op: 'push', rows });
     const tk = part.map((m, j) => [m, (res.applied || [])[j]]).filter(([m]) => m.k === 'task');
+    const pr = part.map((m, j) => [m, (res.applied || [])[j]]).filter(([m]) => m.k === 'proc');
+    if (pr.length && pr.every(([, ok]) => !ok)) SY.noProc = true;                   // сервер ещё без типа proc (до setup.ps1 -Update)
     if (tk.length && tk.every(([, ok]) => !ok)) SY.noTask = true;                   // сервер ещё без типа task (до setup.ps1 -Update) — до перезапуска не слать
     (res.applied || []).forEach((ok, j) => { const m = part[j]; if (!ok) return;
-      if (m.k === 'pq') c.pq[m.id] = m.rec; else if (m.k === 'area') c.area[m.id] = m.rec; else if (m.k === 'task') c.task[m.id] = m.ts; else c.j[m.id] = m.rec.upd || m.rec.ts || 0; });
-    LS.set(K.sync, { ...syCache(), pq: c.pq, area: c.area, j: c.j, task: c.task });
+      if (m.k === 'pq') c.pq[m.id] = m.rec; else if (m.k === 'area') c.area[m.id] = m.rec; else if (m.k === 'task') c.task[m.id] = m.ts; else if (m.k === 'proc') c.proc[m.id] = m.rec; else c.j[m.id] = m.rec.upd || m.rec.ts || 0; });
+    LS.set(K.sync, { ...syCache(), pq: c.pq, area: c.area, j: c.j, task: c.task, proc: c.proc });
   }
   syPrune(syCache());
 }
@@ -608,9 +611,10 @@ async function syPull() {
     else if (r.k === 'j' && rec && rec.id) jIn.push(rec);
     else if (r.k === 'task' && rec && typeof rec.ts === 'string') { const all = tkAll(), cur = all[r.id];
       if (!cur || rec.ts > (cur.ts || '')) { all[r.id] = rec; LS.set(K.tasks, all); changed = true; } c.task[r.id] = rec.ts > (c.task[r.id] || '') ? rec.ts : c.task[r.id]; }
+    else if (r.k === 'proc' && rec && typeof rec.ts === 'string' && rec.by) { const cur = c.proc[r.id]; if (!cur || rec.ts >= cur.ts) { changed = changed || JSON.stringify(cur) !== JSON.stringify(rec); c.proc[r.id] = rec; } }
   }
   if (jIn.length) { const m = jMerge(jIn, true); if (m.add || m.upd) changed = true; jIn.forEach(x => { c.j[x.id] = Math.max(c.j[x.id] || 0, x.upd || x.ts || 0); }); }
-  LS.set(K.sync, { seq: res.seq || c.seq, pq: c.pq, area: c.area, j: c.j, task: c.task });
+  LS.set(K.sync, { seq: res.seq || c.seq, pq: c.pq, area: c.area, j: c.j, task: c.task, proc: c.proc });
   syPrune(syCache());
   return changed;
 }
@@ -2742,7 +2746,31 @@ const PROCK = 'avsec-proc';
 const PROC_ST = [['ok', '✓', 'Выполняется'], ['part', '±', 'Частично'], ['no', '✗', 'Не выполняется'], ['na', 'н/п', 'Не применимо']];
 const procState = () => LS.get(PROCK, {}) || {};
 const procOf = id => { const o = procState()[id] || {}; return { s: o.s || {}, n: o.n || {}, m: o.m || {} }; };
-function procSave(id, fn) { const all = procState(); const o = all[id] || { s: {}, n: {}, m: {} }; o.s = o.s || {}; o.n = o.n || {}; o.m = o.m || {}; fn(o); all[id] = o; LS.set(PROCK, all); }
+function procSave(id, fn) {
+  const all = procState(); const o = all[id] || { s: {}, n: {}, m: {} }; o.s = o.s || {}; o.n = o.n || {}; o.m = o.m || {}; delete o.cleared;
+  if (!o.by) o.by = whoAmI() || 'NCMC';                       // проверяющий = «Кто я» (настройки); запись общая по паре «процесс + проверяющий»
+  fn(o); if (!o.m.who) o.m.who = o.by; o.ts = new Date().toISOString(); all[id] = o; LS.set(PROCK, all); syncSoon();
+}
+// все записи по процессу: чужие из синхронизации + своя с устройства (побеждает более поздняя по паре «процесс + проверяющий»)
+function procRecs(pid) {
+  const byWho = {}; Object.entries(syCache().proc).forEach(([k, r]) => { if (r && r.pid === pid && !r.cleared) byWho[r.by] = r; });
+  const mine = procState()[pid]; if (mine && mine.by) { if (mine.cleared) delete byWho[mine.by]; else if (!byWho[mine.by] || mine.ts >= byWho[mine.by].ts) byWho[mine.by] = { ...mine, pid }; }
+  return Object.values(byWho).filter(r => Object.keys(r.s || {}).length).sort((a, b) => a.by.localeCompare(b.by));
+}
+// вывод по набору отметок (одного или нескольких проверяющих): худшая отметка шага побеждает; расхождения — отдельно
+function procMerge(p, recs) {
+  const rank = { ok: 1, na: 0, part: 2, no: 3 }, c = { ok: 0, part: 0, no: 0, na: 0 }; let diff = 0, marked = 0;
+  const rows = p.steps.map(st => {
+    const v = recs.map(r => ({ by: r.by, k: (r.s || {})[st.n], n: (r.n || {})[st.n] })).filter(x => x.k);
+    const ks = [...new Set(v.map(x => x.k))]; let worst = null; v.forEach(x => { if (!worst || rank[x.k] > rank[worst]) worst = x.k; });
+    if (worst) { c[worst]++; marked++; } const d = ks.filter(k => k !== 'na').length > 1; if (d) diff++;
+    return { st, v, worst, diff: d };
+  });
+  const total = p.steps.length, scope = total - c.na, bad = c.part + c.no;
+  let verdict = 'нет отметок', cls = 'na';
+  if (marked) { if (marked < total) { verdict = `в работе: ${marked} из ${total}`; cls = 'part'; } else if (!scope) { verdict = 'не применимо'; } else if (!bad) { verdict = 'соответствует'; cls = 'ok'; } else if (c.no === 0 || c.ok + c.part >= scope / 2) { verdict = `частично: не в полном объёме ${bad} из ${scope}`; cls = 'part'; } else { verdict = `не соответствует: не выполняется ${c.no} из ${scope}`; cls = 'missing'; } }
+  return { ...c, marked, total, verdict, cls, diff, rows };
+}
 function procStat(p) {
   const o = procOf(p.id), c = { ok: 0, part: 0, no: 0, na: 0 }; p.steps.forEach(s => { if (c[o.s[s.n]] != null) c[o.s[s.n]]++; });
   const marked = c.ok + c.part + c.no + c.na, total = p.steps.length, scope = total - c.na, bad = c.part + c.no;
@@ -2761,7 +2789,8 @@ function pProcs(m) {
   const cur = S.f.id && d.items.find(p => p.id === S.f.id);
   if (cur) return procDetail(m, d, cur);
   pageHead(m, 'Проверка процессов аэропорта', `${esc(d.meta.title)} · ${d.meta.count} процессов, ${d.meta.steps} шагов · источник: ${esc(d.meta.source)}`);
-  const sts = d.items.map(procStat), n = (f) => sts.filter(f).length;
+  if (S.f.t === 'sum') return procSummary(m, d);
+  const sts = d.items.map(p => procMerge(p, procRecs(p.id))), n = (f) => sts.filter(f).length;
   const tiles = el('div', 'tiles');
   tiles.appendChild(tile('info', d.meta.count, 'Процессов', () => {}));
   tiles.appendChild(tile('ok', n(x => x.cls === 'ok'), 'Соответствуют', () => go('procs', { r: 'ok' })));
@@ -2770,11 +2799,38 @@ function pProcs(m) {
   m.appendChild(tiles);
   m.appendChild(el('div', 'card', '<p class="small">Чек-листы для наблюдения за тем, как персонал аэропорта Душанбе выполняет процессы АБ (на месте 09–18.11.2026, наблюдения в DYU 12.11.2026). По каждому шагу — что проверить и какая запись должна быть. Отметки ✓ / ± / ✗ / н/п и замечания хранятся на этом устройстве и входят в резервную копию.</p><p class="small dim">Это не сценарии испытаний и не акты: результат наблюдения оформляется отдельно.</p>'));
   const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск по процессам и ВП'));
-  const ex = el('button', 'btn ghost sm', 'Сводка (.txt)'); ex.onclick = () => download(d.items.map(p => `${p.id}. ${p.title}\n   ${procStat(p).verdict}`).join('\n\n'), `AvSec_Procs_${today()}.txt`); tb.appendChild(ex);
+  const sb = el('a', 'btn ghost sm', 'Сводка по проверяющим'); sb.href = '#procs?t=sum'; tb.appendChild(sb);
   m.appendChild(tb);
   const rows = d.items.map((p, i) => ({ p, st: sts[i] })).filter(({ p, st }) => (!S.f.r || st.cls === S.f.r) && has(S.f.s, p.id, p.title, p.subject, p.pqs.map(q => q.id).join(' ')));
   m.appendChild(table(['№', 'Процесс', 'ВП', 'Шагов', 'Ход', 'Вывод'], rows,
-    ({ p, st }) => [`<b>${esc(p.id)}</b>`, `<div class="td-wrap">${esc(p.title.split(':')[0])}</div>`, `${p.pqs.length}${p.pqs.some(q => q.star) ? ' ★' : ''}`, p.steps.length, `${st.marked} / ${st.total}`, `<span class="badge b-${st.cls}">${esc(st.verdict)}</span>`],
+    ({ p, st }) => [`<b>${esc(p.id)}</b>`, `<div class="td-wrap">${esc(p.title.split(':')[0])}</div>`, `${p.pqs.length}${p.pqs.some(q => q.star) ? ' ★' : ''}`, p.steps.length, `${st.marked} / ${st.total}${procRecs(p.id).length > 1 ? ` · ${procRecs(p.id).length} пров.` : ''}`, `<span class="badge b-${st.cls}">${esc(st.verdict)}</span>${st.diff ? ` <span class="badge b-part" title="Шаги с разными отметками разных проверяющих">≠ ${st.diff}</span>` : ''}`],
+    ({ p }) => go('procs', { id: p.id })));
+}
+// ---- сводка по проверяющим: вкладка + выгрузка CSV (импорт в Google Таблицу: Файл → Импорт → Загрузить, разделитель «;») ----
+const procSym = k => (PROC_ST.find(x => x[0] === k) || [0, ''])[1];
+function procRowsLong(d) {      // строка на «процесс × шаг × проверяющий» — основа для сводной таблицы в Google Таблице
+  const R = [['Процесс', 'Название', 'Шаг', 'Действие', 'Проверяющий', 'Дата', 'Место', 'Отметка', 'Замечание', 'Итог процесса (все проверяющие)', 'ВП']];
+  d.items.forEach(p => { const recs = procRecs(p.id), mg = procMerge(p, recs), pq = p.pqs.map(q => q.id).join(' ');
+    recs.forEach(r => p.steps.forEach(s => { const k = (r.s || {})[s.n]; if (k) R.push([p.id, p.title.split(':')[0], s.n, s.action, r.by, (r.m || {}).date || '', (r.m || {}).place || '', procSym(k), (r.n || {})[s.n] || '', mg.verdict, pq]); })); });
+  return R;
+}
+function procRowsSum(d) {       // строка на процесс: вывод, проверяющие, расхождения
+  const R = [['Процесс', 'Название', 'ВП', 'Шагов', 'Отмечено', '✓', '±', '✗', 'н/п', 'Вывод', 'Проверяющих', 'Кто', 'Шагов с расхождением', 'Что не выполняется (шаги)']];
+  d.items.forEach(p => { const recs = procRecs(p.id), mg = procMerge(p, recs);
+    R.push([p.id, p.title.split(':')[0], p.pqs.map(q => q.id).join(' '), mg.total, mg.marked, mg.ok, mg.part, mg.no, mg.na, mg.verdict, recs.length, recs.map(r => r.by).join(', '), mg.diff, mg.rows.filter(x => x.worst === 'no' || x.worst === 'part').map(x => x.st.n + (x.worst === 'part' ? '±' : '✗')).join(' ')]); });
+  return R;
+}
+function procSummary(m, d) {
+  pageHead(m, 'Проверка процессов аэропорта — сводка', 'Все проверяющие по всем процессам · вывод по худшей отметке шага · синхронизация между устройствами' + (SY.on ? '' : ' (синхронизация выключена — видны только отметки этого устройства)'));
+  const tb = el('div', 'toolbar'); const bk = el('a', 'btn ghost sm', '← Процессы'); bk.href = '#procs'; tb.appendChild(bk);
+  const b1 = el('button', 'btn sm', 'Сводка → Google Таблица (CSV)'); b1.onclick = () => download(csv(procRowsSum(d)), `AvSec_Procs_summary_${today()}.csv`, 'text/csv;charset=utf-8');
+  const b2 = el('button', 'btn ghost sm', 'Все отметки → Google Таблица (CSV)'); b2.onclick = () => download(csv(procRowsLong(d)), `AvSec_Procs_marks_${today()}.csv`, 'text/csv;charset=utf-8');
+  const b3 = el('button', 'btn ghost sm', 'Текст (.txt)'); b3.onclick = () => download(d.items.map(p => { const mg = procMerge(p, procRecs(p.id)); return `${p.id}. ${p.title.split(':')[0]}\n   ${mg.verdict}; проверяющие: ${procRecs(p.id).map(r => r.by).join(', ') || '—'}`; }).join('\n\n'), `AvSec_Procs_${today()}.txt`);
+  tb.append(b1, b2, b3); m.appendChild(tb);
+  m.appendChild(el('div', 'card', '<p class="small">Как получить таблицу: нажмите «Сводка → Google Таблица», затем в Google Таблицах <b>Файл → Импорт → Загрузить</b>, разделитель «;». Вторая выгрузка — по одной строке на шаг и проверяющего: по ней строится сводная таблица. Содержит служебную информацию — хранить в закрытой папке, не публиковать.</p>'));
+  const rows = d.items.map(p => ({ p, recs: procRecs(p.id), mg: procMerge(p, procRecs(p.id)) }));
+  m.appendChild(table(['№', 'Процесс', 'Проверяющие', '✓', '±', '✗', 'н/п', 'Вывод', 'Расхождений'], rows,
+    ({ p, recs, mg }) => [`<b>${esc(p.id)}</b>`, `<div class="td-wrap">${esc(p.title.split(':')[0])}</div>`, recs.length ? recs.map(r => esc(r.by) + ` <span class="dim small">${r.m && r.m.date ? fmtDate(r.m.date) : ''}</span>`).join('<br>') : '<span class="dim">—</span>', mg.ok, mg.part, mg.no, mg.na, `<span class="badge b-${mg.cls}">${esc(mg.verdict)}</span>`, mg.diff ? `<span class="badge b-part">≠ ${mg.diff}</span>` : '0'],
     ({ p }) => go('procs', { id: p.id })));
 }
 function procDetail(m, d, p) {
@@ -2785,7 +2841,8 @@ function procDetail(m, d, p) {
   m.appendChild(el('div', 'card', `<h2>Кто, где, когда</h2>${kv([['Кто выполняет', esc(p.subject)], ['Где', esc(p.place)], ['Когда', esc(p.when)], ['Цель', esc(p.goal)]])}`));
   m.appendChild(el('div', 'card', `<h2>Основание</h2><ul class="list">${p.basis.map(b => `<li><b>${esc(b.doc)}</b>, ${esc(b.ref)}${b.note ? `<div class="small dim">${esc(b.note)}</div>` : ''}</li>`).join('')}</ul>`));
   m.appendChild(el('div', 'card', `<h2>ВП, которые подтверждает процесс</h2><ul class="list">${p.pqs.map(q => `<li><button class="idc clk" type="button" data-openpq="${esc(q.id)}">PQ:${esc(q.id)}</button>${q.star ? ' ★' : ''} ${esc(q.q)}</li>`).join('')}</ul>`));
-  const mc = el('div', 'card'); mc.innerHTML = '<h2>Проверка</h2>';
+  const mc = el('div', 'card'); mc.innerHTML = '<h2>Проверка</h2>' + (settings().me ? `<p class="small dim">Отметки записываются на проверяющего: <b>${esc(whoAmI())}</b> (настройка «Кто я»). Отметки других проверяющих видны под шагами.</p>` : '<p class="small"><span class="badge b-part">!</span> Не указано «Кто я» (Данные → настройки): отметки запишутся на NCMC и смешаются с чужими.</p>');
+  const others = procRecs(p.id).filter(r => r.by !== (procState()[p.id] || {}).by && r.by !== whoAmI());
   const fl = el('div', 'toolbar'); [['date', 'Дата', 'date'], ['time', 'Время', 'time'], ['place', 'Место / рейс / пост', 'text'], ['who', 'Проверяющий', 'text'], ['obs', 'Наблюдаемый персонал', 'text']].forEach(([k, lab, ty]) => { const i = el('input', 'inp'); i.type = ty; i.placeholder = lab; i.title = lab; i.value = o.m[k] || ''; i.onchange = () => procSave(p.id, x => { x.m[k] = i.value; }); fl.appendChild(i); });
   mc.appendChild(fl); m.appendChild(mc);
   const tc = el('div', 'card'); tc.innerHTML = '<h2>Шаги</h2>';
@@ -2794,13 +2851,16 @@ function procDetail(m, d, p) {
     row.innerHTML = `<div><b>${s.n}.</b> ${esc(s.action)}</div><div class="small"><b>Что проверить:</b> ${esc(s.check)}</div><div class="small"><b>Подтверждение:</b> ${esc(s.record)}</div><div class="small dim">Основание: ${esc(s.ref)}</div>`;
     const ctl = el('div', 'toolbar'); const btns = PROC_ST.map(([k, sym, lab]) => { const b = el('button', 'chip' + (o.s[s.n] === k ? ' on' : ''), sym); b.title = lab; b.onclick = () => { const cur2 = procOf(p.id).s[s.n]; procSave(p.id, x => { if (cur2 === k) delete x.s[s.n]; else x.s[s.n] = k; }); btns.forEach(([bb, kk]) => bb.classList.toggle('on', procOf(p.id).s[s.n] === kk)); upd(); }; ctl.appendChild(b); return [b, k]; });
     const nt = el('input', 'inp'); nt.placeholder = 'Замечание'; nt.value = o.n[s.n] || ''; nt.style.flex = '1'; nt.onchange = () => procSave(p.id, x => { if (nt.value.trim()) x.n[s.n] = nt.value; else delete x.n[s.n]; }); ctl.appendChild(nt);
-    row.appendChild(ctl); tc.appendChild(row);
+    row.appendChild(ctl);
+    const oth = others.map(r => ({ by: r.by, k: (r.s || {})[s.n], n: (r.n || {})[s.n] })).filter(x => x.k);
+    if (oth.length) row.appendChild(el('div', 'small dim', oth.map(x => `${esc(x.by)}: <b>${PROC_ST.find(z => z[0] === x.k)[1]}</b>${x.n ? ' — ' + esc(x.n) : ''}`).join(' · ')));
+    tc.appendChild(row);
   });
   m.appendChild(tc); upd(); m.appendChild(stBox);
   const nc = el('div', 'card'); nc.innerHTML = '<h2>Примечание</h2>'; const ta = el('textarea', 'inp'); ta.rows = 3; ta.style.width = '100%'; ta.value = o.m.note || ''; ta.onchange = () => procSave(p.id, x => { x.m.note = ta.value; }); nc.appendChild(ta);
   const tb = el('div', 'toolbar'); const e1 = el('button', 'btn ghost sm', 'Экспорт .txt'); e1.onclick = () => download(procTxt(p), `AvSec_${p.id}_${today()}.txt`);
   const e2 = el('button', 'btn ghost sm', 'Копировать итог'); e2.onclick = () => { try { navigator.clipboard.writeText(procTxt(p)); toast('Скопировано', 'ok'); } catch (e) { toast('Не удалось скопировать', 'err'); } };
-  const e3 = el('button', 'btn ghost sm', 'Очистить отметки'); e3.onclick = () => { if (!confirm('Очистить отметки и замечания по этому процессу?')) return; const all = procState(); delete all[p.id]; LS.set(PROCK, all); render(); };
+  const e3 = el('button', 'btn ghost sm', 'Очистить отметки'); e3.onclick = () => { if (!confirm('Очистить отметки и замечания по этому процессу?')) return; const all = procState(), cur0 = all[p.id]; if (cur0 && cur0.by) all[p.id] = { s: {}, n: {}, m: {}, by: cur0.by, ts: new Date().toISOString(), cleared: true }; else delete all[p.id]; LS.set(PROCK, all); syncSoon(); render(); };
   tb.append(e1, e2, e3); nc.appendChild(tb); m.appendChild(nc);
   m.appendChild(el('div', 'card', `<h2>Что запросить при проверке</h2><ul class="list">${p.records.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h2>На что обратить внимание (типичные нарушения)</h2><ul class="list">${p.gaps.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
 }
