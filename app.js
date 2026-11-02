@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '181';
+const APP_VERSION = '182';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -12,8 +12,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { try { toast(t('Не сохранено: хранилище браузера переполнено — выгрузите резервную копию (Данные) и очистите журнал'), 'err'); } catch (_) { /* до инициализации */ } return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
 };
-const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev', sync: 'avsec-sync', areats: 'avsec-arearesp-ts', pnote: 'avsec-pnote', tasks: 'avsec-tasks' };
-const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.areats, K.audit, K.capi, K.log, K.journal, K.pnote, K.tasks];
+const K = { key: 'avsec-key', lang: 'avsec-lang', theme: 'avsec-theme', pq: 'avsec-pq', cc: 'avsec-cc', sasaq: 'avsec-sasaq', plan: 'avsec-plan', set: 'avsec-settings', team: 'avsec-team', arearesp: 'avsec-arearesp', audit: 'avsec-audit', capi: 'avsec-capitems', log: 'avsec-log', journal: 'avsec-journal', dev: 'avsec-dev', sync: 'avsec-sync', areats: 'avsec-arearesp-ts', pnote: 'avsec-pnote', tasks: 'avsec-tasks', proc: 'avsec-proc' };
+const STATE_KEYS = [K.pq, K.cc, K.sasaq, K.plan, K.set, K.team, K.arearesp, K.areats, K.audit, K.capi, K.log, K.journal, K.pnote, K.tasks, K.proc];
 
 const S = { cfg: null, key: null, D: {}, page: 'dash', q: '', f: {}, lang: LS.get(K.lang, 'ru'), pqSel: new Set() };
 
@@ -110,6 +110,7 @@ const ROUTES = [
     { id: 'qc', ic: '🔍', t: 'Контроль качества', short: 'КК', cnt: () => D('qc') ? (D('qc').findings.length || D('qc').activities.length || '') : '' } ,
     { id: 'tests', ic: '🧪', t: 'Испытания', short: 'Исп.', cnt: () => D('tests') ? D('tests').scenarios.length : '' },
     { id: 'threat', ic: '⚠', t: 'Угрозы и риски', short: 'Угрозы', cnt: () => D('threat') ? D('threat').chain.filter(c => thrLight(c) !== 'ok').length || '' : '' },
+    { id: 'procs', ic: '🛂', t: 'Проверка процессов аэропорта', short: 'Процессы', cnt: () => D('proc_checks') ? D('proc_checks').items.length : '' },
     { id: 'insp', ic: '🎓', t: 'Портфолио инспекторов', short: 'Инспекторы', cnt: () => D('inspectors') ? D('inspectors').people.length : '' } ] },
   { g: 'Документы АБ', items: [
     { id: 'docs', ic: '📚', t: 'Реестр документов', cnt: () => D('registry') ? D('registry').docs.length : '' },
@@ -183,7 +184,7 @@ async function fetchBytes(url, idle = 20000) {
 S.loadErrors = [];
 /* Предварительная оценка и подсказки ВП — почти половина объёма (276 из 572 КБ). Нужны только в карточках и сводках ВП,
    везде читаются через D() с проверкой на пустоту, поэтому подгружаются после первого экрана (loadLazy). */
-const LAZY = ['pq_assess.json', 'pq_hints.json'];
+const LAZY = ['pq_assess.json', 'pq_hints.json', 'proc_checks.json'];
 S.lazyErr = [];   // имена ленивых файлов, которые не догрузились (заметка в разделе ВП, повтор при появлении сети)
 S.lazyDone = false;
 let lazyBusy = false;
@@ -698,10 +699,10 @@ const STG = { '': 'Не начато', wip: 'В работе', done: 'Выпол
 const stageStatus = s => { const o = planState()[s.id] || {}; return o.st !== undefined && o.st !== '' ? o.st : (s.auto() || ''); };
 
 /* ================================================================== СТРАНИЦЫ ================================================================== */
-const PAGES = { dash, audit: pAudit, journal: pJournal, tasks: pTasks, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, threat: pThreat, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
+const PAGES = { dash, audit: pAudit, journal: pJournal, tasks: pTasks, director: pDirector, evplan: pEvPlan, brief: pBrief, cap: pCAP, pq: pPQ, cc: pCC, sasaq: pSASAQ, plan: pPlan, team: pTeam, subjects: pSubjects, qc: pQC, tests: pTests, insp: pInsp, procs: pProcs, threat: pThreat, docs: pDocs, matrix: pMatrix, gm: pGM, drive: pDrive, icao: pICAO, nb: pNB, glossary: pGlossary, data: pData, about: pAbout, find: pFind };
 
 /* ---------- активные фильтры (чипы с ✕), расшифровка сокращений, «что делать сейчас» — по образцу Библиотеки Shohin ---------- */
-const FILTER_LABELS = { src: 'Источник', who: 'Исполнитель', soon: 'Просроченные и на 7 дней', tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень' };
+const FILTER_LABELS = { src: 'Источник', who: 'Исполнитель', soon: 'Просроченные и на 7 дней', tw: 'Окно', tk: 'Форма', ta: 'Что проверяется', team: 'Ответ отдела', area: 'Область', sub: 'Подраздел', ce: 'КЭ', st: 'Статус', star: 'Только ★', resp: 'Ответственный', s: 'Поиск', annex: 'Приложение', ch: 'Глава', defs: 'Определения и заголовки', b: 'Статус', lvl: 'Уровень', l: 'Язык', prio: 'Приоритет', sec: 'Раздел', en: 'Только с EN', over: 'Просрочен срок', cap: 'С выводом 2019', hint: 'Подсказки без доказательств', pre: 'Предварительная оценка не принята', weak: 'Удовлетворительно без подтверждения', type: 'Тип субъекта', kind: 'Роль', pst: 'Программы', org: 'Субъект', sev: 'Уровень', r: 'Вывод', id: 'Процесс' };
 const FILTER_BOOL = { star: 1, defs: 1, en: 1, over: 1, cap: 1, hint: 1, pre: 1, soon: 1 };
 function filterVal(k, v) {
   if (k === 'st') return ({ none: 'Не оценено', bad: 'Частично + расхождения', open: 'Незакрытые', filled: 'Заполнено', empty: 'Не заполнено', checked: 'Проверено' })[v] || PQST[v] || CCST[v] || CAPST[v] || v;
@@ -2733,6 +2734,75 @@ function inspSheet(p) {
   openSheet(`<h3>${esc(p.full || p.name)}</h3>${kv([['Должность', esc(p.position)], ['Приказ о назначении', p.order ? `№ ${esc(p.order.no)} от ${fmtDate(p.order.date)} ${inspEv(p.order.ev)}<div class="small dim">${esc(p.order.text || '')}</div>` : '<span class="badge b-missing">нет в файле приказов</span>'], ['Список персонала КК', p.qc_list ? `${esc(p.qc_position || '')} ${inspEv(p.qc_list.ev)}` : ''], ['Лист OJT', p.ojt ? `${esc(p.ojt.year)} ${inspEv(p.ojt.ev)}` : '<span class="badge b-missing">нет</span>']])}
     <h4>Подготовка</h4><div class="tw"><table><thead><tr><th>Вид</th><th>Курс</th><th>Где</th><th>Даты</th><th>Файл</th></tr></thead><tbody>${tr.map(c => `<tr><td>${esc(K[c.kind] || c.kind)}</td><td>${esc(c.course)}${c.note ? `<div class="small dim">${esc(c.note)}</div>` : ''}</td><td>${esc(c.provider || '')}</td><td>${fmtDate(c.from)} – ${fmtDate(c.to)}</td><td>${inspEv(c.ev)}</td></tr>`).join('')}</tbody></table></div>
     ${p.gaps.length ? `<h4>Замечания</h4><ul class="list">${p.gaps.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`);
+}
+
+/* ---------- Проверка процессов аэропорта: чек-листы наблюдения на месте (data/proc_checks.json, tools/proc_import.py) ---------- */
+// Отметки — только на устройстве: avsec-proc = { P01: { s:{шаг:'ok'|'part'|'no'|'na'}, n:{шаг:'замечание'}, m:{date,time,place,who,obs,note} } }
+const PROCK = 'avsec-proc';
+const PROC_ST = [['ok', '✓', 'Выполняется'], ['part', '±', 'Частично'], ['no', '✗', 'Не выполняется'], ['na', 'н/п', 'Не применимо']];
+const procState = () => LS.get(PROCK, {}) || {};
+const procOf = id => { const o = procState()[id] || {}; return { s: o.s || {}, n: o.n || {}, m: o.m || {} }; };
+function procSave(id, fn) { const all = procState(); const o = all[id] || { s: {}, n: {}, m: {} }; o.s = o.s || {}; o.n = o.n || {}; o.m = o.m || {}; fn(o); all[id] = o; LS.set(PROCK, all); }
+function procStat(p) {
+  const o = procOf(p.id), c = { ok: 0, part: 0, no: 0, na: 0 }; p.steps.forEach(s => { if (c[o.s[s.n]] != null) c[o.s[s.n]]++; });
+  const marked = c.ok + c.part + c.no + c.na, total = p.steps.length, scope = total - c.na, bad = c.part + c.no;
+  let verdict = 'нет отметок', cls = 'na';
+  if (marked) { if (marked < total) { verdict = `в работе: ${marked} из ${total}`; cls = 'part'; } else if (!scope) { verdict = 'не применимо'; } else if (!bad) { verdict = 'соответствует'; cls = 'ok'; } else if (c.no === 0 || c.ok + c.part >= scope / 2) { verdict = `частично: не в полном объёме ${bad} из ${scope}`; cls = 'part'; } else { verdict = `не соответствует: не выполняется ${c.no} из ${scope}`; cls = 'missing'; } }
+  return { ...c, marked, total, verdict, cls };
+}
+function procTxt(p) {
+  const o = procOf(p.id), st = procStat(p), L = [`${p.id}. ${p.title}`, `Дата: ${o.m.date || ''}  Время: ${o.m.time || ''}  Место/рейс/пост: ${o.m.place || ''}`, `Проверяющий: ${o.m.who || ''}  Наблюдаемый персонал: ${o.m.obs || ''}`, `Итог: ${st.verdict} (✓ ${st.ok}, ± ${st.part}, ✗ ${st.no}, н/п ${st.na})`, ''];
+  p.steps.forEach(s => { const k = o.s[s.n]; L.push(`${s.n}. [${k ? PROC_ST.find(x => x[0] === k)[1] : ' '}] ${s.action}${o.n[s.n] ? '\n    Замечание: ' + o.n[s.n] : ''}`); });
+  if (o.m.note) L.push('', 'Примечание: ' + o.m.note);
+  return L.join('\n');
+}
+function pProcs(m) {
+  const d = D('proc_checks'); if (!d) return m.appendChild(el('div', 'empty', S.lazyErr ? 'Чек-листы не загружены — откройте «Данные» и нажмите «Догрузить»' : 'Чек-листы загружаются…'));
+  const cur = S.f.id && d.items.find(p => p.id === S.f.id);
+  if (cur) return procDetail(m, d, cur);
+  pageHead(m, 'Проверка процессов аэропорта', `${esc(d.meta.title)} · ${d.meta.count} процессов, ${d.meta.steps} шагов · источник: ${esc(d.meta.source)}`);
+  const sts = d.items.map(procStat), n = (f) => sts.filter(f).length;
+  const tiles = el('div', 'tiles');
+  tiles.appendChild(tile('info', d.meta.count, 'Процессов', () => {}));
+  tiles.appendChild(tile('ok', n(x => x.cls === 'ok'), 'Соответствуют', () => go('procs', { r: 'ok' })));
+  tiles.appendChild(tile('draft', n(x => x.cls === 'part'), 'Частично / в работе', () => go('procs', { r: 'part' })));
+  tiles.appendChild(tile('miss', n(x => x.cls === 'missing'), 'Не соответствуют', () => go('procs', { r: 'missing' })));
+  m.appendChild(tiles);
+  m.appendChild(el('div', 'card', '<p class="small">Чек-листы для наблюдения за тем, как персонал аэропорта Душанбе выполняет процессы АБ (на месте 09–18.11.2026, наблюдения в DYU 12.11.2026). По каждому шагу — что проверить и какая запись должна быть. Отметки ✓ / ± / ✗ / н/п и замечания хранятся на этом устройстве и входят в резервную копию.</p><p class="small dim">Это не сценарии испытаний и не акты: результат наблюдения оформляется отдельно.</p>'));
+  const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск по процессам и ВП'));
+  const ex = el('button', 'btn ghost sm', 'Сводка (.txt)'); ex.onclick = () => download(d.items.map(p => `${p.id}. ${p.title}\n   ${procStat(p).verdict}`).join('\n\n'), `AvSec_Procs_${today()}.txt`); tb.appendChild(ex);
+  m.appendChild(tb);
+  const rows = d.items.map((p, i) => ({ p, st: sts[i] })).filter(({ p, st }) => (!S.f.r || st.cls === S.f.r) && has(S.f.s, p.id, p.title, p.subject, p.pqs.map(q => q.id).join(' ')));
+  m.appendChild(table(['№', 'Процесс', 'ВП', 'Шагов', 'Ход', 'Вывод'], rows,
+    ({ p, st }) => [`<b>${esc(p.id)}</b>`, `<div class="td-wrap">${esc(p.title.split(':')[0])}</div>`, `${p.pqs.length}${p.pqs.some(q => q.star) ? ' ★' : ''}`, p.steps.length, `${st.marked} / ${st.total}`, `<span class="badge b-${st.cls}">${esc(st.verdict)}</span>`],
+    ({ p }) => go('procs', { id: p.id })));
+}
+function procDetail(m, d, p) {
+  const o = procOf(p.id), pqs = D('pq') ? D('pq').items : [];
+  const back = el('button', 'btn ghost sm', '← Все процессы'); back.onclick = () => go('procs', {}); m.appendChild(back);
+  pageHead(m, `${p.id}. ${p.title.split(':')[0]}`, esc(p.title.includes(':') ? p.title.split(':').slice(1).join(':').trim() : p.goal));
+  const stBox = el('div', 'card'); const upd = () => { const st = procStat(p); stBox.innerHTML = `<h2>Итог проверки</h2><p><span class="badge b-${st.cls}">${esc(st.verdict)}</span> <span class="dim small">✓ ${st.ok} · ± ${st.part} · ✗ ${st.no} · н/п ${st.na} · без отметки ${st.total - st.marked}</span></p>`; };
+  m.appendChild(el('div', 'card', `<h2>Кто, где, когда</h2>${kv([['Кто выполняет', esc(p.subject)], ['Где', esc(p.place)], ['Когда', esc(p.when)], ['Цель', esc(p.goal)]])}`));
+  m.appendChild(el('div', 'card', `<h2>Основание</h2><ul class="list">${p.basis.map(b => `<li><b>${esc(b.doc)}</b>, ${esc(b.ref)}${b.note ? `<div class="small dim">${esc(b.note)}</div>` : ''}</li>`).join('')}</ul>`));
+  m.appendChild(el('div', 'card', `<h2>ВП, которые подтверждает процесс</h2><ul class="list">${p.pqs.map(q => `<li><button class="idc clk" type="button" data-openpq="${esc(q.id)}">PQ:${esc(q.id)}</button>${q.star ? ' ★' : ''} ${esc(q.q)}</li>`).join('')}</ul>`));
+  const mc = el('div', 'card'); mc.innerHTML = '<h2>Проверка</h2>';
+  const fl = el('div', 'toolbar'); [['date', 'Дата', 'date'], ['time', 'Время', 'time'], ['place', 'Место / рейс / пост', 'text'], ['who', 'Проверяющий', 'text'], ['obs', 'Наблюдаемый персонал', 'text']].forEach(([k, lab, ty]) => { const i = el('input', 'inp'); i.type = ty; i.placeholder = lab; i.title = lab; i.value = o.m[k] || ''; i.onchange = () => procSave(p.id, x => { x.m[k] = i.value; }); fl.appendChild(i); });
+  mc.appendChild(fl); m.appendChild(mc);
+  const tc = el('div', 'card'); tc.innerHTML = '<h2>Шаги</h2>';
+  p.steps.forEach(s => {
+    const row = el('div', 'procstep'); row.style.cssText = 'border-top:1px solid var(--line,#ddd);padding:10px 0';
+    row.innerHTML = `<div><b>${s.n}.</b> ${esc(s.action)}</div><div class="small"><b>Что проверить:</b> ${esc(s.check)}</div><div class="small"><b>Подтверждение:</b> ${esc(s.record)}</div><div class="small dim">Основание: ${esc(s.ref)}</div>`;
+    const ctl = el('div', 'toolbar'); const btns = PROC_ST.map(([k, sym, lab]) => { const b = el('button', 'chip' + (o.s[s.n] === k ? ' on' : ''), sym); b.title = lab; b.onclick = () => { const cur2 = procOf(p.id).s[s.n]; procSave(p.id, x => { if (cur2 === k) delete x.s[s.n]; else x.s[s.n] = k; }); btns.forEach(([bb, kk]) => bb.classList.toggle('on', procOf(p.id).s[s.n] === kk)); upd(); }; ctl.appendChild(b); return [b, k]; });
+    const nt = el('input', 'inp'); nt.placeholder = 'Замечание'; nt.value = o.n[s.n] || ''; nt.style.flex = '1'; nt.onchange = () => procSave(p.id, x => { if (nt.value.trim()) x.n[s.n] = nt.value; else delete x.n[s.n]; }); ctl.appendChild(nt);
+    row.appendChild(ctl); tc.appendChild(row);
+  });
+  m.appendChild(tc); upd(); m.appendChild(stBox);
+  const nc = el('div', 'card'); nc.innerHTML = '<h2>Примечание</h2>'; const ta = el('textarea', 'inp'); ta.rows = 3; ta.style.width = '100%'; ta.value = o.m.note || ''; ta.onchange = () => procSave(p.id, x => { x.m.note = ta.value; }); nc.appendChild(ta);
+  const tb = el('div', 'toolbar'); const e1 = el('button', 'btn ghost sm', 'Экспорт .txt'); e1.onclick = () => download(procTxt(p), `AvSec_${p.id}_${today()}.txt`);
+  const e2 = el('button', 'btn ghost sm', 'Копировать итог'); e2.onclick = () => { try { navigator.clipboard.writeText(procTxt(p)); toast('Скопировано', 'ok'); } catch (e) { toast('Не удалось скопировать', 'err'); } };
+  const e3 = el('button', 'btn ghost sm', 'Очистить отметки'); e3.onclick = () => { if (!confirm('Очистить отметки и замечания по этому процессу?')) return; const all = procState(); delete all[p.id]; LS.set(PROCK, all); render(); };
+  tb.append(e1, e2, e3); nc.appendChild(tb); m.appendChild(nc);
+  m.appendChild(el('div', 'card', `<h2>Что запросить при проверке</h2><ul class="list">${p.records.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h2>На что обратить внимание (типичные нарушения)</h2><ul class="list">${p.gaps.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`));
 }
 
 /* ---------- Реестр документов ---------- */
