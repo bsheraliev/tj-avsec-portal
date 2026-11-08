@@ -4,7 +4,7 @@
    SASAQ, дорожная карта) хранится в localStorage устройства; резервная копия — раздел «Данные».
    Версия приложения = версия кэша в sw.js = ?v= в index.html. Бампать вместе. */
 'use strict';
-const APP_VERSION = '216';
+const APP_VERSION = '217';
 
 /* ---------- хранилище ---------- */
 const LS = {
@@ -21,11 +21,13 @@ const S = { cfg: null, key: null, D: {}, page: 'dash', q: '', f: {}, lang: LS.ge
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const safeUrl = u => /^(https?:|mailto:|#|\.?\/|[\w.-]+\.(html|pdf|docx|xlsx|ics)$)/i.test(String(u || '').trim());   // ссылки только http(s)/mailto/внутренние — без javascript:
+const escUrl = u => safeUrl(u) ? esc(String(u).trim()) : '#';
 const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
 const uniq = a => [...new Set(a.filter(Boolean))].sort((x, y) => String(x).localeCompare(String(y), 'ru', { numeric: true }));
 const pct = (a, b) => b ? Math.round(a * 100 / b) : 0;
 const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
-const fmtDate = iso => { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return d && m ? `${d}.${m}.${y}` : iso; };
+const fmtDate = iso => { if (!iso) return '—'; const s = String(iso), m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]}` : esc(s); };   // вне формата даты — только экранированный текст (XSS через синхронизацию)
 const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };   // местная дата, не UTC (Душанбе +5)
 const daysTo = iso => Math.ceil((new Date(iso) - new Date(today())) / 86400000);
 
@@ -37,7 +39,7 @@ function download(text, name, mime = 'text/plain;charset=utf-8') {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-function csv(rows) { return '﻿' + rows.map(r => r.map(c => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(';')).join('\r\n'); }
+function csv(rows) { return '﻿' + rows.map(r => r.map(c => { let v = String(c == null ? '' : c); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; }).join(';')).join('\r\n'); }   // ' перед = + - @ — не формула в Excel/Таблицах
 
 /* ---------- i18n: RU базовый, EN — для аудита ИКАО. Данные первоисточников не переводим. ---------- */
 const TR = { en: {
@@ -145,15 +147,24 @@ async function deriveKey(code) {
   return new Uint8Array(bits);
 }
 async function keyOk(raw) { return hex(await crypto.subtle.digest('SHA-256', raw)) === S.cfg.check; }
+/* Ключ на устройстве (с v217): не hex в localStorage, а неэкспортируемые CryptoKey в IndexedDB — скрипт на странице может ими пользоваться,
+   но не может вынести байты ключа. Срок — KEY_DAYS, после него код вводится заново; смена кода (другой check) — тоже вход заново. */
+const KEY_DAYS = 30;
+const kdb = () => new Promise((ok, no) => { const r = indexedDB.open('avsec-keys', 1); r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+async function kdbOp(mode, fn) { const db = await kdb(); return new Promise((ok, no) => { const tx = db.transaction('k', mode), st = tx.objectStore('k'), r = fn(st); tx.oncomplete = () => ok(r && r.result); tx.onerror = () => no(tx.error); }); }
+async function keyFromRaw(raw) { const sy = await syKeys(raw); return { data: await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']), syToken: sy.token, syKey: sy.key }; }
+async function keySave(k) { try { await kdbOp('readwrite', st => st.put({ ...k, check: S.cfg.check, exp: Date.now() + KEY_DAYS * 864e5 }, 'cur')); } catch (e) { /* без IndexedDB — вход по коду при каждом открытии */ } }
+async function keyLoad() { try { const k = await kdbOp('readonly', st => st.get('cur')); return k && k.check === S.cfg.check && k.exp > Date.now() && k.data instanceof CryptoKey ? k : null; } catch (e) { return null; } }
+async function keyForget() { try { LS.del(K.key); await kdbOp('readwrite', st => st.delete('cur')); } catch (e) { /* нечего удалять */ } }
 async function decryptEnc(bytes, raw) {
-  const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+  const key = raw instanceof CryptoKey ? raw : await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
   const u8 = new Uint8Array(bytes);
   const gz = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u8.slice(0, 12) }, key, u8.slice(12));
   return new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
 }
 async function loadFile(name) {
   if (S.cfg.plain) { const r = await fetch('data/' + name, { cache: 'no-cache' }); if (!r.ok) throw new Error(`data/${name}: HTTP ${r.status}`); return r.json(); }
-  return JSON.parse(await decryptEnc(await fetchBytes('data-enc/' + name + '.enc'), S.key));
+  return JSON.parse(await decryptEnc(await fetchBytes('data-enc/' + name + '.enc?v=' + APP_VERSION), S.key));
 }
 /* Зависший запрос на слабой сети раньше вешал вход навсегда. Таймаут — по простою (20 с без единого байта), а не на всю
    передачу: на медленном канале 21 файл качается параллельно, и большой файл целиком за 20 с не успевал, а каждый повтор
@@ -230,9 +241,9 @@ async function enter() {
     const hint = missing === total && total
       ? `Папка <span class="mono">data-enc/</span> отсутствует или пуста (${missing} файлов не найдено). Скопируйте её из репозитория или соберите: <span class="mono">node tools/build.mjs --code "…"</span> при наличии <span class="mono">data/*.json</span>.`
       : missing ? 'Проверьте код доступа, сеть и наличие файлов data-enc/*.enc.' : 'Связь прервалась. «Повторить» докачает только недостающие файлы — без перезагрузки страницы.';
-    $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось загрузить данные</b> (${S.loadErrors.length} из ${total}).<p>${hint}</p><details><summary class="dim small">Подробности (${S.loadErrors.length})</summary><pre class="mono small" style="white-space:pre-wrap">${esc(S.loadErrors.join('\n'))}</pre></details><div class="row mt"><button class="btn sm" id="errRetry">Повторить</button><button class="btn sm ghost" onclick="location.reload()">Перезагрузить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
+    $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось загрузить данные</b> (${S.loadErrors.length} из ${total}).<p>${hint}</p><details><summary class="dim small">Подробности (${S.loadErrors.length})</summary><pre class="mono small" style="white-space:pre-wrap">${esc(S.loadErrors.join('\n'))}</pre></details><div class="row mt"><button class="btn sm" id="errRetry">Повторить</button><button class="btn sm ghost" data-reload="1">Перезагрузить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
     const r = $('#errRetry'); if (r) r.onclick = () => enter().catch(enterFail);
-    const b = $('#errLogout'); if (b) b.onclick = () => { LS.del(K.key); location.reload(); };
+    const b = $('#errLogout'); if (b) b.onclick = async () => { await keyForget(); location.reload(); };
     return;
   }
   $('#who').hidden = !!S.cfg.plain;
@@ -311,8 +322,8 @@ function jubBanner(m) {
 /* Сбой после загрузки данных (старый WebView, битое состояние устройства) раньше оставлял экран «Расшифровываю…» навсегда. */
 function enterFail(e) {
   console.error(e);
-  $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось открыть портал.</b><p class="dim small">Версия v${esc(APP_VERSION)}. Сообщите текст ниже администратору.</p><pre class="mono small" style="white-space:pre-wrap">${esc(String(e && (e.stack || e.message) || e).slice(0, 600))}</pre><div class="row mt"><button class="btn sm ghost" onclick="location.reload()">Повторить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
-  const b = $('#errLogout'); if (b) b.onclick = () => { LS.del(K.key); location.reload(); };
+  $('#main').innerHTML = `<div class="card" style="max-width:720px;margin:40px auto"><b>Не удалось открыть портал.</b><p class="dim small">Версия v${esc(APP_VERSION)}. Сообщите текст ниже администратору.</p><pre class="mono small" style="white-space:pre-wrap">${esc(String(e && (e.stack || e.message) || e).slice(0, 600))}</pre><div class="row mt"><button class="btn sm ghost" data-reload="1">Повторить</button><button class="btn sm ghost" id="errLogout">Ввести код заново</button></div></div>`;
+  const b = $('#errLogout'); if (b) b.onclick = async () => { await keyForget(); location.reload(); };
 }
 function initGate() {
   $('#gateForm').onsubmit = async e => {
@@ -325,11 +336,11 @@ function initGate() {
     try {
       const raw = await deriveKey(code);
       if (!(await keyOk(raw))) { err.textContent = 'Код не подошёл. Проверьте раскладку и попробуйте ещё раз.'; err.hidden = false; }
-      else { S.key = raw; LS.set(K.key, hex(raw)); showGate(false); try { await enter(); } catch (ex) { enterFail(ex); } }
+      else { const k = await keyFromRaw(raw); S.key = k.data; S.sy = k; await keySave(k); showGate(false); try { await enter(); } catch (ex) { enterFail(ex); } }
     } catch (ex) { err.textContent = 'Ошибка: ' + ex.message; err.hidden = false; }
     btn.disabled = false; btn.textContent = t('Войти');
   };
-  $('#who').onclick = () => { if (confirm('Выйти из портала на этом устройстве? Самооценка останется в памяти устройства.')) { LS.del(K.key); location.reload(); } };
+  $('#who').onclick = async () => { if (confirm('Выйти из портала на этом устройстве? Ключ и общий кэш синхронизации будут удалены; ваша самооценка останется в памяти устройства.')) { await keyForget(); LS.del(K.sync); location.reload(); } };
 }
 
 /* ---------- навигация ---------- */
@@ -435,7 +446,7 @@ function openSheet(html) { S.sheetPQ = null; S.pqDirty = false; $('#sheetBody').
 const closeSheetAsk = () => { if (S.pqDirty && !$('#sheet').hidden && !confirm(t('Закрыть без сохранения?'))) return; closeSheet(); };
 function closeSheet() { S.pqDirty = false; $('#sheet').hidden = true; document.body.style.overflow = ''; tgSync(); if (SY.rerender) { SY.rerender = false; render(); } }
 const kv = pairs => `<div class="kv">${pairs.filter(p => p[1]).map(([k, v]) => `<div>${esc(t(k))}</div><div>${v}</div>`).join('')}</div>`;
-const links = arr => (arr || []).length ? `<ul class="list">${arr.map(l => `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>${l.date ? ` <span class="dim small">${esc(l.date)}</span>` : ''}</li>`).join('')}</ul>` : '<span class="dim">—</span>';
+const links = arr => (arr || []).length ? `<ul class="list">${arr.map(l => `<li><a href="${escUrl(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>${l.date ? ` <span class="dim small">${esc(l.date)}</span>` : ''}</li>`).join('')}</ul>` : '<span class="dim">—</span>';
 function selector(label, key, values, labelFn) {
   const s = el('select', 'sel'); s.innerHTML = `<option value="">${esc(t(label))}</option>` + values.map(v => `<option value="${esc(v)}"${S.f[key] === String(v) ? ' selected' : ''}>${esc(labelFn ? labelFn(v) : v)}</option>`).join('');
   s.onchange = () => { S.f[key] = s.value; go(S.page, S.f, S.q); };
@@ -653,7 +664,7 @@ const syText = () => { if (!SY.on && !SY.err) return ''; if (SY.err) return `<sp
   return `${esc(t('Синхронизация'))}: ${SY.busy ? esc(t('идёт…')) : SY.last ? esc(t('выполнена')) + ' ' + esc(SY.last.toTimeString().slice(0, 5)) : esc(t('ожидание'))}${u ? ' · ' + esc(t('ждут отправки')) + ': ' + u : ''}`; };
 async function syncInit() {
   const cfg = D('sync'); if (!cfg || !cfg.url || !S.key || !(window.crypto && crypto.subtle) || SY.on) return;
-  try { const k = await syKeys(S.key); Object.assign(SY, { url: cfg.url, token: k.token, key: k.key, on: true }); } catch (e) { SY.err = String(e); return; }
+  try { const k = S.sy || {}; if (!k.syKey) throw new Error('нет ключа синхронизации — войдите по коду заново'); Object.assign(SY, { url: cfg.url, token: k.syToken, key: k.syKey, on: true }); } catch (e) { SY.err = String(e); return; }
   syncNow();
   setInterval(() => { if (document.visibilityState === 'visible') syncNow(); }, (cfg.every || 90) * 1000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
@@ -684,7 +695,7 @@ const areaResp = () => { const o = { ...areaShared(), ...LS.get(K.arearesp, {}) 
 /* ответственный за ВП: назначенный лично, иначе — по области */
 const respOfPQ = i => { const o = pqOf(i.id); if (o.resp) return { id: o.resp, name: nameOf(o.resp) || o.resp, byArea: false }; const a = areaResp()[i.area]; return a ? { id: a, name: nameOf(a), byArea: true } : null; };
 function respSelect(name, value, allowFree) {
-  return `<select name="${name}"><option value="">— ${esc(t('Не назначен'))} —</option>${team().map(m => `<option value="${m.id}"${value === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}${allowFree && value && !member(value) ? `<option value="${esc(value)}" selected>${esc(value)}</option>` : ''}</select>`;
+  return `<select name="${name}"><option value="">— ${esc(t('Не назначен'))} —</option>${team().map(m => `<option value="${esc(m.id)}"${value === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}${allowFree && value && !member(value) ? `<option value="${esc(value)}" selected>${esc(value)}</option>` : ''}</select>`;
 }
 function ccAuto(it) {
   if (it.kind !== 'std' && it.kind !== 'rp') return '';
@@ -817,7 +828,7 @@ function todoCard(m) {
 /* Контекстная подсказка под блоком — «Suggested actions: … → Go to module» в OLF.
    Показывается только когда действие действительно требуется. */
 function suggest(text, href, label) {
-  return `<div class="callout small mt"><b>${esc(t('Требуется действие'))}:</b> ${text} <a class="btn sm ghost" href="${esc(href)}">${esc(t(label || 'Перейти'))} →</a></div>`;
+  return `<div class="callout small mt"><b>${esc(t('Требуется действие'))}:</b> ${text} <a class="btn sm ghost" href="${escUrl(href)}">${esc(t(label || 'Перейти'))} →</a></div>`;
 }
 /* ---------- Обзор ---------- */
 function dash(m) {
@@ -884,7 +895,7 @@ function dash(m) {
   if (reg) reg.docs.filter(d => d.bucket === 'draft' || d.bucket === 'ready').forEach(d => items.push(`<li>${badge(d.bucket)} ${esc(d.ru)} <span class="dim small">— ${esc(d.approved)}</span></li>`));
   if (cc) cc.items.filter(i => (i.kind === 'std' || i.kind === 'rp') && ccOf(i).st === 'missing').forEach(i => items.push(`<li>${badge('missing', 'CC')} Прил. ${i.annex} ${esc(i.kind === 'rp' ? 'РП' : 'Ст.')} ${esc(i.id)} <span class="dim small">— ${esc((i.remarks || i.desc || i.ref).slice(0, 140))}</span></li>`));
   if (items.length) { const d = el('details', 'card'); d.innerHTML = `<summary><b>${esc(t('Требует внимания'))}</b> <span class="dim small">${items.length} ${esc(t('позиций: матрица, реестр, CC'))}</span></summary><ul class="list mt">${items.join('')}</ul>`; m.appendChild(d); }
-  const dr = D('drive'); if (dr) m.appendChild(el('p', 'small dim', `<a href="${esc(dr.meta.root)}" target="_blank" rel="noopener">${esc(t('Папка проекта Avsec в Google Drive'))} →</a>`));
+  const dr = D('drive'); if (dr) m.appendChild(el('p', 'small dim', `<a href="${escUrl(dr.meta.root)}" target="_blank" rel="noopener">${esc(t('Папка проекта Avsec в Google Drive'))} →</a>`));
 }
 
 /* ---------- Протокольные вопросы ---------- */
@@ -1113,7 +1124,7 @@ function refsForPQ(i) {
 }
 function refsBlock(R) {
   if (!R.docs.length && !R.mrows.length && !R.icaoDocs.length) return '';
-  const dl = a => (a || []).map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join(' · ');
+  const dl = a => (a || []).map(l => `<a href="${escUrl(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join(' · ');
   return `<details class="mt"><summary><b>${esc(t('Справочные материалы'))}</b> <span class="dim small">${R.docs.length} док. нормбазы · ${R.mrows.length} п. матрицы</span></summary>`
     + (R.docs.length ? `<h4>${esc(t('Нормативная база'))}</h4><ul class="list">${R.docs.slice(0, 8).map(({ x }) => `<li>${badge(x.bucket)} <b>${esc(x.ru)}</b>${x.approved ? ` <span class="dim small">${esc(x.approved)}</span>` : ''}${(x.drive || []).length ? ` — ${dl(x.drive)}` : ''}</li>`).join('')}</ul>` : '')
     + (R.mrows.length ? `<h4>${esc(t('Матрица ИКАО'))}</h4><ul class="list">${R.mrows.slice(0, 6).map(({ s, it }) => `<li><span class="dim small">${esc(s.code)}</span> ${esc(it.title)} <span class="dim small">— ${esc(it.icao)}</span></li>`).join('')}</ul>` : '')
@@ -1219,7 +1230,7 @@ const evKindTag = (x, id) => { const k = evKind(x, id); if (k !== 'auto' && k !=
 /* Имя отправителя файла: в таблице приёма — имя из Telegram («Sonya», «TJ»), людей называем полностью (решение NCMC 25.10.2026). */
 const EV_FROM = { 'ICAO Box': 'NCMC → ИКАО (ICAO Box)', Sonya: 'Исоева Саёхат', TJ: 'Пулатов Тахир', Odina: 'Одинаев Одина', 'S S': 'Салимов Фирдавс', 'Bakhtiyor @bsheraliev': 'Шералиев Бахтиёр', 'Bihishta @bihishtarahimova': 'Рахимова Бихишта', '𝓝𝓲𝔂𝓪𝔃𝓲 @sabrinisso': 'Сабриниссо' };
 const evFrom = x => EV_FROM[x.from] || x.from || '';
-const evLine = x => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b></a> <span class="dim small">${esc(x.id)} · ${fmtDate((x.at || '').slice(0, 10))} · ${esc(evFrom(x))}</span> ${x.dsp ? badge('none', 'ДСП') + ' ' : ''}${x.icao ? badge('ok', t('отправлено ИКАО')) + ' ' : ''}${badge(EVSTB[x.st] || 'none', EVST[x.st] || x.st)}${x.caption ? `<div class="small">${esc(x.caption)}</div>` : ''}`;
+const evLine = x => `<a href="${escUrl(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b></a> <span class="dim small">${esc(x.id)} · ${fmtDate((x.at || '').slice(0, 10))} · ${esc(evFrom(x))}</span> ${x.dsp ? badge('none', 'ДСП') + ' ' : ''}${x.icao ? badge('ok', t('отправлено ИКАО')) + ' ' : ''}${badge(EVSTB[x.st] || 'none', EVST[x.st] || x.st)}${x.caption ? `<div class="small">${esc(x.caption)}</div>` : ''}`;
 function evFilesBlock(i) {
   const fs = evFor(i.id); if (!fs.length) return '';
   return `<details class="mt" open><summary><b>${esc(t('Файлы доказательств'))}</b> <span class="dim small">${fs.length} · ${esc(t('из группы Telegram «USAP 2026»'))}</span></summary><ul class="list small">`
@@ -1647,8 +1658,8 @@ function pAudit(m) {
       ['Брифинг и разбор', esc(u.audit.briefing || '')],
       ['План аудита', esc(u.audit.auditPlan || '')],
       ['AvSec Week', esc(u.audit.avsecWeek || '')],
-      ['Загрузка документов', `<a href="${esc(u.audit.upload)}" target="_blank" rel="noopener">${esc(u.audit.upload)}</a> (не по e-mail)`],
-      ['Портал ИКАО', `<a href="${esc(u.audit.portal)}" target="_blank" rel="noopener">${esc(u.audit.portal)}</a> — группа USAP (ВП, SASAQ, CC); доступ — по NC Welcome Package`],
+      ['Загрузка документов', `<a href="${escUrl(u.audit.upload)}" target="_blank" rel="noopener">${esc(u.audit.upload)}</a> (не по e-mail)`],
+      ['Портал ИКАО', `<a href="${escUrl(u.audit.portal)}" target="_blank" rel="noopener">${esc(u.audit.portal)}</a> — группа USAP (ВП, SASAQ, CC); доступ — по NC Welcome Package`],
       ['NCMC', `${esc(u.ncmc.name)}, ${esc(u.ncmc.title)} · ${esc(u.ncmc.email)} · ${esc(u.ncmc.phone)}`],
     ]);
     g.appendChild(dd);
@@ -2423,7 +2434,7 @@ function tsEventSheet(i) {
   const e = tsEvents()[i]; if (!e) return; const x = e.ref ? TS().plan.items.find(z => z.id === e.ref) : null;
   openSheet(`<div class="sheet-head"><div class="small dim">${badge(TSEVB[e.kind], TSEVL[e.kind])} ${e.ref ? idChip(e.ref) : ''}</div><h2>${esc(e.text)}</h2></div>
     ${kv([['Дата', e.end && e.end !== e.date ? `${fmtDate(e.date)} – ${fmtDate(e.end)}` : fmtDate(e.date)], ['В Google Календарь уйдёт', `<b>${esc(e.cal.title)}</b>${e.cal.date !== e.date || (e.cal.end || '') !== (e.end || '') ? ` <span class="small dim">(${fmtDate(e.cal.date)}${e.cal.end && e.cal.end !== e.cal.date ? ' – ' + fmtDate(e.cal.end) : ''})</span>` : ''}${e.cal.details ? `<div class="small dim">${esc(e.cal.details)}</div>` : ''}`]])}
-    <p class="mt"><a class="btn sm" href="${esc(tsGcal(e.cal))}" target="_blank" rel="noopener">📅 ${esc(t('Добавить в Google Календарь'))}</a>${x ? ` <button class="btn sm ghost" type="button" data-tsitem="${esc(x.id)}">${esc(t('Карточка испытания'))}</button>` : ''}</p>
+    <p class="mt"><a class="btn sm" href="${escUrl(tsGcal(e.cal))}" target="_blank" rel="noopener">📅 ${esc(t('Добавить в Google Календарь'))}</a>${x ? ` <button class="btn sm ghost" type="button" data-tsitem="${esc(x.id)}">${esc(t('Карточка испытания'))}</button>` : ''}</p>
     ${e.kind === 'covert' || (x && x.kind === 'covert') ? `<p class="small dim">${esc(t('Негласное испытание уходит в календарь только окном — без субъекта, объекта и сценария (ДСП).'))}</p>` : ''}`);
 }
 const TSEVL = { win: 'окно', pause: 'пауза', notice: 'уведомление', test: 'гласное', covert: 'негласное', report: 'отчёт', cap: 'ПКД', admin: 'срок', icao: 'ИКАО' };
@@ -2648,7 +2659,7 @@ function pTests(m) {
     const L = el('div', 'card'); let cur = ''; let html = `<h2>${esc(t('Лента событий'))} <span class="dim small">${ev.length}</span></h2>`;
     ev.forEach(e => { const mo = e.date.slice(0, 7); if (mo !== cur) { cur = mo; html += `<h3 class="mt">${esc(['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][+mo.slice(5) - 1])} ${mo.slice(0, 4)}</h3>`; }
       const past = e.date < today();
-      html += `<div class="evrow${past ? ' past' : ''}"><span class="evd">${tsDay(e.date)}${e.end && e.end !== e.date ? ' – ' + fmtDate(e.end).slice(0, 5) : ''}</span><span class="badge b-${TSEVB[e.kind]}">${esc(t(TSEVL[e.kind]))}</span><span class="evt">${esc(e.text)}${e.ref ? ` ${idChip(e.ref)}` : ''} <a class="gcal" href="${esc(tsGcal(e.cal))}" target="_blank" rel="noopener" title="${esc(t('Добавить в Google Календарь'))}">📅</a></span></div>`; });
+      html += `<div class="evrow${past ? ' past' : ''}"><span class="evd">${tsDay(e.date)}${e.end && e.end !== e.date ? ' – ' + fmtDate(e.end).slice(0, 5) : ''}</span><span class="badge b-${TSEVB[e.kind]}">${esc(t(TSEVL[e.kind]))}</span><span class="evt">${esc(e.text)}${e.ref ? ` ${idChip(e.ref)}` : ''} <a class="gcal" href="${escUrl(tsGcal(e.cal))}" target="_blank" rel="noopener" title="${esc(t('Добавить в Google Календарь'))}">📅</a></span></div>`; });
     L.innerHTML = html; m.appendChild(L);
     m.appendChild(el('p', 'small dim', esc(t('Даты уведомлений — не позднее чем за 10 рабочих дней до начала гласного испытания (п. 32). Отчёт — 5 дней после проверки (п. 102), ПКД — 10 календарных дней после получения отчёта (п. 47); даты рассчитаны от конца окна и сдвигаются вместе с ним.'))));
   }
@@ -2715,7 +2726,7 @@ function pTeam(m) {
 
 /* ---------- Портфолио инспекторов: приказ, список КК, курсы, OJT, замечания (data/inspectors.json, собрано из доказательств) ---------- */
 const INSP_COLS = [['inspector', 'Нац. инспектор'], ['instructor', 'Инструктор'], ['basic', 'Базовый'], ['manager', 'Руководитель'], ['covert', 'Негласные']];
-const inspEv = ids => (ids || []).map(id => { const x = (D('evidence') ? D('evidence').items : []).find(e => e.id === id); return x ? `<a href="${esc(x.url)}" target="_blank" rel="noopener" class="code" title="${esc(x.name)}">${esc(id)}</a>` : `<span class="code">${esc(id)}</span>`; }).join(' ');
+const inspEv = ids => (ids || []).map(id => { const x = (D('evidence') ? D('evidence').items : []).find(e => e.id === id); return x ? `<a href="${escUrl(x.url)}" target="_blank" rel="noopener" class="code" title="${esc(x.name)}">${esc(id)}</a>` : `<span class="code">${esc(id)}</span>`; }).join(' ');
 const inspLast = (p, kind) => p.training.filter(c => c.kind === kind).sort((a, b) => (b.to || '').localeCompare(a.to || ''))[0];
 const inspCell = c => c ? `<span class="badge b-ok" title="${esc(c.course)}">${fmtDate((c.to || c.from || '').slice(0, 7) + '-01').slice(3)}</span>` : '<span class="badge b-missing">нет</span>';
 // Должность по первому слову (начальник / главный / ведущий / специалист): «Главный специалист» = «Главный специалист АБ Агентства».
@@ -2766,7 +2777,7 @@ function procSave(id, fn) {
 function procRecs(pid) {
   const byWho = {}; Object.entries(syCache().proc).forEach(([k, r]) => { if (r && r.pid === pid && !r.cleared) byWho[r.by] = r; });
   const mine = procState()[pid]; if (mine && mine.by) { if (mine.cleared) delete byWho[mine.by]; else if (!byWho[mine.by] || mine.ts >= byWho[mine.by].ts) byWho[mine.by] = { ...mine, pid }; }
-  return Object.values(byWho).filter(r => Object.keys(r.s || {}).length).sort((a, b) => a.by.localeCompare(b.by));
+  return Object.values(byWho).filter(r => Object.keys(r.s || {}).length).sort((a, b) => String(a.by || '').localeCompare(String(b.by || '')));
 }
 // вывод по набору отметок (одного или нескольких проверяющих): худшая отметка шага побеждает; расхождения — отдельно
 function procMerge(p, recs) {
@@ -2791,7 +2802,7 @@ function procStat(p) {
 }
 function procTxt(p) {
   const o = procOf(p.id), st = procStat(p), L = [`${p.id}. ${p.title}`, `Дата: ${o.m.date || ''}  Время: ${o.m.time || ''}  Место/рейс/пост: ${o.m.place || ''}`, `Проверяющий: ${o.m.who || ''}  Наблюдаемый персонал: ${o.m.obs || ''}`, `Итог: ${st.verdict} (✓ ${st.ok}, ± ${st.part}, ✗ ${st.no}, н/п ${st.na})`, ''];
-  p.steps.forEach(s => { const k = o.s[s.n]; L.push(`${s.n}. [${k ? PROC_ST.find(x => x[0] === k)[1] : ' '}] ${s.action}${o.n[s.n] ? '\n    Замечание: ' + o.n[s.n] : ''}`); });
+  p.steps.forEach(s => { const k = o.s[s.n]; L.push(`${s.n}. [${k ? procSym(k) || '?' : ' '}] ${s.action}${o.n[s.n] ? '\n    Замечание: ' + o.n[s.n] : ''}`); });
   if (o.m.note) L.push('', 'Примечание: ' + o.m.note);
   return L.join('\n');
 }
@@ -2864,7 +2875,7 @@ function procDetail(m, d, p) {
     const nt = el('input', 'inp'); nt.placeholder = 'Замечание'; nt.value = o.n[s.n] || ''; nt.style.flex = '1'; nt.onchange = () => procSave(p.id, x => { if (nt.value.trim()) x.n[s.n] = nt.value; else delete x.n[s.n]; }); ctl.appendChild(nt);
     row.appendChild(ctl);
     const oth = others.map(r => ({ by: r.by, k: (r.s || {})[s.n], n: (r.n || {})[s.n] })).filter(x => x.k);
-    if (oth.length) row.appendChild(el('div', 'small dim', oth.map(x => `${esc(x.by)}: <b>${PROC_ST.find(z => z[0] === x.k)[1]}</b>${x.n ? ' — ' + esc(x.n) : ''}`).join(' · ')));
+    if (oth.length) row.appendChild(el('div', 'small dim', oth.map(x => `${esc(x.by)}: <b>${esc(procSym(x.k) || '?')}</b>${x.n ? ' — ' + esc(x.n) : ''}`).join(' · ')));
     tc.appendChild(row);
   });
   m.appendChild(tc); upd(); m.appendChild(stBox);
@@ -2919,7 +2930,7 @@ function pMatrix(m) {
   m.appendChild(tiles);
   m.appendChild(table(['№', 'Документ / программа', 'Требование ИКАО и НППБ', 'Статус в АГА при ПРТ', 'Аналог РК / КР'], list,
     i => [i.n, `<b>${esc(i.title)}</b>`, `<div class="small">${esc(i.icao)}</div>`, `${badge(i.bucket)}<div class="small">${esc(i.status)}</div>`, `<div class="small dim">${esc(i.analog)}</div>`],
-    i => { const reg = D('registry'); const rd = reg ? i.reg.map(id => reg.docs.find(x => x.id === id)).filter(Boolean) : []; openSheet(`<h3>${i.n}. ${esc(i.title)} ${badge(i.bucket)}</h3>${kv([['Требование ИКАО', esc(i.icao)], ['Статус', esc(i.status)], ['Аналог РК / КР', esc(i.analog)], ['Раздел', esc(i.sec)]])}${rd.length ? `<h4>Документы реестра</h4><ul class="list">${rd.map(x => `<li>${badge(x.bucket)} ${esc(x.ru)} <span class="dim small">${esc(x.approved)}</span>${x.drive.length ? ' — ' + x.drive.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join(', ') : ''}</li>`).join('')}</ul>` : ''}<p class="small dim mt">${esc(d.meta.note)}</p>`); },
+    i => { const reg = D('registry'); const rd = reg ? i.reg.map(id => reg.docs.find(x => x.id === id)).filter(Boolean) : []; openSheet(`<h3>${i.n}. ${esc(i.title)} ${badge(i.bucket)}</h3>${kv([['Требование ИКАО', esc(i.icao)], ['Статус', esc(i.status)], ['Аналог РК / КР', esc(i.analog)], ['Раздел', esc(i.sec)]])}${rd.length ? `<h4>Документы реестра</h4><ul class="list">${rd.map(x => `<li>${badge(x.bucket)} ${esc(x.ru)} <span class="dim small">${esc(x.approved)}</span>${x.drive.length ? ' — ' + x.drive.map(l => `<a href="${escUrl(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join(', ') : ''}</li>`).join('')}</ul>` : ''}<p class="small dim mt">${esc(d.meta.note)}</p>`); },
     { groupKey: i => i.sec }));
 }
 
@@ -2929,9 +2940,9 @@ function pGM(m) {
   pageHead(m, 'Инструктивные материалы', `${esc(d.meta.title)}. ${esc(d.meta.sub)} · ${fmtDate(d.meta.updated)}`);
   const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск по ИМ')); m.appendChild(tb);
   const list = d.items.filter(i => has(S.f.s, i.code, i.title, i.ncasp, i.status));
-  m.appendChild(el('div', 'card', `<div class="row">${d.meta.folders.map(l => `<a class="btn ghost sm" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join('')}</div>`));
+  m.appendChild(el('div', 'card', `<div class="row">${d.meta.folders.map(l => `<a class="btn ghost sm" href="${escUrl(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>`).join('')}</div>`));
   m.appendChild(table(['Код', 'Инструктивный материал', 'Раздел / § НПАБГА РТ', 'Статус', 'Папка'], list,
-    i => [`<span class="code">${esc(i.code)}</span>`, `<b>${esc(i.title)}</b>`, esc(i.ncasp), badge(i.bucket, i.status), `<a href="${esc(i.folder)}" target="_blank" rel="noopener">Drive ↗</a>`],
+    i => [`<span class="code">${esc(i.code)}</span>`, `<b>${esc(i.title)}</b>`, esc(i.ncasp), badge(i.bucket, i.status), `<a href="${escUrl(i.folder)}" target="_blank" rel="noopener">Drive ↗</a>`],
     i => openSheet(`<h3><span class="code">${esc(i.code)}</span> ${badge(i.bucket, i.status)}</h3><p><b>${esc(i.title)}</b></p>${kv([['Раздел / § НПАБГА РТ', esc(i.ncasp || '')], ['Статус', esc(i.status || '')], ['EN (GM)', esc([i.gm, i.en].filter(Boolean).join(' — ') || 'нет перевода')], ['Прежний номер', esc(i.old || '—')], ['Последний файл', i.date ? fmtDate(i.date) : '—']])}<div class="row mt"><button class="btn sm" data-open="${esc(i.folder)}">Папка Drive ↗</button><button class="btn sm ghost" data-go="matrix">Матрица ИКАО</button></div>`)));
   m.appendChild(el('div', 'card', `<h2>Примечания</h2><ul class="list">${d.meta.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>`));
 }
@@ -2939,16 +2950,16 @@ function pGM(m) {
 /* ---------- Материалы (Drive) ---------- */
 function pDrive(m) {
   const d = D('drive'); if (!d) return m.appendChild(el('div', 'empty', 'Карта папки не загружена'));
-  pageHead(m, 'Материалы (Drive)', `${esc(d.meta.title)} · локально: <span class="mono">${esc(d.meta.local)}</span> · <a href="${esc(d.meta.root)}" target="_blank" rel="noopener">открыть корень в Drive ↗</a>`);
+  pageHead(m, 'Материалы (Drive)', `${esc(d.meta.title)} · локально: <span class="mono">${esc(d.meta.local)}</span> · <a href="${escUrl(d.meta.root)}" target="_blank" rel="noopener">открыть корень в Drive ↗</a>`);
   const tb = el('div', 'toolbar'); tb.appendChild(inputFilter('Поиск по папкам и файлам')); m.appendChild(tb);
   const g = el('div', 'grid2');
   d.folders.filter(f => has(S.f.s, f.title, f.desc, f.children.map(c => c.title).join(' '))).forEach(f => {
-    g.appendChild(el('div', 'card', `<h2><a href="${esc(f.url)}" target="_blank" rel="noopener">🗂 ${esc(f.title)}</a></h2><div class="small dim">${esc(f.desc)}</div>${f.children.length ? `<div class="chips mt">${f.children.map(c => `<a class="chip" style="height:28px;line-height:26px;text-decoration:none;font-size:12px" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>`).join('')}</div>` : ''}`));
+    g.appendChild(el('div', 'card', `<h2><a href="${escUrl(f.url)}" target="_blank" rel="noopener">🗂 ${esc(f.title)}</a></h2><div class="small dim">${esc(f.desc)}</div>${f.children.length ? `<div class="chips mt">${f.children.map(c => `<a class="chip" style="height:28px;line-height:26px;text-decoration:none;font-size:12px" href="${escUrl(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>`).join('')}</div>` : ''}`));
   });
   m.appendChild(g);
   const files = d.rootFiles.filter(f => has(S.f.s, f.title));
   m.appendChild(el('h2', 'mt', 'Файлы в корне папки'));
-  m.appendChild(table(['Файл', 'Дата'], files, f => [`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.title)}</a>`, esc(f.date)]));
+  m.appendChild(table(['Файл', 'Дата'], files, f => [`<a href="${escUrl(f.url)}" target="_blank" rel="noopener">${esc(f.title)}</a>`, esc(f.date)]));
 }
 
 /* ---------- Документы ИКАО ---------- */
@@ -2964,10 +2975,10 @@ function pICAO(m) {
 /* ---------- Соседние страны ---------- */
 function pNB(m) {
   const d = D('neighbours'); if (!d) return m.appendChild(el('div', 'empty', 'Нет данных'));
-  pageHead(m, 'Соседние страны', `${esc(d.meta.title)} · ${fmtDate(d.meta.updated)} · <a href="${esc(d.meta.folder)}" target="_blank" rel="noopener">папка «Сравнение — соседние страны» ↗</a>`);
+  pageHead(m, 'Соседние страны', `${esc(d.meta.title)} · ${fmtDate(d.meta.updated)} · <a href="${escUrl(d.meta.folder)}" target="_blank" rel="noopener">папка «Сравнение — соседние страны» ↗</a>`);
   d.countries.forEach(c => {
-    m.appendChild(el('h2', 'mt', `${esc(c.name)} <span class="dim small">— ${esc(c.regulator)} · <a href="${esc(c.folder)}" target="_blank" rel="noopener">папка ↗</a></span>`));
-    m.appendChild(table(['Документ', 'Тема', 'Реквизиты', 'Файл / источник'], c.docs, x => [`<b>${esc(x.title)}</b>`, esc(x.topic), esc(x.ref), [x.local && `<a href="${esc(x.local)}" target="_blank" rel="noopener">в папке ↗</a>`, x.local2 && `<a href="${esc(x.local2)}" target="_blank" rel="noopener">PDF ↗</a>`, x.src && `<span class="small dim">${esc(x.src)}</span>`].filter(Boolean).join(' · ')],
+    m.appendChild(el('h2', 'mt', `${esc(c.name)} <span class="dim small">— ${esc(c.regulator)} · <a href="${escUrl(c.folder)}" target="_blank" rel="noopener">папка ↗</a></span>`));
+    m.appendChild(table(['Документ', 'Тема', 'Реквизиты', 'Файл / источник'], c.docs, x => [`<b>${esc(x.title)}</b>`, esc(x.topic), esc(x.ref), [x.local && `<a href="${escUrl(x.local)}" target="_blank" rel="noopener">в папке ↗</a>`, x.local2 && `<a href="${escUrl(x.local2)}" target="_blank" rel="noopener">PDF ↗</a>`, x.src && `<span class="small dim">${esc(x.src)}</span>`].filter(Boolean).join(' · ')],
       x => openSheet(`<h3>${esc(x.title)}</h3>${kv([['Страна / регулятор', `${esc(c.name)} — ${esc(c.regulator)}`], ['Тема', esc(x.topic || '')], ['Реквизиты', esc(x.ref || '')], ['Источник', esc(x.src || '')]])}<div class="row mt">${x.local ? `<button class="btn sm" data-open="${esc(x.local)}">В папке ↗</button>` : ''}${x.local2 ? `<button class="btn sm ghost" data-open="${esc(x.local2)}">PDF ↗</button>` : ''}<button class="btn sm ghost" data-open="${esc(c.folder)}">Папка страны ↗</button></div>`)));
   });
 }
@@ -3028,7 +3039,7 @@ function jLinked(key) {
 }
 function jSave(rec) {
   const all = jAll(), k = all.findIndex(x => x.id === rec.id);
-  rec.upd = Math.max(Date.now(), ((k >= 0 && all[k].upd) || 0) + 1, (syCache().j[rec.id] || 0) + 1); rec.who = rec.who || String(settings().ncmc || '').split(',')[0].trim();
+  rec.upd = Math.max(Date.now(), ((k >= 0 && all[k].upd) || 0) + 1, (syCache().j[rec.id] || 0) + 1); rec.who = rec.who || whoAmI(); rec.by = whoAmI();   // who — автор записи, by — кто правил последним
   if (k >= 0) all[k] = rec; else all.unshift(rec);
   LS.set(K.journal, all); syncSoon();
 }
@@ -3049,7 +3060,7 @@ function openJournal(x) {
       <label>${esc(t('Статус'))}<select name="st">${Object.entries(JST).map(([k, v]) => opt(k, t(v), x.st === k)).join('')}</select></label>
       <label>${esc(t('Ответ / что передали'))}<textarea name="answer" rows="3">${esc(x.answer || '')}</textarea></label>
       <div class="row mt"><button class="btn" type="submit">${esc(t('Сохранить'))}</button>${isNew ? '' : `<button class="btn ghost" type="button" id="jDel">${esc(t('Удалить'))}</button>`}<button class="btn ghost" type="button" data-close>${esc(t('Закрыть'))}</button></div>
-      ${isNew ? '' : `<p class="small dim">${esc(t('Изменено'))}: ${esc(new Date(x.upd || x.ts).toLocaleString('ru-RU'))}${x.who ? ' · ' + esc(x.who) : ''} · ${esc(t('устройство'))} ${esc(x.dev || '')}</p>`}
+      ${isNew ? '' : `<p class="small dim">${esc(t('Изменено'))}: ${esc(new Date(x.upd || x.ts).toLocaleString('ru-RU'))}${(x.by || x.who) ? ' · ' + esc(x.by || x.who) : ''} · ${esc(t('устройство'))} ${esc(x.dev || '')}</p>`}
     </form>`);
   const f = $('#jForm');
   f.auditor.onchange = () => { const a = aud.find(y => y.name === f.auditor.value); if (a && a.areas.length === 1 && !f.area.value) f.area.value = a.areas[0]; };
@@ -3080,7 +3091,7 @@ function epStatus(x) {
   const due = (((P && P.meta.waves) || {})[x.w] || {}).iso || '';
   return { st: got.length ? (got.every(e => e.st === 'ok') ? 'ok' : 'got') : cand.length ? 'cand' : due && due < today() ? 'over' : 'wait', got, cand, due };
 }
-const epFile = e => `<a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.name)}">${esc(e.id)}</a>${e.dsp ? ' ' + badge('none', 'ДСП') : ''}`;
+const epFile = e => `<a href="${escUrl(e.url)}" target="_blank" rel="noopener" title="${esc(e.name)}">${esc(e.id)}</a>${e.dsp ? ' ' + badge('none', 'ДСП') : ''}`;
 const epCut = (s, n) => s.length > n ? s.slice(0, n).replace(/\s+\S*$/, '') + '…' : s;
 function planBlock(i) {
   if (!D('evidence_plan')) return '';
@@ -3369,7 +3380,7 @@ function pTasks(m) {
   TCOLS.forEach(c => tiles.appendChild(tile(c.id === 'done' ? 'ok' : c.id === 'doing' ? 'draft' : 'info', all.filter(x => x.col === c.id).length, c.t, null)));
   tiles.appendChild(tile(late ? 'miss' : 'ok', late, 'просрочено', () => go('tasks', { ...S.f, soon: '1' }, S.q)));
   m.appendChild(tiles);
-  const order = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title);
+  const order = (a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999')) || String(a.title || '').localeCompare(String(b.title || ''));
   const board = el('div', 'kb');
   board.innerHTML = TCOLS.map(c => { const L = list.filter(x => x.col === c.id).sort(order);
     return `<div class="kb-col" data-tkcol="${c.id}"><div class="kb-h"><b>${esc(t(c.t))}</b> <span class="badge b-none">${L.length}</span></div>${L.map(tkCard).join('') || `<div class="small dim kb-empty">${esc(t('пусто'))}</div>`}</div>`; }).join('');
@@ -3475,8 +3486,8 @@ function pAbout(m) {
   pageHead(m, 'О портале', 'AvSec Portal v' + APP_VERSION);
   m.appendChild(el('p', 'small dim', 'Номер версии виден в шапке (на телефоне справа от поиска) и внизу меню. Если после обновления на телефоне или в Telegram номер другой — закройте и снова откройте мини-апп: при смене сборки портал перезагружается сам.'));
   if (S.cfg.site || S.cfg.tg) m.appendChild(el('div', 'card', `<h2>${esc(t('Где открыть'))}</h2>` + kv([
-    ['Веб (GitHub Pages)', S.cfg.site ? `<a href="${esc(S.cfg.site)}" target="_blank" rel="noopener">${esc(S.cfg.site)}</a> — на телефоне «Добавить на экран „Домой“», работает офлайн` : ''],
-    ['Telegram', S.cfg.tg ? `<a href="${esc(S.cfg.tg)}" target="_blank" rel="noopener">${esc(S.cfg.tg)}</a> — кнопка «Портал» внизу чата с ботом (Mini App)` : ''],
+    ['Веб (GitHub Pages)', S.cfg.site ? `<a href="${escUrl(S.cfg.site)}" target="_blank" rel="noopener">${esc(S.cfg.site)}</a> — на телефоне «Добавить на экран „Домой“», работает офлайн` : ''],
+    ['Telegram', S.cfg.tg ? `<a href="${escUrl(S.cfg.tg)}" target="_blank" rel="noopener">${esc(S.cfg.tg)}</a> — кнопка «Портал» внизу чата с ботом (Mini App)` : ''],
     ['Код доступа', 'один и тот же для веба и Telegram, вводится один раз на устройстве; выдаёт NCMC'],
   ])));
   m.appendChild(el('div', 'card', `<h2>Назначение</h2><p>Рабочий портал отдела авиационной безопасности АГА при ПРТ: единое место для нормативной базы АБ (реестр, соответствие Приложению 17 и Doc 8973, инструктивные материалы) и для подготовки к аудиту ИКАО USAP-CMA (протокольные вопросы, контрольный перечень соответствия, SASAQ, дорожная карта). Построен по образцу «Портала сертификации и надзора» и «Библиотеки Shohin Airlines».</p>
@@ -3585,7 +3596,7 @@ async function boot() {
     if (e.target.closest('[data-lazyretry]')) { loadLazy(); toast(t('Догружаю…')); return; }
     const opq = e.target.closest('[data-openpq]'); if (opq) { const it = D('pq') && D('pq').items.find(x => x.id === opq.dataset.openpq); if (it && (!S.pqDirty || confirm(t('Закрыть без сохранения?')))) openPQ(it); return; }
     const occ = e.target.closest('[data-opencc]'); if (occ) { const [a, id] = occ.dataset.opencc.split(':'); const it = D('cc') && D('cc').items.find(x => String(x.annex) === a && x.id === id); if (it) openCC(it); return; }
-    const opn = e.target.closest('[data-open]'); if (opn) { window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
+    if (e.target.closest('[data-reload]')) { location.reload(); return; } const opn = e.target.closest('[data-open]'); if (opn) { if (safeUrl(opn.dataset.open)) window.open(opn.dataset.open, '_blank', 'noopener'); return; } if (!e.target.closest('#side') && !e.target.closest('#burger')) $('#side').classList.remove('open'); const nh = e.target.closest('.navh'); if (nh) nh.parentElement.classList.toggle('open'); });
   // Esc — закрыть шторку; «/» — курсор в поиск, если не печатаем в поле
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheetAsk(); if (e.key === '/' && !/^(input|textarea|select)$/i.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); $('#q').focus(); } });
   $('#qclear').onclick = () => { $('#q').value = ''; if (S.page === 'find') go('dash'); };
@@ -3601,8 +3612,11 @@ async function boot() {
   try { S.cfg = await (await fetch('data/config.json', { cache: 'no-cache' })).json(); }
   catch (e) { $('#main').innerHTML = '<div class="empty">Не найден data/config.json. Портал нужно открыть через http(s)-сервер (node tools/serve.mjs), а не как файл.</div>'; return; }
   if (S.cfg.plain) { await enter(); return; }
-  const saved = LS.get(K.key, '');
-  if (saved && cryptoReady()) { try { const raw = unhex(saved); if (await keyOk(raw)) { S.key = raw; await enter(); return; } } catch (e) { enterFail(e); return; } LS.del(K.key); }
+  if (cryptoReady()) {
+    const saved = LS.get(K.key, '');   // переход со старого хранения (hex в localStorage, до v217): перенести в IndexedDB и стереть
+    if (saved) { try { const raw = unhex(saved); LS.del(K.key); if (await keyOk(raw)) { const k = await keyFromRaw(raw); await keySave(k); S.key = k.data; S.sy = k; await enter(); return; } } catch (e) { enterFail(e); return; } }
+    const k = await keyLoad(); if (k) { S.key = k.data; S.sy = k; try { await enter(); } catch (e) { enterFail(e); } return; }
+  }
   $('#main').innerHTML = ''; showGate(true);
 }
 boot();

@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://raqam-core.onrender.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
@@ -10,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="styles.css?v=216">
+<link rel="stylesheet" href="styles.css?v=217">
 </head>
 <body>
 <div id="app">
@@ -59,9 +60,9 @@
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<!-- Telegram Mini App: SDK нужен только при открытии из бота; вне Telegram window.Telegram.WebApp пустой -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="app.js?v=216"></script>
-<script src="feedback.js" data-app="avsec-portal" data-version="v216" defer></script>
+<!-- Telegram Mini App: SDK (своя копия) подключает tg.js только при открытии из бота -->
+<script src="tg.js"></script>
+<script src="app.js?v=217"></script>
+<script src="feedback.js" data-app="avsec-portal" data-version="v217" defer></script>
 </body>
 </html>
